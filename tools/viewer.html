@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Model viewer</title>
+<style>body{margin:0;overflow:hidden;font:14px system-ui;color:#222}#ui{position:fixed;left:12px;top:10px;background:#fffc;padding:6px 10px;border-radius:6px}</style>
+</head>
+<body>
+<div id="ui">Dev tool, not shipped. Query: <code>?m=warrior,goblin&amp;clip=walk&amp;seeds=1,2,3&amp;hold=axe</code></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three'
+import { library, make, hold, pose } from '../src/dsl.js'
+const q = new URLSearchParams(location.search)
+const lib = library(await (await fetch('../src/models.txt')).text())
+const names = (q.get('m') || 'warrior,slime,goblin,spider,bat').split(',')
+const seeds = (q.get('seeds') || '1').split(',').map(Number)
+const clip = q.get('clip') || 'idle'
+const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.setSize(innerWidth, innerHeight)
+renderer.setPixelRatio(devicePixelRatio)
+document.body.appendChild(renderer.domElement)
+const scene = new THREE.Scene()
+scene.background = new THREE.Color('#cfe3f0')
+scene.add(new THREE.HemisphereLight('#fff', '#686', 1.4))
+const sun = new THREE.DirectionalLight('#fff', 2)
+sun.position.set(3, 6, 5)
+scene.add(sun)
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#8b6' }))
+scene.add(ground)
+const models = []
+const w = 1.8
+let i = 0
+const total = names.length * seeds.length
+for (const n of names)
+  for (const s of seeds) {
+    const m = make(lib, n, s)
+    if (q.get('hold') && m.bones.handR) hold(lib, m, 'handR', q.get('hold'))
+    m.root.parent || 0
+    const g = new THREE.Group()
+    g.add(m.root)
+    g.position.x = (i++ - (total - 1) / 2) * w
+    scene.add(g)
+    models.push(m)
+  }
+const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 100)
+const dist = Math.max(4, total * w * 0.9)
+cam.position.set(+(q.get('cx') || dist * 0.35), +(q.get('cy') || 2.2), +(q.get('cz') || dist))
+cam.lookAt(0, 0.8, 0)
+const t0 = performance.now()
+renderer.setAnimationLoop(() => {
+  const t = (performance.now() - t0) / 1000
+  const freeze = q.get('t')
+  for (const m of models) pose(m, [[clip, freeze ? +freeze : t, 1]])
+  renderer.render(scene, cam)
+})
+</script>
+</body>
+</html>

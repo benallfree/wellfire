@@ -1,0 +1,271 @@
+=common
+@!hit .3
+root rx 0 -18 0
+root z 0 -.2 0
+@!death 1.2
+root rz 0 80 90 90
+root y 0 .2 -.1 -.2
+
+=warrior
+$ skin e8b088
+$ cloth 9b2f2f
+$ steel bcc6d0
+$ leather 5a3a22
+b hip root 0 .95 0
+b chest hip 0 .05 0
+b head chest 0 .6 0
+b cape chest 0 .55 -.16
+b arm* chest .3 .52 0
+b hand* arm* 0 -.55 .02 / -25 0 0
+b leg* hip .12 0 0
+b foot* leg* 0 -.5 0
+box chest cloth 0 .27 0 .46 .55 .28
+box chest leather 0 .03 0 .5 .1 .32
+box chest c9a64a 0 .03 .16 .1 .08 .02
+box hip cloth 0 -.08 0 .44 .22 .27
+ball head skin 0 .17 0 .17 .2 .17
+ball8 head steel 0 .25 0 .2 .15 .2
+cyl4 head steel 0 .42 0 0 .14 .06
+box head steel 0 .21 .17 .04 .16 .04
+ball* head 222 .065 .19 .14 .025 .03 .02
+box cape 2f4f8f 0 -.33 0 .42 .7 .03
+ball arm* steel 0 0 0 .14 .11 .14
+box arm* skin 0 -.2 0 .12 .3 .12
+box arm* leather 0 -.4 0 .14 .2 .14
+ball hand* skin 0 -.03 0 .07 .07 .07
+box leg* 3a3a4a 0 -.22 0 .16 .44 .17
+box foot* leather 0 -.04 .04 .16 .1 .26
+hold handL shield
+@idle 2.4
+chest rx 0 3
+head rx 2 -2
+arm* rz 4 6
+cape rx 5 8
+@walk .7
+leg^ rx 35 -35
+foot^ rx 0 -20
+arm^ rx -30 30
+armR rx -15 -15
+chest ry 4 -4
+hip y 0 .05 0 .05
+cape rx 20 30
+@!swing .45
+armR rx 0 -170 -40 0
+armR rz 0 -10 10 0
+chest ry 0 25 -30 0
+chest rx 0 -10 15 0
+@!chop .7
+armR rx 0 -190 -190 -10 0
+chest rx 0 -15 -15 25 0
+hip y 0 .1 .1 -.1 0
+@!jab .35
+armR rx 0 -60 -95 0
+chest ry 0 -25 10 0
+@!hit .3
+chest rx 0 -20 0
+head rx 0 -25 0
+@!death 1.4
+root rx 0 -30 -90 -90
+root y 0 .3 -.1 -.15
+arm* rz 0 40 80 80
+
+=shield
+cyl10 root 7a4a2a .06 0 .05 .26 .05 .26 / 0 0 90
+cyl10 root 8a8f99 .06 0 .05 .28 .03 .28 / 0 0 90
+ball6 root c9a64a .1 0 .05 .07 .07 .07
+
+=sword
+$ name Sword
+$ dmg 3
+$ reach 2.4
+$ push 6
+$ anim swing
+cyl root 5a3a22 0 0 0 .03 .22 .03 / 90 0 0
+box root c9a64a 0 0 .12 .26 .05 .05
+ext root dfe6ee 0 0 .14 .015 -.045 0 .045 0 .035 .85 0 .98 -.035 .85 / -90 0 0
+ball6 root c9a64a 0 0 -.13 .04 .04 .04
+
+=axe
+$ name Axe
+$ dmg 6
+$ reach 2.3
+$ push 12
+$ anim chop
+cyl root 6b4423 0 0 .25 .035 .75 .035 / 90 0 0
+ext root 9aa3ad 0 .02 .5 .03 -.04 0 .04 0 .17 .26 0 .22 -.17 .26 / 0 90 0
+ext root 9aa3ad 0 .02 .5 .03 -.03 0 .03 0 .02 -.12 -.02 -.12 / 0 90 0
+
+=torch
+$ name Torch
+$ dmg 1
+$ reach 2.1
+$ push 3
+$ anim jab
+$ burn 4
+b stick root 0 0 0 / -55 0 0
+cyl stick 6b4423 0 0 .15 .035 .55 .03 / 90 0 0
+cyl6 stick 444 0 0 .43 .07 .1 .05 / 90 0 0
+b flame stick 0 0 .5
+ball5 flame f60! 0 .02 .06 .09 .16 .09 / 35 0 0
+ball5 flame fd4! 0 .02 .05 .05 .1 .05 / 35 0 0
+@idle .3
+flame s 0 .25 -.1 .15
+flame rz 0 20 -10
+
+=club
+cyl root 6b4423 0 0 .2 .04 .5 .06 / 90 0 0
+ball5 root 7a5230 0 0 .45 .09 .09 .14
+
+=spear
+cyl root 6b4423 0 0 .3 .025 .9 .025 / 90 0 0
+cyl4 root 9aa3ad 0 0 .8 0 .2 .05 / 90 0 0
+
+=slime
+$ s .7~1.2
+$ c 5c5|4ad|d85|c5c|dd4|5cc
+S s
+b body root 0 0 0
+ball10 body c 0 .32 0 .42 .32 .42
+ball* body fff .13 .42 .3 .08 .1 .05
+ball* body 111 .13 .42 .34 .04 .05 .03
+?.5 cyl4 body c 0 .7 0 0 .18 .08
+?.3 ball6 body fff 0 .62 -.1 .1 .06 .1
+@idle 1
+body sy .05 -.05
+body s -.02 .02
+@walk .55
+body y 0 .35 0
+body sy -.2 .15 -.2
+@!attack .6
+body z 0 -.15 .7 0
+body sy 0 -.25 .25 0
+@!hit .3
+body sy 0 -.3 0
+body z 0 -.2 0
+@!death .7
+body sy 0 -.92 -.95
+body s 0 .4 .5
+
+=goblin
+$ s .55~.8
+$ k 6a4|7a5|596|8a4|9a5
+$ h .9~1.3
+$ cl 754|564|645|456
+S s
+b hip root 0 .8 0
+b chest hip 0 .05 0
+b head chest 0 .55 .02
+b arm* chest .28 .45 0
+b hand* arm* 0 -.5 .02
+b leg* hip .12 0 0
+box chest cl 0 .25 0 .4 .5 .3
+box hip 4a3a2a 0 -.08 0 .42 .2 .3
+ball7 head k 0 .2 0 .25*h .22*h .22*h
+cyl4 head k 0 .14 .22*h 0 .18 .05 / 90 0 0
+cyl4* head k .24*h .25 0 0 .3 .07 / 0 0 -70
+ball* head ff4 .09 .25 .17*h .04 .05 .03
+ball* head 111 .09 .25 .19*h .02 .03 .02
+?.4 cyl5 head 5a3a22 0 .42 0 .14 .16 .2
+box arm* k 0 -.22 0 .1 .44 .1
+ball hand* k 0 -.02 0 .07 .07 .07
+box leg* k 0 -.3 0 .12 .6 .12
+box leg* 4a3a2a 0 -.58 .05 .14 .08 .22
+hold handR club|spear|club
+@idle 1.6
+chest rx 8 12
+head ry -10 10
+@walk .45
+leg^ rx 40 -40
+arm^ rx -35 35
+hip y 0 .07 0 .07
+chest rz 5 -5
+@!attack .6
+armR rx 0 -150 -20 0
+chest rx 0 -15 20 0
+
+=spider
+$ s .45~.75
+$ c 333|543|425|354|444
+S s
+b body root 0 .38 0
+ball body c 0 .05 -.3 .32 .26 .38
+ball body c 0 0 .15 .18 .15 .2
+?.6 ball6 body e83|c22|eee 0 .26 -.34 .12 .05 .16
+ball* body d22 .06 .06 .32 .04 .04 .04
+ball* body d22 .12 .03 .3 .025 .025 .025
+* 4 i
+b leg{i}* body .12 0 {.2-i*.12} / 0 {-55+i*35} 0
+* 4 i
+box leg{i}* c .2 .12 0 .44 .05 .05 / 0 0 30
+* 4 i
+box leg{i}* c .55 -.12 0 .05 .5 .05 / 0 0 25
+@idle 1.2
+body y 0 .02
+@walk .35
+leg0^ ry 25 -25
+leg1^ ry -25 25
+leg2^ ry 25 -25
+leg3^ ry -25 25
+leg0^ rz 15 0
+leg1^ rz 0 15
+leg2^ rz 15 0
+leg3^ rz 0 15
+@!attack .5
+body rx 0 -25 15 0
+body z 0 -.1 .5 0
+leg0* rz 0 30 -10 0
+@!death .9
+body y 0 .1 -.2 -.3
+* 4 i
+leg{i}* rz 0 40 60 60
+
+=bat
+$ s .6~.9
+$ c 433|324|222|523|335
+S s
+b body root 0 1.5 0
+ball7 body c 0 0 0 .2 .2 .22
+cyl4* body c .1 .22 0 0 .16 .06 / 0 0 -15
+ball* body f44 .07 .05 .17 .035 .035 .03
+cyl4* body fff .04 -.08 .18 0 .06 .02 / 180 0 0
+b wing* body .15 .05 0
+ext wing* c 0 0 0 .02 0 -.1 .55 -.05 .5 .1 .3 .05 .2 .15 0 .1 / 90 0 0
+@idle .3
+wing* rz 40 -35
+body y .05 -.05
+@walk .25
+wing* rz 45 -40
+body y .08 -.08
+@!attack .5
+body z 0 -.3 .9 0
+body y 0 .2 -.6 0
+wing* rz 0 60 -60 0
+
+=pine
+$ h .8~1.5
+$ g 2f6b3a|3a7a40|2a5e38|3f6e2f
+cyl5 root 6b4a2a 0 .4 0 .12 .8 .16
+cyl7 root g 0 {.9+.6*h} 0 0 1.4*h .9
+cyl7 root g 0 {1.5+.9*h} 0 0 1.1*h .65
+cyl7 root g 0 {2+1.1*h} 0 0 .8*h .4
+
+=oak
+$ h .8~1.3
+$ g 4a8a3a|5a9a3a|6a8a30|3d7a3a
+cyl5 root 6b4a2a 0 .7*h 0 .14 1.4*h .2
+ball5 root g 0 1.8*h 0 1 .8 1
+ball5 root g .5 1.5*h .3 .7 .6 .7
+ball5 root g -.4 1.6*h -.3 .7 .6 .7
+
+=rock
+$ a .5~1.2
+$ b .3~.8
+$ g 8a8a8a|7a7570|9a948a
+ball5 root g 0 .1 0 a b a*.8 / 0 {a*90} 0
+?.5 ball4 root g .4*a .05 .3 .4 .3 .35
+
+=bush
+$ g 3a7a30|4a8a3a|2f6b3a
+ball5 root g 0 .25 0 .5 .4 .5
+?.5 ball4 root g .3 .2 .2 .35 .3 .35
+?.6 ball4 root e44|ee4|eef .2 .55 .2 .06 .06 .06
