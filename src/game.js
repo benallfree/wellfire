@@ -194,7 +194,7 @@ class Actor {
 const $ = (id) => document.getElementById(id)
 function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = `${item ? item.name : ''} · ${player.kills} kills`
+  $('info').textContent = player.hp > 0 ? `${item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
 
 // ---------- player ----------
@@ -218,11 +218,14 @@ equip(0)
 // ---------- monsters ----------
 const foes = []
 let seedNext = 100
+// More monsters roam at night: 12 by day, up to 22 in the dark.
+const crowd = () => 12 + Math.round((1 - day) * 10)
 function spawn(f) {
   const kind = FOES[(R() * FOES.length) | 0]
   if (f) {
     scene.remove(f.g)
     foes.splice(foes.indexOf(f), 1)
+    if (foes.length >= crowd()) return
   }
   const e = new Actor(kind, seedNext++)
   let x, z
@@ -242,7 +245,7 @@ function spawn(f) {
   e.cool = 1
   foes.push(e)
 }
-for (let i = 0; i < 16; i++) spawn()
+for (let i = 0; i < 14; i++) spawn()
 
 // ---------- particles: little cubes for hits ----------
 const bits = []
@@ -404,6 +407,7 @@ function frame() {
   }
 
   // monsters: wander, chase, attack, die, respawn
+  if (foes.length < crowd() && R() < dt) spawn()
   for (const e of [...foes]) {
     if (e.hp <= 0) {
       e.dead += dt
