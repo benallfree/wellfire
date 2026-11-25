@@ -77,21 +77,52 @@ const wet = (x, z) => noise(x * 0.004, z * 0.004, SEED + 1)
 const rough = (x, z) => noise(x * 0.003, z * 0.003, SEED + 2)
 const REGIONS = ['meadow', 'forest', 'rocky hills', 'lakes']
 const region = (x, z) => (wet(x, z) > 0.66 ? 3 : rough(x, z) > 0.58 ? 2 : wet(x, z) > 0.47 ? 1 : 0)
-function height(x, z) {
-  let h = 0
-  for (let o = 0, f = 0.015, a = 6; o < 4; o++, f *= 2.1, a *= 0.45) h += (noise(x * f, z * f, SEED + 10 + o) - 0.5) * a
-  const r = rough(x, z)
-  return flatten(x, z, h * (0.6 + r * 1.2) + 2 + Math.max(0, r - 0.5) * 30 - Math.max(0, wet(x, z) - 0.63) * 60)
+const smooth = (a, b, v) => ((v = Math.min(1, Math.max(0, (v - a) / (b - a)))), v * v * (3 - 2 * v))
+// fBm: `o` octaves of noise, each twice as fine, half as strong and turned (hides the grid), scaled to about 0..1
+const fbm = (x, z, s, o = 4) => {
+  let t = 0
+  let a = 0.5
+  for (let i = 0; i < o; i++, [x, z] = [x * 1.6 - z * 1.2, x * 1.2 + z * 1.6], a /= 2) t += noise(x, z, s + i) * a // x2, turned 37deg
+  return t / (1 - 2 * a)
 }
-// Ground colour at a point, shared by the terrain mesh and the minimap.
-function ground(c, x, z, h = height(x, z)) {
+// Base terrain, before villages or roads level anything (they layer on top in height()). Layers, all from SEED:
+// a domain warp so nothing lines up with the noise grid; rolling fBm hills, gentle in meadows and bigger in forests;
+// ridged mountain ranges where `rough` is high; lake basins where `wet` is high; and rare winding river valleys.
+function terrain(x, z) {
+  const u = x + (noise(x * 0.01, z * 0.01, SEED + 20) - 0.5) * 70
+  const v = z + (noise(x * 0.01, z * 0.01, SEED + 21) - 0.5) * 70
+  const r = rough(x, z)
+  const w = wet(x, z)
+  const near = smooth(150, 70, Math.hypot(x, z)) // the start: no lakes, rivers or mountains, so spawn is dry and gentle
+  const hi = smooth(0.5, 0.75, r) * (1 - near) // 0 lowland, 1 highland
+  let h = 2 + (fbm(u * 0.012, v * 0.012, SEED + 10) - 0.5) * (7 + smooth(0.35, 0.6, w) * 7 + hi * 8)
+  for (let o = 0, p = u * 0.007, q = v * 0.007, a = 22; o < 3; o++, [p, q] = [p * 1.7 - q * 1.1, p * 1.1 + q * 1.7], a *= 0.4) {
+    const n = 1 - Math.abs(noise(p, q, SEED + 30 + o) * 2 - 1) // ridged: sharp crests where noise crosses 0.5
+    h += hi * n * n * a
+  }
+  h -= smooth(0.6, 0.7, w) * 9 * (1 - near) // lake basins
+  const m = noise(x * 0.004, z * 0.004, SEED + 22) * 150 // rivers get their own, wider warp so they meander
+  const river = Math.max(hi, near, smooth(0.01, 0.07, Math.abs(noise((u + m) * 0.0025, (v - m) * 0.0025, SEED + 40) - 0.5)))
+  return WATER - 1.5 + (h - WATER + 1.5) * river
+}
+function height(x, z) {
+  return flatten(x, z, terrain(x, z))
+}
+// height difference across 2 units in x and in z: the slope (and, for the minimap, which way the ground faces)
+const slope = (x, z) => [height(x + 1, z) - height(x - 1, z), height(x, z + 1) - height(x, z - 1)]
+// Ground colour at a point, shared by the terrain mesh and the minimap: sand by water, then grass, dirt on slopes,
+// rock on steep or high ground, snow on peaks. Noise wobbles each boundary so none is a straight contour line.
+const mix = new THREE.Color()
+function ground(c, x, z, h = height(x, z), [gx, gz] = slope(x, z)) {
   const n = noise(x * 0.3, z * 0.3, SEED + 3) * 0.08
-  const r = region(x, z)
-  if (h < WATER + 0.4) c.set('#d8c890')
-  else if (h > 5 + (r == 2 ? -2 : 2)) c.setRGB(0.48 + n, 0.47 + n, 0.42 + n)
-  else if (r == 1) c.setRGB(0.22 + n, 0.45 + n, 0.18)
-  else c.setRGB(0.32 + n, 0.57 + n, 0.23)
-  return c
+  const s = Math.hypot(gx, gz) / 2 + n // rise per unit
+  if (h < WATER + 0.4 + n * 4) return c.set('#d8c890')
+  c.setRGB(0.32 + n, 0.57 + n, 0.23) // meadow grass, shading into dark forest grass and dry highland grass
+  c.lerp(mix.setRGB(0.22 + n, 0.45 + n, 0.18), smooth(0.43, 0.5, wet(x, z)))
+  c.lerp(mix.setRGB(0.42 + n, 0.52 + n, 0.25), smooth(0.5, 0.6, rough(x, z)))
+  c.lerp(mix.setRGB(0.42 + n, 0.32 + n, 0.21), smooth(0.4, 0.7, s)) // dirt
+  c.lerp(mix.setRGB(0.27 + n, 0.26 + n, 0.25 + n), Math.max(smooth(0.65, 0.9, s), smooth(18, 23, h + n * 40))) // rock
+  return c.lerp(mix.setRGB(0.8, 0.83, 0.88), smooth(29, 31, h + n * 50) * (1 - smooth(0.9, 1.3, s))) // snow
 }
 
 // ---------- villages: pick a dry, gentle site near the start and level the ground there ----------
@@ -201,7 +232,7 @@ function grow(cx, cz) {
     if (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3)) continue
     let k = 0
     for (let sum = 0, f = FLORA[region(x, z)]; k < 4 && pick >= (sum += f[k]); k++);
-    if (k > 3) continue
+    if (k > 3 || (h > 17 && k != 2)) continue // above the tree line only boulders
     o.position.set(x, h - 0.1, z)
     o.rotation.y = turn
     o.scale.setScalar(s)
@@ -346,9 +377,12 @@ function paint(t, i, j) {
       const x = i * CELL + a + 1
       const z = j * CELL + b + 1
       const h = height(x, z)
-      ground(tc, x, z, h)
-      if (region(x, z) == 1) tc.multiplyScalar(0.65) // forest reads darker on the map
-      t.ctx.fillStyle = h < WATER ? (h < WATER - 2 ? '#2a5c94' : '#3a7ab8') : '#' + tc.getHexString()
+      const g = slope(x, z)
+      // relief: ground colour (rock and snow already mark the heights), a little brighter higher up, and hillshade
+      // lit from the north-west; water darkens with depth
+      if (h < WATER) tc.setRGB(0.23, 0.48, 0.72).multiplyScalar(1 - Math.min(0.45, (WATER - h) * 0.05))
+      else ground(tc, x, z, h, g).multiplyScalar(Math.min(1.35, Math.max(0.5, 0.9 + h * 0.005 + (g[0] + g[1]) * 0.4)) * (region(x, z) == 1 ? 0.75 : 1)) // forest: darker
+      t.ctx.fillStyle = '#' + tc.getHexString(THREE.LinearSRGBColorSpace) // no sRGB lift: keeps the map's contrast
       t.ctx.fillRect((x - 1 - t.cx * CH) / UPP, (z - 1 - t.cz * CH) / UPP, 1, 1)
     }
 }
@@ -1398,6 +1432,6 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, height, region, grow, drop } } // for play-testing from the console
+window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, terrain, height, region, grow, drop } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.coins = coins

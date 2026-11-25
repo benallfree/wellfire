@@ -389,9 +389,8 @@ every visit and every page load, and nothing generated needs storing. It's one s
   `sin()` hash loses precision far out). `noise()` is smooth value noise on it.
 - **Regions.** Two slow fields, `wet` and `rough` (a feature every few hundred units), pick the region: **meadow**,
   **forest**, **rocky hills** or **lakes** (`region(x, z)`, each about a quarter of the world). `height()` is four
-  octaves of detail scaled by `rough`, lifted into hills where it's rough and sunk into lakes where it's wet; about a
-  quarter of the world is water. `ground()` colours a point (sand, meadow grass, darker forest grass, rock) and is
-  shared by the terrain and the minimap.
+  layered base terrain built on the same two fields (see [Terrain](#terrain)); about a quarter of the world is water.
+  `ground()` colours a point by height and slope and is shared by the terrain and the minimap.
 - **Chunks.** The world is cut into 40×40-unit chunks. Each frame `stream()` drops chunks more than 4 away from the
   player, builds at most two missing chunks within 3 (nearest first), and refills the scenery instances. A chunk is a
   terrain mesh (26×26 vertices, coloured per vertex) plus an instance list and colliders. Neighbouring chunks
@@ -552,6 +551,64 @@ lists the live coins.
 
 Cost: about 4.2 KB raw (game code +3.2 KB, models +0.8 KB of pretty JSON, HTML/CSS +0.3 KB). Not measured with
 surprisal; at ~90% that's roughly 0.4 KB shipped.
+
+## Terrain
+
+![A mountain range: grass, then dirt on the slopes, rock, and snow on the crests](docs/terrain-range.jpg)
+
+The old height was four octaves of small noise: 98.5% of land had a slope under 0.3, and the highest point anywhere
+was 22 units, so the world read as flat. Height is now `height(x, z) = flatten(x, z, terrain(x, z))`: `terrain()` is a
+self-contained base terrain, and anything that levels ground (the village today, roads later) layers on top in
+`height()`. Still a pure function of `SEED` and coordinates, all cheap value-noise math. The layers in `terrain()`:
+
+- **Domain warp.** The sample point is pushed up to 35 units by two slow noise fields, and each fBm/ridge octave is
+  turned 37° from the last, so hills and ridges don't line up with the noise grid.
+- **Rolling hills.** Four-octave fBm with an amplitude that follows the regions: gentle in meadows (about ±3.5),
+  bigger in forests (±7), bigger still in the highlands.
+- **Mountain ranges.** Where `rough` is high (the rocky hills region), a highland mask fades in three octaves of
+  ridged noise (`1 - |2n - 1|`, squared): sharp crests up to about 40 units, with valleys between them.
+- **Lake basins.** Where `wet` is high (the lakes region) the ground sinks up to 9 units below the hills.
+- **Rivers.** Where a very slow, separately warped noise field crosses 0.5, a narrow band is carved below the water
+  line, so rivers wind for kilometres through lowlands (never across mountains) and join lakes.
+- **The start.** Within about 150 units of the origin, lakes, rivers and mountains fade out, so the spawn spiral always
+  finds dry, gentle ground (the start lands on a 0.08 slope, and the village ring is levelled flat at y = 3.6).
+
+![Six km around the start, rendered offline from the same functions, with hillshade](docs/terrain-overview.jpg)
+
+Measured over 6×6 km (every 8 units): land with a slope under 0.3 went from 98.5% to 77%, 0.3–1 is 23%, 1–1.5 is
+0.4% and nothing is steeper, so cliffs are rare and nothing needs blocking. Heights run from −10 (lake beds) to 40
+(peaks); water is 30% of the area (was 28%). Regions are unchanged, so flora and monsters still match the ground.
+
+**Ground colour** (`ground()`, per vertex, also used by the minimap) follows height and slope: sand by the water;
+grass that blends smoothly from meadow green to dark forest green to dry highland olive (so region borders no longer
+show as hard circles); dirt on slopes over about 0.4; rock on slopes over 0.65 or above about 20 units; snow above
+about 30 units, unless the slope is steep. `slope()` takes the height difference across 2 units in x and z, the same
+everywhere, so colours match across chunk seams. Each boundary wobbles with noise so none is a straight contour line.
+Trees and bushes don't grow above 17 units (only boulders).
+
+**Minimap relief.** Each revealed map pixel is now the ground colour, a little brighter with height, times a hillshade
+lit from the north-west, and water darkens with depth. The colours are written without three's sRGB lift
+(`getHexString(LinearSRGBColorSpace)`), which keeps the map's contrast. It is still painted per chunk into the
+same 150-tile LRU cache as cells are revealed, behind the same fog of war, so memory stays bounded.
+
+![The minimap over rocky hills: hillshade, rock, snow on the peaks, grass valleys](docs/terrain-minimap.jpg)
+
+**Checked in the browser** (via `window.game`, which now also exposes `world.terrain`):
+
+- Teleports to a summit, a mountain range, rolling forest hills, a river, a lake shore and open meadow:
+  [mountain](docs/terrain-mountain.jpg), [range](docs/terrain-range.jpg), [hills](docs/terrain-hills.jpg),
+  [river](docs/terrain-river.jpg), [lake](docs/terrain-lake.jpg), [plains](docs/terrain-plains.jpg), and
+  [night on a snowfield by torchlight](docs/terrain-night.jpg). Overview shots use a raised camera; the game camera
+  is unchanged.
+- Seams: 0 height difference along 52 shared chunk edges. All 1,553 live scenery instances and every actor sit exactly
+  on `height()` (or on the water floor).
+- Chunk build: 1.3 ms, up from 0.29 ms (ground colour samples the slope, four extra heights per vertex); at most two
+  chunks build per frame. `height()` costs about 0.29 µs, up from 0.16 µs. Frame rate couldn't be measured, because
+  the browser pane was hidden and paused rendering; the checks ran in an iframe with a timer standing in for
+  `requestAnimationFrame`.
+
+Cost: about 2.9 KB raw in `src/game.js` (39,932 → 42,878 bytes). Not measured with surprisal; at ~90% that's roughly
+0.3 KB shipped.
 
 ## Size
 
