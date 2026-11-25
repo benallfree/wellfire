@@ -2288,7 +2288,8 @@
       "dmg": 6,
       "reach": 2.3,
       "push": 12,
-      "anim": "chop"
+      "anim": "chop",
+      "chop": 1
     },
     "bones": [
       {
@@ -7115,5 +7116,211 @@
         "segments": 10
       }
     ]
+  },
+  "boat": {
+    "vars": {
+      "name": "Boat"
+    },
+    "bones": [
+      {
+        "name": "oar*",
+        "parent": "root",
+        "position": [
+          0.58,
+          0.42,
+          0.1
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "7a5230",
+        "position": [
+          0,
+          0.02,
+          -0.05
+        ],
+        "size": [
+          0.95,
+          0.1,
+          2.3
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "7a5230",
+        "position": [
+          0,
+          0.02,
+          1.25
+        ],
+        "size": [
+          0.5,
+          0.1,
+          0.5
+        ],
+        "rotation": [
+          0,
+          45,
+          0
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "a87a4a",
+        "position": [
+          0.53,
+          0.22,
+          -0.05
+        ],
+        "size": [
+          0.09,
+          0.42,
+          2.3
+        ],
+        "rotation": [
+          0,
+          0,
+          -8
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "a87a4a",
+        "position": [
+          0.27,
+          0.22,
+          1.45
+        ],
+        "size": [
+          0.09,
+          0.42,
+          0.74
+        ],
+        "rotation": [
+          0,
+          -48,
+          0
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "a87a4a",
+        "position": [
+          0,
+          0.22,
+          -1.2
+        ],
+        "size": [
+          1.15,
+          0.42,
+          0.09
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "c89a60",
+        "position": [
+          0,
+          0.3,
+          0.1
+        ],
+        "size": [
+          1.0,
+          0.06,
+          0.32
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "c89a60",
+        "position": [
+          0,
+          0.3,
+          -0.9
+        ],
+        "size": [
+          1.0,
+          0.06,
+          0.3
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "oar*",
+        "color": "8a6a40",
+        "position": [
+          0.36,
+          -0.17,
+          0
+        ],
+        "size": [
+          0.03,
+          1.6,
+          0.03
+        ],
+        "rotation": [
+          0,
+          0,
+          65
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "oar*",
+        "color": "8a6a40",
+        "position": [
+          0.75,
+          -0.37,
+          0
+        ],
+        "size": [
+          0.32,
+          0.03,
+          0.16
+        ],
+        "rotation": [
+          0,
+          0,
+          -25
+        ]
+      }
+    ],
+    "clips": {
+      "row": {
+        "duration": 1.6,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "oar*",
+            "channel": "ry",
+            "keys": [
+              35,
+              -35
+            ]
+          },
+          {
+            "bone": "oar*",
+            "channel": "rz",
+            "keys": [
+              -12,
+              0,
+              12,
+              0
+            ]
+          }
+        ]
+      }
+    }
   }
 }

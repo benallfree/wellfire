@@ -14,9 +14,10 @@ Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serve
 need a network connection.)
 
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
-Space or J attack · F, Tab or 1-3 swap the item in hand · R ride · C switches to the old free camera (WASD moves
+Space or J attack (the axe also chops trees) · F or Tab swap the item in hand · 1-4 pick a tray slot · B build a
+boat at the water · R ride, or board and leave the boat · C switches to the old free camera (WASD moves
 relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
-On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons. See
+On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
 [Chase camera](#chase-camera).
 
 | | |
@@ -790,6 +791,42 @@ with swimming's own 0.55 speed factor.
 
 Cost: about 1.2 KB raw in `src/game.js` (71,581 → 72,770 bytes on top of swimming, villages and the chase camera), roughly 0.1 KB shipped at ~90%. Not measured with
 surprisal.
+
+## Tray, wood and the boat
+
+A tray along the bottom holds the three weapons, then goods with counts (wood for now). Keys 1-4 or a tap pick a
+slot: a weapon is equipped, goods are used (wood builds the boat). The bag is kept in `localStorage.warriorBag`, next
+to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the tray lists it from then on.
+
+| | |
+|---|---|
+| ![Three chops and a tree tips away from you, paying 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
+| ![B at the water: 10 wood launches a rowboat](docs/boat-launch.jpg) | ![Rowing: oars pull, the hull bobs and rolls](docs/boat-rowing.jpg) |
+| ![A slime on the bank can't reach the boat](docs/boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](docs/boat-ashore.jpg) |
+
+- **Chopping.** The axe has `"chop": 1` in `models.json`; other weapons have no `chop` and pass through trees. A swing
+  near a pine or oak (within reach, about 66° of your facing) hits it: wood chips, a thunk, and the tree shakes.
+  The first hit moves that tree out of its InstancedMesh into a mesh of its own (same geometry and material), so only
+  it moves. Three hits and it tips over away from you, crashes, adds 3 wood straight to the tray and sinks.
+- **Felled stays felled.** Each tree is the n-th candidate spot of its chunk's seeded loop, so a felled tree is stored
+  as `{ "cx,cz": { n: time } }` in `localStorage.warriorFelled`, and `grow()` skips it. Trees regrow after 30 minutes
+  (real time): expired entries are pruned on load, so the record stays small however far you roam.
+- **The boat.** B (or tapping the wood slot) with 10 wood, standing by water at least 0.3 deep, launches a rowboat
+  (the `boat` model, with a `row` clip for the oars) 2-4 units away, searching out from straight ahead. R boards it
+  within 4.5 units, on foot or swimming; a rider gets off the mount first, so mounts never board. In the boat you sit
+  (the `ride` pose), A/D turn, W rows at 3 u/s (half walking speed) with glide, S backs slowly, and it runs aground
+  rather than leave the water. R at a shore steps you out onto land; with no land within 4 units it says so.
+- **What I chose.** No attacking from the boat: your hands are on the oars and the weapon is stowed. Land monsters
+  stop at the shore as before, and their blows don't reach a boater even from the bank. Eels still circle the boat
+  but can't bite through the hull. Bats can still swoop at you, but they tire over water as before. You never swim
+  while in the boat, and breath refills.
+- **Persistence.** There is one boat: building another moves it. Its place and heading go in
+  `localStorage.warriorBoat` when you launch, when you get out, and on `pagehide`, so you find it where you left it.
+  The chase camera needs nothing new, since the boat drives the hero's facing.
+
+Cost: about +8.8 KB raw in `src/game.js` (81,542 vs 72,770 bytes, a good share of it comments), +1.3 KB in
+`models.json` once minified (the boat is 1.2 KB of that), and +0.74 KB in the page shell for the tray CSS. At the
+usual ~90% compression that is roughly +1 KB in the shipped build. That's an estimate: surprisal wasn't run here.
 
 ## Size
 

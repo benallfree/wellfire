@@ -316,8 +316,30 @@ scene.add(water)
 
 const chunks = new Map() // live chunks only, "cx,cz" -> { mesh, inst, trees }
 let dirty = false
+// localStorage, wrapped: private windows and blocked storage just start fresh
+const kept = (k, d) => {
+  try {
+    return JSON.parse(localStorage[k]) || d
+  } catch {
+    return d
+  }
+}
+const keep = (k, v) => {
+  try {
+    localStorage[k] = JSON.stringify(v)
+  } catch {}
+}
+// felled trees: chunk key -> { candidate index: when it fell }. A tree regrows after REGROW; old entries are pruned
+// on load, so the record stays small however far you roam.
+const REGROW = 30 * 60e3
+const felled = kept('warriorFelled', {})
+for (const k in felled) {
+  for (const i in felled[k]) if (Date.now() - felled[k][i] > REGROW) delete felled[k][i]
+  if (!Object.keys(felled[k]).length) delete felled[k]
+}
 function grow(cx, cz) {
   const R = rng((hash(cx, cz, SEED + 4) * 4294967296) | 0)
+  const key = cx + ',' + cz
   const x0 = cx * CH
   const z0 = cz * CH
   const seg = 25
@@ -347,7 +369,7 @@ function grow(cx, cz) {
     const s = 0.8 + R() * 0.5
     const turn = R() * 7
     const h = height(x, z)
-    if (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3) || road(x, z)[0] < RW + 1.5) continue
+    if (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3) || road(x, z)[0] < RW + 1.5 || Date.now() - (felled[key]?.[i] || 0) < REGROW) continue
     let k = 0
     for (let sum = 0, f = FLORA[region(x, z)]; k < 4 && pick >= (sum += f[k]); k++);
     if (k > 3 || (h > 17 && k != 2)) continue // above the tree line only boulders
@@ -355,10 +377,11 @@ function grow(cx, cz) {
     o.rotation.y = turn
     o.scale.setScalar(s)
     o.updateMatrix()
-    inst[k * 4 + v].push(o.matrix.clone())
-    if (KINDS[k][1]) trees.push([x, z, KINDS[k][1] * s])
+    const m = o.matrix.clone()
+    inst[k * 4 + v].push(m)
+    if (KINDS[k][1]) trees.push(k < 2 ? [x, z, KINDS[k][1] * s, i, k * 4 + v, m, key] : [x, z, KINDS[k][1] * s]) // pines and oaks can be felled (see wood)
   }
-  chunks.set(cx + ',' + cz, { cx, cz, mesh, inst, trees })
+  chunks.set(key, { cx, cz, mesh, inst, trees })
   dirty = true
 }
 function drop(key) {
@@ -458,14 +481,14 @@ class Actor {
   update(dt, run) {
     this.time += dt
     if (this.once) this.once[1] += dt
-    const k = this.seat ? 0 : Math.min(1, this.speed / run)
+    const k = this.seat || this.boat ? 0 : Math.min(1, this.speed / run)
     const layers = this.swim && this.m.clips.swim
       ? [['swim', this.time * (0.6 + k * 0.6), 1]]
       : [
           ['idle', this.time, 1 - k],
           ['walk', this.time * Math.max(0.6, k), k],
         ]
-    if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
+    if (this.seat || this.boat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts) or in the boat
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
     // a swimmer floats at the surface, sunk by `swim`; everyone else stands on the ground, wading in up to the waist
@@ -485,7 +508,32 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
+}
+// the tray: the weapons, then every kind of goods (wood now; potions or loot later add a GOODS entry and a use).
+// Number keys or a tap pick a slot: a weapon is equipped, goods are used. The bag is kept in localStorage.
+const ICON = { sword: '🗡️', axe: '🪓', torch: '🔥', wood: '🪵' }
+const GOODS = { wood: () => launch() }
+const bag = kept('warriorBag', { wood: 0 })
+function tray() {
+  $('tray').innerHTML = [...ITEMS, ...Object.keys(GOODS)]
+    .map((k, i) => `<b data-s=${i} class=${i == player.item ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k]}<i>${i + 1}</i>${k in GOODS ? `<u>${bag[k] || 0}</u>` : ''}</b>`)
+    .join('')
+}
+function slot(i) {
+  if (i < ITEMS.length) equip(i)
+  else GOODS[Object.keys(GOODS)[i - ITEMS.length]]?.()
+}
+function gain(k, n) {
+  bag[k] = (bag[k] || 0) + n
+  keep('warriorBag', bag)
+  tray()
+  $('tray').children[ITEMS.length + Object.keys(GOODS).indexOf(k)].animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
+}
+const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
+$('tray').onpointerdown = (e) => {
+  const b = e.target.closest('b')
+  if (b) slot(+b.dataset.s)
 }
 
 // ---------- minimap: turns with the camera, fog of war over ground you haven't been near ----------
@@ -627,8 +675,9 @@ function equip(i) {
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   torchLight.intensity = item.burn ? 30 : 0
-  if (village?.in || player.seat || player.swim) village.stow(1)
+  if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
   hud()
+  tray()
 }
 const torchLight = new THREE.PointLight('#ff9a40', 0, 12, 1.5)
 scene.add(torchLight)
@@ -700,7 +749,9 @@ function unseat(r, from) {
 }
 const nearMount = () => mounts.find((m) => !m.rider && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
 function mountUp() {
+  if (player.boat) return ashore()
   if (player.seat) return unseat(player)
+  if (nearBoat()) return board()
   const m = player.hp > 0 && !village.in && nearMount()
   if (m) seat(player, m)
   hud()
@@ -1343,6 +1394,167 @@ function pickups(dt) {
   }
 }
 
+// ---------- wood: the axe (its "chop" var) fells pines and oaks for the tray ----------
+// A struck tree leaves its InstancedMesh for a mesh of its own that shakes; three chops and it falls away from you,
+// pays 3 wood and sinks. Its chunk key and candidate index go in `felled`, so grow() skips it until it regrows.
+const falling = []
+function chop() {
+  const p = player.pos
+  let t, list
+  let best = item.reach + 0.4
+  for (const trees of around(p.x, p.z))
+    for (const e of trees) {
+      const dx = e[0] - p.x
+      const dz = e[1] - p.z
+      const d = Math.hypot(dx, dz) - e[2]
+      if (e[4] != null && d < best && Math.cos(Math.atan2(dx, dz) - player.dir) > 0.4) (best = d), (t = e), (list = trees)
+    }
+  if (!t) return
+  const [x, z, , i, v, m, key] = t
+  let f = t.f
+  if (!f) {
+    const ch = chunks.get(key)
+    ch.inst[v].splice(ch.inst[v].indexOf(m), 1)
+    dirty = true
+    const mesh = new THREE.Mesh(kit[v].geometry, kit[v].material)
+    mesh.castShadow = true
+    mesh.matrixAutoUpdate = false
+    mesh.matrix.copy(m).setPosition(0, 0, 0)
+    f = t.f = new THREE.Group()
+    f.position.setFromMatrixPosition(m)
+    f.add(mesh)
+    scene.add(f)
+    Object.assign(f, { hits: 0, t: -1, ch, key })
+    falling.push(f)
+  }
+  f.hits += item.chop
+  f.shake = 1
+  burst({ x: x + (p.x - x) * 0.3, y: f.position.y, z: z + (p.z - z) * 0.3 }, '#d8b070', 5) // chips
+  beep(110, 0.08, 'square', 0.09, 0.5) // thunk
+  beep(70, 0.15, 'triangle', 0.12, 0.7)
+  if (f.hits >= 3 && f.t < 0) {
+    f.t = 0
+    const a = Math.atan2(x - p.x, z - p.z)
+    f.ax = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)) // tips away from you
+    list.splice(list.indexOf(t), 1)
+    ;(felled[key] ||= {})[i] = Date.now()
+    keep('warriorFelled', felled)
+  }
+}
+function fells(dt) {
+  for (const f of [...falling]) {
+    f.shake = Math.max(0, f.shake - dt * 3)
+    if (f.t < 0) f.rotation.set(Math.sin(clock.elapsedTime * 50) * 0.05 * f.shake, 0, Math.sin(clock.elapsedTime * 43) * 0.04 * f.shake)
+    else {
+      f.t += dt
+      f.quaternion.setFromAxisAngle(f.ax, Math.min(1.5, f.t * f.t * 2.5))
+      if (f.t > 0.8 && !f.paid) {
+        f.paid = 1
+        gain('wood', 3)
+        splash(0.25) // crash
+        beep(55, 0.4, 'sawtooth', 0.06, 0.5)
+        burst(f.position, '#7a5230', 10)
+      }
+      if (f.t > 1.8) f.position.y -= dt * 2
+    }
+    if (f.t > 2.8 || chunks.get(f.key) != f.ch) {
+      scene.remove(f)
+      falling.splice(falling.indexOf(f), 1)
+    }
+  }
+}
+
+// ---------- boat: built from BOAT wood at a shore, rowed across water, left where you get out ----------
+// In the boat you sit and row (tank steering, about half walking speed, with glide) and cannot attack. Land
+// monsters can't reach you and eels can't bite through the hull; bats still can. There is one boat: building
+// another moves it. Its place is kept in localStorage.
+const BOAT = 10
+let boat
+const afloat = (h) => h < WATER - 0.3
+// the nearest point 1.8-4.2 units from (x, z) whose ground passes `ok`, searching out from straight ahead
+function spot(x, z, dir, ok) {
+  for (let i = 0; i < 36; i++) {
+    const j = i % 9
+    const a = dir + ((j + 1) >> 1) * (j & 1 ? 0.45 : -0.45)
+    const d = 1.8 + ((i / 9) | 0) * 0.8
+    const sx = x + Math.sin(a) * d
+    const sz = z + Math.cos(a) * d
+    if (ok(height(sx, sz))) return [sx, sz, a]
+  }
+}
+function dock(x, z, dir) {
+  if (!boat) {
+    boat = make(lib, 'boat', 1)
+    scene.add((boat.g = new THREE.Group()).add(boat.root)) // pose() resets the model's root, so it rides in a group
+    boat.v = boat.time = 0
+  }
+  boat.g.position.set(x, WATER, z)
+  boat.g.rotation.y = dir
+  keep('warriorBoat', [x, z, dir])
+}
+const docked = kept('warriorBoat')
+if (docked) dock(...docked)
+addEventListener('pagehide', () => boat && keep('warriorBoat', [boat.g.position.x, boat.g.position.z, boat.g.rotation.y]))
+function launch() {
+  if (player.boat || player.seat || village.in || player.hp <= 0) return
+  if (bag.wood < BOAT) return say(`A boat takes ${BOAT} wood`)
+  const s = spot(player.pos.x, player.pos.z, player.dir, afloat)
+  if (!s) return say('Stand at the water to launch a boat')
+  gain('wood', -BOAT)
+  dock(...s)
+  splash(0.3)
+  ripple(boat.g.position, 2)
+  beep(392, 0.12, 'triangle', 0.06, 1)
+  setTimeout(() => beep(523, 0.25, 'triangle', 0.06, 1), 120)
+}
+const nearBoat = () => boat && !player.boat && player.hp > 0 && !village.in && Math.hypot(boat.g.position.x - player.pos.x, boat.g.position.z - player.pos.z) < 4.5 // the launch spot can be 4.2 out
+function board() {
+  player.boat = 1
+  player.once = null
+  village.stow(1)
+  boat.v = 0
+  hud()
+}
+function ashore() {
+  const b = boat.g.position
+  const s = spot(b.x, b.z, player.dir, onLand)
+  if (!s) return say('Row to a shore to get out')
+  player.boat = player.floor = null
+  player.pos.set(s[0], 0, s[1])
+  village.stow(0)
+  dock(b.x, b.z, boat.g.rotation.y)
+  hud()
+}
+function row(dt, ix, iz) {
+  const b = boat.g
+  b.rotation.y -= ix * 1.4 * dt + drag
+  boat.v += (-iz * (iz > 0 ? 1.2 : 3) - boat.v) * Math.min(1, dt * 1.5)
+  const x = b.position.x + Math.sin(b.rotation.y) * boat.v * dt
+  const z = b.position.z + Math.cos(b.rotation.y) * boat.v * dt
+  if (afloat(height(x, z))) b.position.set(x, b.position.y, z)
+  else boat.v = 0 // aground
+  if (Math.abs(boat.v) > 0.5 && R() < dt * 2) ripple(b.position, 0.9)
+  player.dir = b.rotation.y
+  player.speed = 0
+}
+// every frame: the boat bobs and rolls, the oars pull while it moves, the rider sits on the thwart
+function boating(dt) {
+  if (!boat) return
+  const b = boat.g
+  b.position.y = WATER - 0.12 + Math.sin(clock.elapsedTime * 2) * 0.05
+  b.rotation.z = Math.sin(clock.elapsedTime * 1.3) * 0.04
+  pose(boat, [['row', (boat.time += dt * Math.abs(boat.v) * 0.5), 1]])
+  if (player.boat) {
+    player.pos.set(b.position.x, 0, b.position.z)
+    player.floor = b.position.y + 0.3 - player.m.bones.hip.position.y * player.m.root.scale.y
+  }
+  if (!player.seat && (player.boat || nearBoat())) {
+    $('rider').hidden = 0
+    $('mbar').hidden = 1
+    $('mname').textContent = player.boat ? 'R · get out at a shore' : 'R · board the boat'
+  }
+}
+
 // ---------- sound: music compiled from the score text, plus a few synthesized blips ----------
 const audio = jukebox(score($('score').textContent))
 function muteButton() {
@@ -1399,7 +1611,8 @@ addEventListener('keydown', (e) => {
   keys[e.code] = 1
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1)
-  if (e.code.startsWith('Digit')) equip(+e.code[5] - 1)
+  if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
+  if (e.code == 'KeyB') launch()
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyR') mountUp()
@@ -1415,10 +1628,11 @@ addEventListener('touchstart', (e) => {
     if (t.target.id == 'swap') equip(player.item + 1)
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
-    else if (t.target.id == 'mute') continue
+    else if (t.target.id == 'mute' || t.target.closest('#tray')) continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
   $('pad').style.display = 'block'
+  document.body.className = 't'
   $('help').textContent = 'Drag: up/down to walk, sideways to turn'
 })
 addEventListener('touchmove', (e) => {
@@ -1436,7 +1650,7 @@ addEventListener('touchend', (e) => {
 // ---------- combat ----------
 function attack() {
   if (player.seat) return buck()
-  if (player.busy || player.hp <= 0 || village?.in || player.swim) return
+  if (player.busy || player.hp <= 0 || village?.in || player.swim || player.boat) return
   player.play(item.anim)
   player.struck = false
   // chase mode: the swing turns toward the nearest monster in front, so you needn't line up exactly
@@ -1500,7 +1714,8 @@ function frame() {
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
   const run = 6
-  if (player.seat) {
+  if (player.boat) row(dt, ix, iz)
+  else if (player.seat) {
     steer(dt, ix, iz, il)
     player.dir = player.seat.dir
   } else if (tank && alive) {
@@ -1528,7 +1743,7 @@ function frame() {
     player.speed = 0
   }
   // swimming: deep water sinks the warrior to his shoulders, stows the weapon and costs breath
-  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.seat
+  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.seat && !player.boat
   if (deep != !!player.swim) {
     player.swim = deep ? 1.25 : 0
     player.once = null // no swing carries into (or out of) the water
@@ -1562,8 +1777,11 @@ function frame() {
         if (item.burn) e.burn = item.burn
       }
     }
+    if (item.chop) chop()
   }
   herd(dt)
+  boating(dt)
+  fells(dt)
   player.update(dt, run)
   player.safe -= dt
   if (!alive && (player.dead += dt) > 3) {
@@ -1571,6 +1789,7 @@ function frame() {
     player.air = 1
     player.once = null
     player.pos.copy(home)
+    if (player.boat) (player.boat = player.floor = null), village.stow(0)
     hud()
   }
   if (alive && player.hp < player.maxHp && !player.swim) {
@@ -1684,7 +1903,7 @@ function frame() {
     }
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
+      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
     }
     e.update(dt, e.run)
   }
@@ -1763,3 +1982,4 @@ frame()
 window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, depth, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.coins = coins
+Object.assign(window.game, { bag, felled, falling, launch, board, ashore, boat: () => boat })
