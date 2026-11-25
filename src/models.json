@@ -7654,6 +7654,76 @@
       }
     }
   },
+  "wood": {
+    "vars": {
+      "name": "Wood"
+    },
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "7a4e2a",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.11,
+          0.6,
+          0.11
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "c9a06a",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.08,
+          0.61,
+          0.08
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ]
+      }
+    ]
+  },
+  "flint": {
+    "vars": {
+      "name": "Flint"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "8fa3b8",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.13,
+          0.09,
+          0.1
+        ],
+        "segments": 5
+      }
+    ]
+  },
   "tray": {
     "icons": {
       "sword": "🗡️",
@@ -7661,14 +7731,14 @@
       "torch": "🔥",
       "wood": "🪵",
       "flint": "🪨",
-      "pack": "🎒"
+      "pack": "🛠️"
     },
     "slots": [
       "sword",
       "axe",
       "torch",
-      "",
-      ""
+      "wood",
+      "flint"
     ],
     "materials": {
       "wood": "fell a tree with the axe",

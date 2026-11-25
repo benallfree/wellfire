@@ -6,7 +6,7 @@ import { score, jukebox } from './music.js'
 const lib = library(document.getElementById('models').textContent)
 
 const WATER = 0.2
-const ITEMS = ['sword', 'axe', 'torch']
+const ITEMS = ['sword', 'axe', 'torch', 'wood', 'flint']
 // monster mix and how crowded it gets, per region (meadow, forest, rocky hills, lakes)
 const FOES = [
   ['slime', 'slime', 'bat', 'goblin'],
@@ -526,12 +526,14 @@ function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
-// the tray (models.json "tray"): five slots of usable items, keys 1-5 or a tap; a held item is equipped. Slot 6 (key 6)
-// opens the pack: materials, recipes to craft (tap one), and tapping two slots swaps them. The game pauses while it's open.
+// the tray (models.json "tray"): five slots, keys 1-5 or a tap, each item taken in hand (Space drops wood or flint).
+// Slot 6 (key 6) opens crafting: recipes (tap one), and tapping two slots swaps them. The game pauses while it's open.
 // The bag (counts) and the slot layout are kept in localStorage.
 const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
 const belt = kept('warriorSlots', lib.tray.slots)
 let pick = -1
+const place = (k) => belt.includes(k) || (belt[belt.indexOf('')] = k)
+lib.tray.slots.map(place)
 const bag = kept('warriorBag', {})
 bag.wood ||= 0
 bag.flint ||= 0
@@ -547,8 +549,6 @@ function tray() {
       .map((k, i) => `<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
       .join('')
   $('inv').innerHTML =
-    Object.keys(MATS).map((m) => `${ICON[m]} ${bag[m]}`).join(' · ') +
-    '<br>' +
     Object.entries(RECIPES)
       .map(([k, r]) => `<b data-r=${k} class=${has(r) ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
       .join('') +
@@ -569,7 +569,7 @@ function slot(i) {
 function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
   keep('warriorBag', bag)
-  tray()
+  ITEMS[player.item] == k && !bag[k] ? equip(0) : tray()
   ;($('tray').children[belt.indexOf(k)] || $('tray').lastChild).animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
 }
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
@@ -776,7 +776,7 @@ function light() {
 }
 function equip(i) {
   player.item = (i + ITEMS.length) % ITEMS.length
-  if (ITEMS[player.item] == 'torch' && !bag.torch) player.item = 0 // no torch left to hold
+  if (ITEMS[player.item] in bag && !bag[ITEMS[player.item]]) player.item = 0 // none left to hold
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
@@ -1456,6 +1456,21 @@ function earn(n) {
   hud()
   $('gold').animate([{ transform: 'scale(1.6)', color: n < 0 ? '#f55' : '#fff' }, { transform: 'scale(1)' }], n < 0 ? 900 : 250)
 }
+// dropped wood or flint: thrown ahead, lies spinning until you walk onto it
+const geos = {}
+const itemMat = new THREE.MeshLambertMaterial({ vertexColors: true })
+function toss(k) {
+  const c = new THREE.Mesh((geos[k] ||= bake(make(lib, k, 1))), itemMat)
+  c.position.set(player.pos.x, player.pos.y + 1.2, player.pos.z)
+  c.v = new THREE.Vector3(Math.sin(player.dir) * 4, 3, Math.cos(player.dir) * 4)
+  c.k = k
+  c.age = 0
+  c.castShadow = true
+  scene.add(c)
+  coins.push(c)
+  player.play('jab')
+  gain(k, -1)
+}
 function pickups(dt) {
   const p = player.pos
   coinMat.emissive.setRGB(0.35, 0.24, 0).multiplyScalar(0.7 + Math.sin(clock.elapsedTime * 4) * 0.3) // a soft glow pulse
@@ -1467,18 +1482,19 @@ function pickups(dt) {
     const wet = q.y < WATER
     const d = player.swim && wet ? Math.hypot(dx, dz) || 0.01 : Math.hypot(dx, dy, dz) // a swimmer dives for sunk coins at any depth
     c.age += dt
-    if (player.hp > 0 && d < 3.5 && c.age > 0.5) {
+    if (player.hp > 0 && d < (c.k ? 1.6 : 3.5) && c.age > (c.k ? 1 : 0.5)) {
       // magnet: faster the closer it gets
       const sp = Math.min(d, (5 + (3.5 - d) * 5) * dt) / d
       q.x += dx * sp
       q.y += dy * sp
       q.z += dz * sp
       if (d < 0.6) {
-        earn(c.worth)
+        c.k ? gain(c.k, 1) : earn(c.worth)
         beep(1568, 0.06, 'square', 0.03, 1) // ching
         setTimeout(() => beep(2093, 0.3, 'triangle', 0.05, 0.98), 60)
         burst(q.clone().setY(q.y - 0.6), '#fd4', 5)
         c.age = 99
+        c.k = 0
       }
     } else {
       // fall and bounce, then rest on the ground; in water, sink slowly to the bed
@@ -1493,8 +1509,8 @@ function pickups(dt) {
       }
     }
     c.rotation.y += dt * 3
-    c.visible = c.age < 40 || (c.age * 8) & 1 // blink before it goes
-    if (c.age > 45 || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) {
+    c.visible = c.age < 40 || c.k || (c.age * 8) & 1 // blink before it goes
+    if ((c.age > 45 && !c.k) || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) {
       scene.remove(c)
       coins.splice(coins.indexOf(c), 1)
     }
@@ -1690,7 +1706,7 @@ function craft(k = 'torch') {
   if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(bag[m] >= n))[0]]}`)
   for (const [m, n] of e) gain(m, -n)
   gain(k, 1)
-  if (!belt.includes(k)) belt[belt.indexOf('')] = k
+  place(k)
   keep('warriorSlots', belt)
   if (k == 'torch') fuel = FUEL
   say(`You made a ${k}`)
@@ -1916,6 +1932,7 @@ addEventListener('touchend', (e) => {
 function attack() {
   if (player.seat) return buck()
   if (well && !beacon[well.k] && ITEMS[player.item] == 'torch') return setTorch()
+  if (ITEMS[player.item] in MATS) return player.busy || player.hp <= 0 || toss(ITEMS[player.item])
   if (player.busy || player.hp <= 0 || village?.in || player.swim || player.boat) return
   player.play(item.anim)
   player.struck = false
