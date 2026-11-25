@@ -357,7 +357,8 @@ The one village today is placed near the start by its own seed and levels the gr
 - After teleports to ±10 km and a 1,200-unit walk, `scene.children` stays at 85–110 and live chunks at 49–81.
   `renderer.info.memory.geometries` stays roughly flat: 171 before, 153 after the walk, 240–350 across teleports
   (live chunks plus monsters). That needed a fix in `spawn()`: monsters left behind are now disposed of (their
-  geometry and material), where before every respawn leaked one compiled model.
+  geometry and material), where before every respawn leaked one compiled model. `hold()` in the compiler likewise frees the
+  prop it replaces, so item swaps and village stows no longer leak (12 swaps and 5 village trips: +0 geometries).
 - Frame time while walking at 40 units/s: median 8.3 ms, worst 9.4 ms (120 Hz display); chunk building never showed
   up as a hitch.
 

@@ -173,7 +173,7 @@ function mirror(g) {
 // Attach a prop model to a bone (a socket). Replaces whatever that bone was holding.
 export function hold(lib, m, bone, prop, seed = 1) {
   const old = m.props[bone]
-  if (old) old.root.removeFromParent()
+  if (old) old.root.removeFromParent().traverse((o) => o.geometry?.dispose()) // the material is the holder's, kept
   delete m.props[bone]
   if (!prop || !lib[prop]) return
   const p = make(lib, prop, seed, m.mat)
