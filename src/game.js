@@ -319,7 +319,7 @@ function hud() {
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
 
-// ---------- minimap: north-up, fog of war over ground you haven't been near ----------
+// ---------- minimap: turns with the camera, fog of war over ground you haven't been near ----------
 // `seen` (revealed 8x8-unit cells) is the remembered state. Pictures of chunks are a small LRU cache rebuilt from
 // `seen` plus height() and region(), so the map never reads back WebGL and its memory stays bounded.
 const MAP = 160 // canvas pixels
@@ -330,6 +330,9 @@ const seen = new Set()
 const tiles = new Map()
 const trail = []
 const mapc = $('map').getContext('2d')
+const FLAT = document.createElement('canvas') // world-aligned, big enough to cover the map at any turn
+FLAT.width = FLAT.height = Math.ceil(MAP * 1.42)
+const flat = FLAT.getContext('2d')
 const tc = new THREE.Color()
 function paint(t, i, j) {
   for (let a = 0; a < CELL; a += UPP)
@@ -382,30 +385,42 @@ function minimap() {
     const last = trail[trail.length - 1]
     if (!last || Math.hypot(last[0] - x, last[1] - z) > 6) trail.push([x, z]) > 300 && trail.shift()
   }
-  const sx = (wx) => (wx - x) / UPP + MAP / 2 // world to map pixels
-  const sz = (wz) => (wz - z) / UPP + MAP / 2
-  mapc.fillStyle = '#0b0f18'
-  mapc.fillRect(0, 0, MAP, MAP)
-  const span = Math.ceil((MAP * UPP) / CH / 2) + 1
+  // compose the explored ground world-aligned on a larger canvas, then draw it turned with the camera
+  const W = FLAT.width
+  const sx = (wx) => (wx - x) / UPP + W / 2 // world to flat-canvas pixels
+  const sz = (wz) => (wz - z) / UPP + W / 2
+  flat.fillStyle = '#0b0f18'
+  flat.fillRect(0, 0, W, W)
+  const span = Math.ceil((W * UPP) / CH / 2) + 1
   const cx = Math.floor(x / CH)
   const cz = Math.floor(z / CH)
   for (let i = cx - span; i <= cx + span; i++)
     for (let j = cz - span; j <= cz + span; j++) {
       const t = tile(i, j)
-      if (t) mapc.drawImage(t.cv, Math.round(sx(i * CH)), Math.round(sz(j * CH)))
+      if (t) flat.drawImage(t.cv, Math.round(sx(i * CH)), Math.round(sz(j * CH)))
     }
-  mapc.fillStyle = '#fff8'
-  for (const [a, b] of trail) mapc.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
-  mapc.fillStyle = '#fd4'
-  mapc.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
+  flat.fillStyle = '#fff8'
+  for (const [a, b] of trail) flat.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
+  flat.fillStyle = '#fd4'
+  flat.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
+  // up on the map is the way the camera looks (the way W walks)
+  mapc.save()
+  mapc.translate(MAP / 2, MAP / 2)
+  mapc.rotate(camYaw)
+  mapc.drawImage(FLAT, -W / 2, -W / 2)
   const fx = Math.sin(player.dir)
   const fz = Math.cos(player.dir)
   mapc.fillStyle = '#f33'
   mapc.beginPath()
-  mapc.moveTo(MAP / 2 + fx * 8, MAP / 2 + fz * 8)
-  mapc.lineTo(MAP / 2 - fx * 4 + fz * 5, MAP / 2 - fz * 4 - fx * 5)
-  mapc.lineTo(MAP / 2 - fx * 4 - fz * 5, MAP / 2 - fz * 4 + fx * 5)
+  mapc.moveTo(fx * 8, fz * 8)
+  mapc.lineTo(-fx * 4 + fz * 5, -fz * 4 - fx * 5)
+  mapc.lineTo(-fx * 4 - fz * 5, -fz * 4 + fx * 5)
   mapc.fill()
+  mapc.restore()
+  mapc.fillStyle = '#fff'
+  mapc.font = 'bold 11px system-ui'
+  mapc.textAlign = 'center'
+  mapc.fillText('N', MAP / 2 + Math.sin(camYaw) * 68, MAP / 2 - Math.cos(camYaw) * 68 + 4) // north, on the rim
   $('pos').textContent = `${REGIONS[region(x, z)]} · ${x | 0}, ${z | 0} · ${Math.hypot(x - home.x, z - home.z) | 0} m from start`
 }
 

@@ -372,12 +372,14 @@ Ground you've been within 36 units of is drawn in the world's own colours: deep 
 start and a red arrow for your facing sit on top. Below it: the region, your coordinates and how far you are from the
 start, e.g. `rocky hills · 5899, -3327 · 6860 m from start`.
 
-It is **north-up** (−z is up): what you've explored keeps its shape and position, the coordinates read straight off
-it, and it doesn't spin when Q/E turns the camera.
+It **turns with the camera**: up on the map is the way the camera looks, which is the way W walks, so the red arrow
+points up when you walk straight ahead. An **N** on the rim shows where north (−z) is. (A north-up map was tried first,
+but the camera's default 45° turn made "straight ahead" point northwest on the map.) The explored ground is composed
+world-aligned on a slightly larger hidden canvas and drawn turned in one `drawImage`, so chunk tiles never show seams.
 
 It's drawn on a 2D canvas without reading back WebGL. Each revealed cell is painted once into a small per-chunk canvas
-by sampling `height()`, `region()` and `ground()` 16 times. Each frame the visible chunk canvases are blitted and the
-trail and arrow drawn on top. The chunk canvases are an LRU cache of 150: an evicted one is repainted from `seen` when
+by sampling `height()`, `region()` and `ground()` 16 times. Each frame the visible chunk canvases are blitted, the
+trail drawn on top, and the result drawn turned by the camera's yaw. The chunk canvases are an LRU cache of 150: an evicted one is repainted from `seen` when
 you come back into view, so leaving and returning shows exactly the ground you explored.
 
 ![6.7 km from the start, in a forest with a spider](docs/endless-far.jpg)
