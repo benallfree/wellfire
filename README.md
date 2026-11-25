@@ -898,8 +898,8 @@ design discussion and the other options weighed are in [docs/goal-ideas.md](docs
 Cost: about +10 KB raw. `game.js` is +9,082 bytes (83,956 to 93,038), about 1.4 KB of it whole-line comments.
 `models.json` gains the `beacon` model (969 bytes minified), and `index.html` +4. That is far more than the 1.7 KB raw
 estimated in the design note: the far-beam drawing, the aiming and show cameras, the end screen, the prompts and the
-crafting all grew. At the tray-and-boat rate (about 11 raw bytes per shipped byte) it is roughly +0.8-0.9 KB shipped.
-That's an estimate: surprisal wasn't run.
+crafting all grew. At about 0.12 compressed bytes per raw JS byte, the code alone is roughly +1.1 KB shipped
+(9,082 × 0.12 ≈ 1,090), plus a little for the model. That's an estimate: surprisal wasn't run.
 
 ## Size
 
