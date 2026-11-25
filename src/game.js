@@ -93,9 +93,12 @@ function terrain(x, z) {
   const v = z + (noise(x * 0.01, z * 0.01, SEED + 21) - 0.5) * 70
   const r = rough(x, z)
   const w = wet(x, z)
-  const near = smooth(150, 70, Math.hypot(x, z)) // the start: no lakes, rivers or mountains, so spawn is dry and gentle
-  const hi = smooth(0.5, 0.75, r) * (1 - near) // 0 lowland, 1 highland
-  let h = 2 + (fbm(u * 0.012, v * 0.012, SEED + 10) - 0.5) * (7 + smooth(0.35, 0.6, w) * 7 + hi * 8)
+  const d = Math.hypot(x, z)
+  const near = smooth(160, 90, d) // the start: no lakes or rivers, so spawn is on dry land
+  const pad = smooth(10, 35, d) // and a flat pad right where you appear
+  const hi = smooth(0.5, 0.75, r) * smooth(35, 90, d) // 0 lowland, 1 highland
+  let h = 2 + (fbm(u * 0.012, v * 0.012, SEED + 10) - 0.5) * (10 + smooth(0.35, 0.6, w) * 4 + hi * 8) * pad + 2 * near
+  h += (fbm(u * 0.035, v * 0.035, SEED + 50, 2) - 0.5) * 10 * pad // knolls small enough to see from the camera
   for (let o = 0, p = u * 0.007, q = v * 0.007, a = 22; o < 3; o++, [p, q] = [p * 1.7 - q * 1.1, p * 1.1 + q * 1.7], a *= 0.4) {
     const n = 1 - Math.abs(noise(p, q, SEED + 30 + o) * 2 - 1) // ridged: sharp crests where noise crosses 0.5
     h += hi * n * n * a
@@ -212,7 +215,8 @@ function grow(cx, cz) {
   for (let i = 0; i < p.count; i++) {
     const h = height(p.getX(i), p.getZ(i)) // edges sample the same points as the neighbour: seams match
     p.setY(i, h)
-    ground(c, p.getX(i), p.getZ(i), h)
+    const [gx, gz] = slope(p.getX(i), p.getZ(i))
+    ground(c, p.getX(i), p.getZ(i), h, [gx, gz]).multiplyScalar(Math.min(1.3, Math.max(0.6, 1 - gx * 0.7 - gz * 0.35))) // baked hillshade, lit from the sun's side, so gentle hills read from the camera
     col.push(c.r, c.g, c.b)
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))

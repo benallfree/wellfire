@@ -563,8 +563,9 @@ self-contained base terrain, and anything that levels ground (the village today,
 
 - **Domain warp.** The sample point is pushed up to 35 units by two slow noise fields, and each fBm/ridge octave is
   turned 37° from the last, so hills and ridges don't line up with the noise grid.
-- **Rolling hills.** Four-octave fBm with an amplitude that follows the regions: gentle in meadows (about ±3.5),
-  bigger in forests (±7), bigger still in the highlands.
+- **Rolling hills.** Four-octave fBm with an amplitude that follows the regions: about ±5 in meadows, ±7 in forests,
+  more in the highlands. On top, two octaves of **knolls** (about ±5 over 30 units), small enough to show up in the
+  ~25-unit view of the follow camera; the big hills alone looked flat from there.
 - **Mountain ranges.** Where `rough` is high (the rocky hills region), a highland mask fades in three octaves of
   ridged noise (`1 - |2n - 1|`, squared): sharp crests up to about 40 units, with valleys between them.
 - **Lake basins.** Where `wet` is high (the lakes region) the ground sinks up to 9 units below the hills.
@@ -573,14 +574,16 @@ self-contained base terrain, and anything that levels ground (the village today,
   deeper than 0.2 below the surface, so the river bed rises to just under it at **fords**, where a slow noise is
   high: about a quarter of river length, every 50–100 units along a river. A steed stops at a deep stretch and
   crosses at a ford (checked in the browser).
-- **The start.** Within about 150 units of the origin, lakes, rivers and mountains fade out, so the spawn spiral always
-  finds dry, gentle ground (the start lands on a 0.08 slope, and the village ring is levelled flat at y = 3.6).
+- **The start.** Within about 150 units of the origin, lakes and rivers fade out, so the start is dry land (this seed's
+  origin sits in a big lake region, so the start is a hilly island about 200 units across with a neck south to the
+  mountains). Mountains fade in from 35 to 90 units out, and hills and knolls flatten only on a pad within 10–35 units,
+  so you start on level ground and walk into hills within a few seconds. The village ring is still levelled flat.
 
 ![Six km around the start, rendered offline from the same functions, with hillshade](docs/terrain-overview.jpg)
 
-Measured over 6×6 km (every 8 units): land with a slope under 0.3 went from 98.5% to 77%, 0.3–1 is 23%, 1–1.5 is
-0.4% and nothing is steeper, so cliffs are rare and nothing needs blocking. Heights run from −10 (lake beds) to 40
-(peaks); water is 30% of the area (was 28%). Regions are unchanged, so flora and monsters still match the ground.
+Measured over 6×6 km (every 8 units): land with a slope under 0.3 went from 98.5% to 64%, 0.3–1 is 35%, 1–1.5 is
+0.8% and nothing is steeper, so cliffs are rare and nothing needs blocking. Heights run from −10 (lake beds) to 40
+(peaks); water is 35% of the area (was 28%). Regions are unchanged, so flora and monsters still match the ground.
 
 **Ground colour** (`ground()`, per vertex, also used by the minimap) follows height and slope: sand by the water;
 grass that blends smoothly from meadow green to dark forest green to dry highland olive (so region borders no longer
@@ -588,6 +591,10 @@ show as hard circles); dirt on slopes over about 0.4; rock on slopes over 0.65 o
 about 30 units, unless the slope is steep. `slope()` takes the height difference across 2 units in x and z, the same
 everywhere, so colours match across chunk seams. Each boundary wobbles with noise so none is a straight contour line.
 Trees and bushes don't grow above 17 units (only boulders).
+
+**Baked hillshade.** The follow camera looks steeply down from close by, and three's lighting alone barely shades a
+gentle slope, so the ground read as flat. Each chunk's vertex colours are also multiplied by a hillshade lit from the
+sun's side (0.6–1.3), so slopes facing away from the sun are visibly darker even where they are gentle.
 
 **Minimap relief.** Each revealed map pixel is now the ground colour, a little brighter with height, times a hillshade
 lit from the north-west, and water darkens with depth. The colours are written without three's sRGB lift
@@ -612,7 +619,7 @@ same 150-tile LRU cache as cells are revealed, behind the same fog of war, so me
   the browser pane was hidden and paused rendering; the checks ran in an iframe with a timer standing in for
   `requestAnimationFrame`.
 
-Cost: about 3.1 KB raw in `src/game.js` (49,078 → 52,139 bytes on top of the mounts main, fords included). Not
+Cost: about 3.5 KB raw in `src/game.js` (49,078 → 52,561 bytes on top of the mounts main, fords, knolls and baked hillshade included). Not
 measured with surprisal; at ~90% that's roughly 0.3 KB shipped.
 
 ## Size
