@@ -496,13 +496,15 @@ class Actor {
     this.time += dt
     if (this.once) this.once[1] += dt
     const k = this.seat || this.boat ? 0 : Math.min(1, this.speed / run)
-    const layers = this.swim && this.m.clips.swim
+    const layers = this.boat
+      ? [['row', boat.time, 1]] // rowing (see boat)
+      : this.swim && this.m.clips.swim
       ? [['swim', this.time * (0.6 + k * 0.6), 1]]
       : [
           ['idle', this.time, 1 - k],
           ['walk', this.time * Math.max(0.6, k), k],
         ]
-    if (this.seat || this.boat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts) or in the boat
+    if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
     // a swimmer floats at the surface, sunk by `swim`; everyone else stands on the ground, wading in up to the waist
@@ -698,12 +700,15 @@ let item
 // The torch lights the night (T or LIGHT). It burns in the right hand when it's the weapon (a fire swing: +2 damage
 // and the burn), else in the left hand in place of the shield, so the sword or axe can fight in its light. Unlit,
 // the torch weapon is a weak club. A torch burns for FUEL seconds; relighting a spent one costs a wood. Water douses it.
+// In the boat both hands are on the oars: the lit torch stands in the bow post, and goes back to his hand ashore.
 const FUEL = 150
 let lit = 0
 let fuel = FUEL
+let boat
 function torch() {
   const w = ITEMS[player.item] == 'torch' && player.m.props.handR
-  hold(lib, player.m, 'handL', lit && !w ? 'torch' : 'shield')
+  hold(lib, player.m, 'handL', player.boat ? null : lit && !w ? 'torch' : 'shield')
+  boat && hold(lib, boat, 'post', player.boat && lit ? 'torch' : null)
   for (const b in player.m.props) if (player.m.props[b].bones.flame) player.m.props[b].bones.flame.visible = b != 'back' && lit > 0
   hud()
 }
@@ -1521,7 +1526,6 @@ function fells(dt) {
 // monsters can't reach you and eels can't bite through the hull; bats still can. There is one boat: building
 // another moves it. Its place is kept in localStorage.
 const BOAT = 10
-let boat
 const afloat = (h) => h < WATER - 0.3
 // the nearest point 1.8-4.2 units from (x, z) whose ground passes `ok`, searching out from straight ahead
 function spot(x, z, dir, ok) {
@@ -1586,16 +1590,18 @@ function row(dt, ix, iz) {
   if (afloat(height(x, z))) b.position.set(x, b.position.y, z)
   else boat.v = 0 // aground
   if (Math.abs(boat.v) > 0.5 && R() < dt * 2) ripple(b.position, 0.9)
+  // the stroke keeps time with the speed; stopping, it runs on to the finish (key 0) and rests there, oars level
+  if (Math.abs(boat.v) > 0.3 || ix || boat.time % 1.6 > 0.08) boat.time += dt * Math.max(0.8, Math.abs(boat.v) * 0.6)
   player.dir = b.rotation.y
   player.speed = 0
 }
-// every frame: the boat bobs and rolls, the oars pull while it moves, the rider sits on the thwart
+// every frame: the boat bobs and rolls, the rider sits on the thwart
 function boating(dt) {
   if (!boat) return
   const b = boat.g
   b.position.y = WATER - 0.03 + Math.sin(clock.elapsedTime * 2) * 0.04 // the floor (top 0.1) stays above the water
   b.rotation.z = Math.sin(clock.elapsedTime * 1.3) * 0.04
-  pose(boat, [['row', (boat.time += dt * Math.abs(boat.v) * 0.5), 1]])
+  pose(boat, [[0, clock.elapsedTime]]) // rests the oars (shipped along the hull) and flickers a torch in the post
   if (player.boat) {
     player.pos.set(b.position.x, 0, b.position.z)
     player.floor = b.position.y + 0.3 - player.m.bones.hip.position.y * player.m.root.scale.y
@@ -1742,6 +1748,19 @@ function shine(dt) {
       document.body.append(e)
     }
     if (show > 14) show = 0
+  }
+}
+
+// after the rower is posed: each oar turns in its lock towards a hand across the boat
+const hand = new THREE.Vector3()
+function grip() {
+  boat.g.updateMatrixWorld(true)
+  player.g.updateMatrixWorld(true)
+  for (const s of 'LR') {
+    const o = boat.bones['oar' + s]
+    player.m.bones[s == 'L' ? 'handR' : 'handL'].getWorldPosition(hand) // he faces the stern
+    boat.root.worldToLocal(hand).sub(o.position)
+    o.quaternion.setFromUnitVectors(seatAt.set(s == 'L' ? -1 : 1, 0, 0), hand.normalize())
   }
 }
 
@@ -1979,6 +1998,7 @@ function frame() {
   boating(dt)
   fells(dt)
   player.update(dt, run)
+  if (player.boat) grip()
   player.safe -= dt
   if (lit && (fuel -= dt) <= 0) (lit = 0), torch(), say('Your torch burnt out')
   if (lit && (fuel | 0) != ((fuel + dt) | 0)) hud()
@@ -2135,7 +2155,7 @@ function frame() {
   }
 
   // torch light follows the flame, flickering
-  const flame = lit && (player.m.props.handR?.bones.flame || player.m.props.handL?.bones.flame)
+  const flame = lit && (boat?.props.post?.bones.flame || player.m.props.handR?.bones.flame || player.m.props.handL?.bones.flame)
   const t = clock.elapsedTime
   if (flame) {
     flame.getWorldPosition(torchLight.position)

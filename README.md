@@ -802,8 +802,9 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 | | |
 |---|---|
 | ![Three chops and a tree tips away from you, paying 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
-| ![B at the water: 10 wood launches a rowboat](docs/boat-launch.jpg) | ![Rowing: oars pull, the hull bobs and rolls](docs/boat-rowing.jpg) |
+| ![B at the water: 10 wood launches a rowboat](docs/boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](docs/boat-rowing.jpg) |
 | ![A slime on the bank can't reach the boat](docs/boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](docs/boat-ashore.jpg) |
+| ![T in the boat at night: the torch stands in the bow post and lights the water](docs/boat-torch-night.jpg) | |
 
 - **Chopping.** The axe has `"chop": 1` in `models.json`; other weapons have no `chop` and pass through trees. A swing
   near a pine or oak (within reach, about 66° of your facing) hits it: wood chips, a thunk, and the tree shakes.
@@ -813,14 +814,25 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
   as `{ "cx,cz": { n: time } }` in `localStorage.warriorFelled`, and `grow()` skips it. Trees regrow after 30 minutes
   (real time): expired entries are pruned on load, so the record stays small however far you roam.
 - **The boat.** B (or tapping the wood slot) with 10 wood, standing by water at least 0.3 deep, launches a rowboat
-  (the `boat` model, with a `row` clip for the oars) 2-4 units away, searching out from straight ahead. R boards it
+  (the `boat` model) 2-4 units away, searching out from straight ahead. R boards it
   within 4.5 units, on foot or swimming; a rider gets off the mount first, so mounts never board. In the boat you sit
-  (the `ride` pose), A/D turn, W rows at 3 u/s (half walking speed) with glide, S backs slowly, and it runs aground
+  on the thwart facing the stern and row (the warrior's `row` clip), A/D turn, W rows at 3 u/s (half walking speed) with glide, S backs slowly, and it runs aground
   rather than leave the water. R at a shore steps you out onto land; with no land within 4 units it says so.
 - **What I chose.** No attacking from the boat: your hands are on the oars and the weapon is stowed. Land monsters
   stop at the shore as before, and their blows don't reach a boater even from the bank. Eels still circle the boat
   but can't bite through the hull. Bats can still swoop at you, but they tire over water as before. You never swim
   while in the boat, and breath refills.
+- **Rowing with the hands.** The warrior's `row` clip (made in `tools/warrior.mjs`, 1.6 s) runs finish, recovery,
+  catch, drive: hands drawn to the ribs with the elbows past the torso and a lean back, then hands low and away,
+  a full reach leaning in, and the pull. It also turns him to face the stern (`root.ry` 180). Each frame after he is
+  posed, `grip()` turns each oar in its lock (`oarL`/`oarR` on the gunwales) to point its handle at the opposite
+  hand, so the hands never leave the oars and the blades follow the hands' height: they dip under on the drive and
+  lift clear on the recovery. The stroke rate follows the speed (and A/D turning in place rows too). When you stop,
+  the stroke runs on to the finish and rests there, blades raised. A beached boat ships its oars along the hull.
+  Turning doesn't pull one oar harder: it would need a second, per-side phase.
+- **Torch in the boat.** Both hands are rowing, so the shield is put away and T puts the lit torch in a post at the
+  bow (the boat's `post` socket), with the same flickering light, fuel, and monster fear and lure. T again puts it
+  out. Board with a lit torch and it goes to the post; step ashore with it lit and it goes back to your hand, lit.
 - **Persistence.** There is one boat: building another moves it. Its place and heading go in
   `localStorage.warriorBoat` when you launch, when you get out, and on `pagehide`, so you find it where you left it.
   The chase camera needs nothing new, since the boat drives the hero's facing.
@@ -828,6 +840,9 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 Cost: about +8.8 KB raw in `src/game.js` (81,542 vs 72,770 bytes, a good share of it comments), +1.3 KB in
 `models.json` once minified (the boat is 1.2 KB of that), and +0.74 KB in the page shell for the tray CSS. At the
 usual ~90% compression that is roughly +1 KB in the shipped build. That's an estimate: surprisal wasn't run here.
+
+Rowing with the hands and the boat torch: `game.js` +1,064 bytes raw, `models.json` +3,265 pretty (+1,032 minified;
+the `row` clip is most of it, the boat dropped its old oar clip). Estimate only: surprisal wasn't run here.
 
 ## Dark nights and the torch
 
@@ -858,8 +873,8 @@ neither needs a torch. The minimap and HUD are unchanged and stay readable.
   it: they chase from 24 units instead of 12.
 - **Fuel.** A torch burns for 150 s of being lit (the HUD shows `torch N%`). A spent torch goes out; relighting it
   costs one wood from the tray. Putting it out keeps what's left.
-- **Water and riding.** Swimming douses it (and you can't light it while swimming). On a mount or in the boat the
-  weapon is stowed as before, so a lit torch rides in the left hand.
+- **Water and riding.** Swimming douses it (and you can't light it while swimming). On a mount the weapon is
+  stowed as before, so a lit torch rides in the left hand. In the boat it stands in the bow post (see the boat).
 
 Cost: about +2.9 KB raw (`game.js` +2,369 bytes, about 0.9 KB of it comments; `compiler.js` +456; `index.html` +64;
 `models.json` +2 bytes minified, eight colours gaining a `!`). Estimate only: surprisal wasn't run here.

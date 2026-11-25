@@ -186,6 +186,20 @@ clips.ride = {
   keys: [P({ ...base, 'leg*.rx': -80, 'leg*.rz': 18, 'shin*.rx': 85, 'foot*.rx': -5, 'foot*.rz': -18, 'hip.ry': 0, 'chest.ry': -5, 'head.ry': 5 })],
 }
 
+// row: in the boat (played alone, not over idle), turned to face the stern and sat on the thwart, legs braced.
+// Key 0 is the finish and the rest: hands drawn to the ribs, elbows past the torso. Then the recovery (hands low and
+// away, so the blades lift), the catch (full reach, leaning in, hands rising so the blades drop) and the drive.
+// The game turns each oar in its lock to follow a hand, so the hands' heights dip and lift the blades.
+{
+  const sit = { ...base, 'root.ry': 180, 'root.z': 0.1, 'leg*.rx': -75, 'leg*.rz': 10, 'shin*.rx': 50, 'foot*.rx': 15, 'foot*.rz': -10, 'hip.ry': 0, 'chest.ry': 0, 'head.ry': 0, 'head.rx': 0, 'handL.rx': 0, 'handL.ry': 0, 'handL.rz': 0, 'handR.rx': 0 }
+  const arms = (lean, a, z, f) => P({ ...sit, 'chest.rx': lean, 'head.rx': -lean, 'arm*.rx': a, 'arm*.rz': z, 'fore*.rx': f })
+  clips.row = {
+    duration: 1.6,
+    loop: true,
+    keys: [arms(-14, 20, -8, -100), arms(4, -20, -8, -50), arms(26, -85, -8, -10), arms(8, -60, -8, -60)],
+  }
+}
+
 // hit: knocked back, the head snaps, the arms fly open, knees buckle and recover
 clips.hit = {
   duration: 0.3,
@@ -295,11 +309,13 @@ function channels(c) {
   return out
 }
 
+const kept = W.clips // clips written by hand in models.json (swim) are kept, after the generated ones
 W.clips = {}
 for (const name in clips) {
   const c = clips[name]
   W.clips[name] = { duration: c.duration, loop: !!c.loop, channels: channels(c) }
 }
+for (const name in kept) W.clips[name] ||= kept[name]
 // keep the warrior's keys in their usual order
 lib.warrior = { vars: W.vars, bones: W.bones, parts: W.parts, holds: W.holds, clips: W.clips }
 writeFileSync(FILE, JSON.stringify(lib, null, 2) + '\n')

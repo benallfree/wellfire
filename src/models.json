@@ -1528,6 +1528,177 @@
           }
         ]
       },
+      "row": {
+        "duration": 1.6,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "hip",
+            "channel": "ry",
+            "keys": [
+              12
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              8
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              -24,
+              -6,
+              16,
+              -2
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -18
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              24,
+              6,
+              -16,
+              2
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              45,
+              5,
+              -60,
+              -35
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              20
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              -25,
+              25,
+              65,
+              15
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              -75
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              40,
+              0,
+              -65,
+              -40
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              -23
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              -5,
+              45,
+              85,
+              35
+            ]
+          },
+          {
+            "bone": "handL",
+            "channel": "rx",
+            "keys": [
+              -28
+            ]
+          },
+          {
+            "bone": "handL",
+            "channel": "ry",
+            "keys": [
+              76
+            ]
+          },
+          {
+            "bone": "handL",
+            "channel": "rz",
+            "keys": [
+              102
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              -38
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              27
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              -64
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              54
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "ry",
+            "keys": [
+              180
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "z",
+            "keys": [
+              0.1
+            ]
+          }
+        ]
+      },
       "hit": {
         "duration": 0.3,
         "loop": false,
@@ -7126,9 +7297,28 @@
         "name": "oar*",
         "parent": "root",
         "position": [
-          0.58,
-          0.42,
-          0.1
+          0.56,
+          0.5,
+          -0.5
+        ],
+        "rotation": [
+          0,
+          70,
+          -8
+        ]
+      },
+      {
+        "name": "post",
+        "parent": "root",
+        "position": [
+          0,
+          0.72,
+          1.32
+        ],
+        "rotation": [
+          -35,
+          0,
+          0
         ]
       }
     ],
@@ -7257,22 +7447,37 @@
       },
       {
         "shape": "cyl",
+        "bone": "root",
+        "color": "a87a4a",
+        "position": [
+          0,
+          0.42,
+          1.32
+        ],
+        "size": [
+          0.05,
+          0.6,
+          0.05
+        ]
+      },
+      {
+        "shape": "cyl",
         "bone": "oar*",
         "color": "8a6a40",
         "position": [
-          0.36,
-          -0.17,
+          0.38,
+          0,
           0
         ],
         "size": [
           0.03,
-          1.6,
+          2.05,
           0.03
         ],
         "rotation": [
           0,
           0,
-          65
+          90
         ]
       },
       {
@@ -7280,48 +7485,17 @@
         "bone": "oar*",
         "color": "8a6a40",
         "position": [
-          0.75,
-          -0.37,
+          1.2,
+          0,
           0
         ],
         "size": [
-          0.32,
-          0.03,
-          0.16
-        ],
-        "rotation": [
-          0,
-          0,
-          -25
+          0.4,
+          0.16,
+          0.03
         ]
       }
-    ],
-    "clips": {
-      "row": {
-        "duration": 1.6,
-        "loop": true,
-        "channels": [
-          {
-            "bone": "oar*",
-            "channel": "ry",
-            "keys": [
-              35,
-              -35
-            ]
-          },
-          {
-            "bone": "oar*",
-            "channel": "rz",
-            "keys": [
-              -12,
-              0,
-              12,
-              0
-            ]
-          }
-        ]
-      }
-    }
+    ]
   },
   "beacon": {
     "bones": [
