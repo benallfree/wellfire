@@ -759,6 +759,38 @@ closes 4 × the angle gap per second), so turns feel smooth rather than bolted o
 Cost: about +2.4 KB raw in `src/game.js` (58,139 vs 55,763 bytes, much of it comments) and +29 bytes in the page
 shell; at ~90% compression, roughly +0.24 KB in the shipped build.
 
+## Water depth
+
+Water used to read as a flat sheet that never got deeper. The base terrain did slope down in lakes, but two
+things hid it. `Actor.update` clamped every actor at `WATER - 0.35`, so the warrior never sank more than ankle-deep however far
+out he walked. The water was also one flat, uniformly coloured, 75%-opaque plane, with sand under it everywhere, so a
+metre of water looked the same as ten.
+
+- **Bed shaping:** `shore(h)` runs after `terrain()` in `height()`. It remaps depth below `WATER` pointwise:
+  `d * (0.7 + smooth(0.8, 2.5, d) * 1.5)`. The first ~0.8 units of base depth become a shallow wading shelf, then
+  the bed drops off to about 2.5x its base depth. It is a pure function of the base height, so it is deterministic,
+  seam-safe (0 difference across 894 underwater shared chunk-edge vertices) and costs one smoothstep. River fords stay rideable:
+  their beds were at most 0.1 deep and become at most 0.07.
+- **`depth(x, z)`** (exposed as `game.world.depth`) is `max(0, WATER - height(x, z))`.
+- **Readable depth:** under water, `ground()` tints the bed from sand-teal to dark navy through `sea(c, d)`, with a
+  pale foam band at the waterline. The water plane is now 60% opaque so the tint shows through. The minimap uses the
+  same `sea()` colour: light teal shallows, dark deep water.
+- **Wading:** actors now sink with the bed down to `WATER - 0.9` (about waist-deep), going ankle, knee, then waist.
+  `wade(p)` slows movement and the walk cycle by up to 45%.
+
+![Knee-deep on the shelf: light shallows, darker water beyond](docs/water-knee.jpg)
+![Waist-deep and slowed, the bed darkening toward the middle](docs/water-waist.jpg)
+![Minimap: teal shallows, navy deep](docs/water-minimap.png)
+
+**How it sits with the other layers.** `shore()` runs on `terrain()` inside the road/village `height()`, before
+grading and levelling, so roads and villages still flatten on top. Swimming starts where the ground drops below `SWIM`
+(`WATER - 1`, that is `depth > 1`): the wade floor at `WATER - 0.9` hands over to swimming's `WATER - this.swim`. Eels
+need `depth > 1.1`, and the deeper beds give them more room. `wade()` returns 1 while swimming, so it doesn't stack
+with swimming's own 0.55 speed factor.
+
+Cost: about 1.2 KB raw in `src/game.js` (71,581 → 72,770 bytes on top of swimming, villages and the chase camera), roughly 0.1 KB shipped at ~90%. Not measured with
+surprisal.
+
 ## Size
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal

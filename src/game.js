@@ -114,6 +114,15 @@ function terrain(x, z) {
   const bed = WATER - 1.5 + smooth(0.6, 0.7, noise(x * 0.02, z * 0.02, SEED + 23)) * 1.4 // fords: shallow enough to ride
   return bed + (h - bed) * river
 }
+// Shoreline and lake-bed shaping, after the base terrain: a pure remap of how far ground sits below WATER, so it is
+// seam-safe and costs nothing. The first ~0.8 units of depth become a gentle wading shelf, then the bed drops off to
+// about 2.5x its base depth, so walking out from any shore goes ankle, knee, waist, then over your head.
+const shore = (h, d = WATER - h) => (d > 0 ? WATER - d * (0.7 + smooth(0.8, 2.5, d) * 1.5) : h)
+// how deep the water is at a point (0 on dry land); swimming starts past 1 (SWIM), eels live past 1.1
+const depth = (x, z) => Math.max(0, WATER - height(x, z))
+const wade = (a) => (a.swim ? 1 : 1 - Math.min(0.45, depth(a.pos.x, a.pos.z) * 0.4)) // wading slows you, up to about half speed
+// water colour by depth: light over the shallows, dark over the deep (bed tint under the water, minimap)
+const sea = (c, d) => c.setRGB(0.5, 0.75, 0.7).lerp(mix.setRGB(0.03, 0.12, 0.28), smooth(0, 4, d))
 // height difference across 2 units in x and in z: the slope (and, for the minimap, which way the ground faces)
 const slope = (x, z) => [height(x + 1, z) - height(x - 1, z), height(x, z + 1) - height(x, z - 1)]
 const mix = new THREE.Color()
@@ -250,7 +259,7 @@ function road(x, z) {
 // the ground: bare terrain, graded level across nearby roads, then levelled under nearby villages
 function height(x, z) {
   const [d, y] = road(x, z)
-  let h = y + (terrain(x, z) - y) * smooth(RW, RW + 4, d)
+  let h = y + (shore(terrain(x, z)) - y) * smooth(RW, RW + 4, d)
   for (const t of at(x, z).towns) h = t.y + (h - t.y) * smooth(t.r, t.r + 8, Math.hypot(x - t.x, z - t.z))
   return h
 }
@@ -260,6 +269,8 @@ function ground(c, x, z, h = height(x, z), [gx, gz] = slope(x, z)) {
   const n = noise(x * 0.3, z * 0.3, SEED + 3) * 0.08
   const s = Math.hypot(gx, gz) / 2 + n // rise per unit
   if (road(x, z)[0] < RW) return c.setRGB(0.52 + n, 0.4 + n, 0.25) // road strips: dirt
+  if (h < WATER - 0.12) return sea(c, WATER - h).lerp(mix.set('#d8c890'), 0.6 * smooth(1.5, 0, WATER - h)) // sand fading into the deep
+  if (h < WATER + 0.06) return c.setRGB(0.95, 0.97, 0.95) // foam where the water meets the shore
   if (h < WATER + 0.4 + n * 4) return c.set('#d8c890')
   c.setRGB(0.32 + n, 0.57 + n, 0.23) // meadow grass, shading into dark forest grass and dry highland grass
   c.lerp(mix.setRGB(0.22 + n, 0.45 + n, 0.18), smooth(0.43, 0.5, wet(x, z)))
@@ -298,7 +309,7 @@ const kit = KINDS.flatMap(([kind]) =>
 )
 const water = new THREE.Mesh(
   new THREE.PlaneGeometry(600, 600).rotateX(-90 * DEG),
-  new THREE.MeshLambertMaterial({ color: '#3a7ab8', transparent: true, opacity: 0.75 })
+  new THREE.MeshLambertMaterial({ color: '#3a7ab8', transparent: true, opacity: 0.6 })
 )
 water.position.y = WATER // one flat sheet that travels with the player: water is the same everywhere
 scene.add(water)
@@ -416,8 +427,9 @@ class Actor {
     return this.once && this.once[1] < this.m.clips[this.once[0]].d
   }
   move(dx, dz, dt) {
-    let x = this.pos.x + dx + this.vel.x * dt
-    let z = this.pos.z + dz + this.vel.y * dt
+    const w = wade(this)
+    let x = this.pos.x + dx * w + this.vel.x * dt
+    let z = this.pos.z + dz * w + this.vel.y * dt
     for (const trees of around(x, z))
       for (const [tx, tz, r] of trees) {
         const ex = x - tx
@@ -456,8 +468,8 @@ class Actor {
     if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
-    // a swimmer floats at the surface, sunk by `swim`; everyone else stands on the ground
-    this.pos.y = this.floor ?? (this.swim ? WATER - this.swim : Math.max(WATER - 0.35, height(this.pos.x, this.pos.z)))
+    // a swimmer floats at the surface, sunk by `swim`; everyone else stands on the ground, wading in up to the waist
+    this.pos.y = this.floor ?? (this.swim ? WATER - this.swim : Math.max(WATER - 0.9, height(this.pos.x, this.pos.z)))
     this.g.rotation.y = this.dir
     this.flash = Math.max(0, this.flash - dt * 4)
     this.m.mat.emissive.setRGB(this.flash * 0.7 + this.burn * 0.12, this.flash * 0.3 + this.burn * 0.04, this.flash * 0.3)
@@ -500,7 +512,7 @@ function paint(t, i, j) {
       const g = slope(x, z)
       // relief: ground colour (rock and snow already mark the heights), a little brighter higher up, and hillshade
       // lit from the north-west; water darkens with depth
-      if (h < WATER) tc.setRGB(0.23, 0.48, 0.72).multiplyScalar(1 - Math.min(0.45, (WATER - h) * 0.05))
+      if (h < WATER) sea(tc, WATER - h)
       else ground(tc, x, z, h, g).multiplyScalar(Math.min(1.35, Math.max(0.5, 0.9 + h * 0.005 + (g[0] + g[1]) * 0.4)) * (region(x, z) == 1 ? 0.75 : 1)) // forest: darker
       if (h >= WATER && road(x, z)[0] < RW + 1) tc.set('#e0b070') // roads stand out on the map
       if (h >= WATER && inTown(x, z)) tc.set('#d8c49a')
@@ -1510,7 +1522,7 @@ function frame() {
     const slow = (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
     player.move(dx * run * slow * dt, dz * run * slow * dt, dt)
     player.dir = Math.atan2(dx, dz)
-    player.speed = run * Math.min(1, il) * slow
+    player.speed = run * Math.min(1, il) * slow * wade(player)
   } else {
     player.move(0, 0, dt)
     player.speed = 0
@@ -1748,6 +1760,6 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
+window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, depth, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.coins = coins
