@@ -667,6 +667,7 @@ const saveSeen = () => (keep('warriorSeen', [...seen].join(' ')), (saved = seen.
 addEventListener('pagehide', saveSeen)
 const tiles = new Map()
 const trail = []
+const hint = []
 const mapc = $('map').getContext('2d')
 const bigc = $('big').getContext('2d')
 const bigMap = () => ($('big').hidden ^= 1)
@@ -746,7 +747,7 @@ function chart(g, W, H, k) {
   return towns
 }
 // player arrow, upright village names, north and the star's way on a rim of radius R, around (ox, oy) turned by rot
-function marks(g, ox, oy, rot, k, R, towns) {
+function marks(g, ox, oy, rot, k, R, towns, q = 1e9) {
   const { x, z } = player.pos
   const u = k / UPP
   g.save()
@@ -767,14 +768,29 @@ function marks(g, ox, oy, rot, k, R, towns) {
   const c = Math.cos(rot)
   const s = Math.sin(rot)
   for (const t of towns) {
-    const dx = (t.x - x) * u
-    const dz = (t.z - z) * u
-    g.fillText(t.name, ox + dx * c - dz * s, oy + dx * s + dz * c - t.r * u - 3)
+    let dx = (t.x - x) * u
+    let dz = (t.z - z) * u
+    const l = Math.hypot(dx, dz) / q
+    if (l > 1) (dx /= l), (dz /= l)
+    g.fillText(t.name, Math.max(ox - q + 10, Math.min(ox + q - 10, ox + dx * c - dz * s)), oy + dx * s + dz * c + (l > 1 ? 4 : -t.r * u - 3))
   }
   g.fillText('N', ox + s * R, oy - c * R + 4) // north, on the rim
   const sl = Math.hypot(STAR.x, STAR.z) / R
   g.fillStyle = '#fd4'
   g.fillText('✦', ox + (STAR.x * c - STAR.z * s) / sl, oy + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
+}
+function reveal(x, z, R) {
+  const pi = Math.floor(x / CELL)
+  const pj = Math.floor(z / CELL)
+  const r = Math.ceil(R / CELL)
+  for (let i = pi - r; i <= pi + r; i++)
+    for (let j = pj - r; j <= pj + r; j++) {
+      const key = i + ',' + j
+      if (seen.has(key) || Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - z) > R) continue
+      seen.add(key)
+      const t = tiles.get(Math.floor((i * CELL) / CH) + ',' + Math.floor((j * CELL) / CH))
+      if (t) paint(t, i, j)
+    }
 }
 let lastCell
 function minimap() {
@@ -783,16 +799,7 @@ function minimap() {
   const pj = Math.floor(z / CELL)
   if (lastCell != pi + ',' + pj) {
     lastCell = pi + ',' + pj
-    const S = SIGHT + (player.seat?.alt || 0) * 1.5 // wider from the air
-    const r = Math.ceil(S / CELL)
-    for (let i = pi - r; i <= pi + r; i++)
-      for (let j = pj - r; j <= pj + r; j++) {
-        const key = i + ',' + j
-        if (seen.has(key) || Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - z) > S) continue
-        seen.add(key)
-        const t = tiles.get(Math.floor((i * CELL) / CH) + ',' + Math.floor((j * CELL) / CH))
-        if (t) paint(t, i, j)
-      }
+    reveal(x, z, SIGHT + (player.seat?.alt || 0) * 1.5)
     seen.size > saved + 99 && saveSeen()
     const last = trail[trail.length - 1]
     if (!last || Math.hypot(last[0] - x, last[1] - z) > 6) trail.push([x, z]) > 300 && trail.shift()
@@ -805,7 +812,7 @@ function minimap() {
   mapc.rotate(camYaw)
   mapc.drawImage(FLAT, -W / 2, -W / 2)
   mapc.restore()
-  marks(mapc, MAP / 2, MAP / 2, camYaw, 1, 68, towns)
+  marks(mapc, MAP / 2, MAP / 2, camYaw, 1, 68, towns, 58)
   $('pos').textContent = `${REGIONS[region(x, z)]} · ${x | 0}, ${z | 0} · ${Math.hypot(x - home.x, z - home.z) | 0} m from start`
 }
 
@@ -1335,6 +1342,7 @@ var village
       f.goal = spots[(VR() * spots.length) | 0]
       f.wait = VR() * 3
       f.town = v
+      f.i = i
       v.folk.push(f)
       parts.push(f.m)
     }
@@ -1347,6 +1355,23 @@ var village
     v.folk.push(f)
     parts.push(f.m)
     return v
+  }
+  const TALK = lib.talk
+  const told = {}
+  const talk = (v, f) => {
+    const k = v.T.seed + f.i
+    const pick = (a, name) => a[k % a.length].replace('@', name)
+    if (told[k]) return told[k]
+    const role = TALK.roles[f.i % TALK.roles.length]
+    let line = pick(TALK.greet, v.T.name)
+    if (role == 'mission') line = pick(TALK.mission)
+    if (role == 'guide') {
+      const t = sites(v.T.x, v.T.z, 2)
+        .filter((t) => !beacon[t.k] && !seen.has(Math.floor(t.x / CELL) + ',' + Math.floor(t.z / CELL)))
+        .sort((a, b) => Math.hypot(a.x - v.T.x, a.z - v.T.z) - Math.hypot(b.x - v.T.x, b.z - v.T.z))[0]
+      if (t) reveal(t.x, t.z, t.r + 12), hint.push([t.x, t.z]), (line = pick(TALK.guide, t.name))
+    }
+    return (told[k] = line)
   }
   function raze(v) {
     for (const m of v.parts) {
@@ -1524,6 +1549,13 @@ var village
           const dz = f.goal[1] - f.pos.z
           const d = Math.hypot(dx, dz)
           f.speed = 0
+          const n = Math.hypot(p.x - f.pos.x, p.z - f.pos.z)
+          if (n < EGG.talk && !f.near && !f.keep && f != v.sage && player.hp > 0 && !title) {
+            f.near = f.wait = 3
+            f.dir = Math.atan2(p.x - f.pos.x, p.z - f.pos.z)
+            f.line = talk(v, f)
+            v.talker = f
+          } else if (n > EGG.talk + 1) f.near = 0
           if ((f.wait -= dt) > 0) f.keep || f.move(0, 0, dt)
           else if (d < 0.6) {
             f.wait = 2 + v.VR() * 5
@@ -1536,7 +1568,8 @@ var village
           f.update(dt, 1.6)
         }
       // the sage: a bubble over them when you're near; bump them and they stop, turn and say which way the sunstone is
-      const g = !h && !title && here?.sage
+      const t = here?.talker
+      const g = !h && !title && (t && Math.hypot(t.pos.x - p.x, t.pos.z - p.z) < EGG.talk + 1 ? t : here?.sage)
       const d = g ? Math.hypot(g.pos.x - p.x, g.pos.z - p.z) : 99
       $('bub').hidden = !(d < 12)
       if (d < 12) {
@@ -1548,7 +1581,7 @@ var village
           g.dir = Math.atan2(p.x - g.pos.x, p.z - g.pos.z)
         }
         $('bub').textContent =
-          d > EGG.talk + 1 ? '…' : !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? `${T.name}'s sunstone is found. Light the wells!` : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`
+          g.line || (d > EGG.talk + 1 ? '…' : !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? `${T.name}'s sunstone is found. Light the wells!` : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`)
         const v = g.pos.clone().setY(g.pos.y + 2.4).project(camera)
         Object.assign($('bub').style, { left: (v.x + 1) * 50 + '%', top: (1 - v.y) * 50 + '%' })
       }
@@ -2203,7 +2236,7 @@ function bigDraw() {
   const H = (c.height = innerHeight)
   const { x, z } = player.pos
   let e = 0
-  for (const [a, b] of [...trail, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
+  for (const [a, b] of [...trail, ...hint, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
   const k = Math.min(4, (0.45 * UPP) / e)
   c.style.opacity = player.seat?.alt ? 0.8 : 1
   marks(bigc, W / 2, H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k))

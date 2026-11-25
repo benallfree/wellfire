@@ -466,6 +466,13 @@ settlements and routes wherever you walk, and nothing about them is stored. The 
   stowed in any of them, and spawning avoids every site, built or not.
 - **Minimap.** Roads show as you reveal the ground they cross, and a village gets a ring and its name once you've
   seen its centre. The revealed-cell set is still the only remembered state.
+- **Townsfolk talk.** Bump into a villager to hear a line in the speech bubble over them (the sage's bubble, shared;
+  the sage keeps its sunstone hint and takes no role). Roles cycle by index from `talk.roles` in `models.json`:
+  a mission giver (the goal), guides and greeters, with lines picked by seed from `talk.mission`, `talk.guide` and
+  `talk.greet` (`@` is a village name). A guide names the nearest unseen village without a lit beacon and reveals a
+  circle round it (the same `reveal()` as sight), never the road. Each villager's line is fixed once heard, so a guide
+  reveals only once. Seen villages off the minimap's edge show their name on its rim, pointing the way, and
+  the big map (N) zooms out to include the villages guides have named.
 
 | a road into Wildale's gate | the minimap after walking two roads |
 |---|---|

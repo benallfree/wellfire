@@ -8955,5 +8955,31 @@
     "gemNear": 40,
     "gemFar": 200,
     "talk": 1.8
+  },
+  "talk": {
+    "roles": [
+      "mission",
+      "guide",
+      "greet",
+      "guide",
+      "greet"
+    ],
+    "mission": [
+      "Crack thunder eggs with the axe: each village's wilds hide a sunstone",
+      "A torch and a sunstone in a well light its beacon. Aim the beam at the star ✦",
+      "When five beams meet the star, the night goes blind"
+    ],
+    "guide": [
+      "Seek @. I marked it on your map",
+      "Folk in @ need a beacon lit. See your map",
+      "@ lies out there. It's on your map now"
+    ],
+    "greet": [
+      "Good day, warrior",
+      "Welcome to @",
+      "Mind the woods at night",
+      "Fair weather today",
+      "Safe roads to you"
+    ]
   }
 }
