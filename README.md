@@ -14,8 +14,9 @@ Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serve
 need a network connection.)
 
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
-Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-5 pick a tray
-slot (3 at a well sets your torch in its beacon) · B build a boat at the water · R ride, board and leave the boat,
+Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-6 pick a tray
+slot, 7 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
+with it at a well sets it in the beacon · B build a boat at the water · R ride, board and leave the boat,
 or take a beacon's mirror (then turn and W/S tilt) · C switches to the old free camera (WASD moves
 relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
@@ -804,7 +805,7 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 | ![Three chops and a tree tips away from you, paying 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
 | ![B at the water: 10 wood launches a rowboat](docs/boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](docs/boat-rowing.jpg) |
 | ![A slime on the bank can't reach the boat](docs/boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](docs/boat-ashore.jpg) |
-| ![T in the boat at night: the torch stands in the bow post and lights the water](docs/boat-torch-night.jpg) | |
+| ![The torch in the boat at night: it stands in the bow post and lights the water](docs/boat-torch-night.jpg) | |
 
 - **Chopping.** The axe has `"chop": 1` in `models.json`; other weapons have no `chop` and pass through trees. A swing
   near a pine or oak (within reach, about 66° of your facing) hits it: wood chips, a thunk, and the tree shakes.
@@ -834,9 +835,10 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
   lift clear on the recovery. The stroke rate follows the speed (and A/D turning in place rows too). When you stop,
   the stroke runs on to the finish and rests there, blades raised. A beached boat ships its oars along the hull.
   Turning doesn't pull one oar harder: it would need a second, per-side phase.
-- **Torch in the boat.** Both hands are rowing, so the shield is put away and T puts the lit torch in a post at the
-  bow (the boat's `post` socket), with the same flickering light, fuel, and monster fear and lure. T again puts it
-  out. Board with a lit torch and it goes to the post; step ashore with it lit and it goes back to your hand, lit.
+- **Torch in the boat.** Both hands are rowing, so the shield is put away and, while the torch is your weapon and
+  lit, it stands in a post at the bow (the boat's `post` socket), with the same flickering light, fuel, and monster
+  fear and lure. Board with a lit torch and it goes to the post; step ashore and it goes back to your hand, lit.
+  Picking another weapon in the boat puts it out; picking the torch lights it in the post again.
 - **Persistence.** There is one boat: building another moves it. Its place and heading go in
   `localStorage.warriorBoat` when you launch, when you get out, and on `pagehide`, so you find it where you left it.
   The chase camera needs nothing new, since the boat drives the hero's facing.
@@ -861,24 +863,23 @@ neither needs a torch. The minimap and HUD are unchanged and stay readable.
 | | |
 |---|---|
 | ![Day](docs/night-day.jpg) | ![Dusk](docs/night-dusk.jpg) |
-| ![Night, no torch: near-black, a faint moonlit silhouette](docs/night-unlit.jpg) | ![Night, torch lit in the left hand](docs/night-lit.jpg) |
+| ![Night, no torch: near-black, a faint moonlit silhouette](docs/night-unlit.jpg) | ![Night, torch lit](docs/night-lit.jpg) |
 | ![A lit torch swing: flame bits, two slimes burning](docs/night-fight.jpg) | |
 
-- **Light it.** T (or the LIGHT touch button) lights and puts out the torch. A lit torch gives a warm flickering point
-  light (two sines) around the hero, much stronger at night.
-- **Which hand.** I went past the a/b choice: the torch goes in whichever hand is free. When the torch is your weapon
-  (tray 3) it burns in your sword hand; with the sword or axe out, a lit torch replaces the shield in the left hand.
-  So you choose between fighting *with* fire and fighting *by* firelight, and the light never asks you to drop your
-  best weapon. The left-hand torch isn't swung (no new clip, no new bytes); fire damage is the torch weapon's job.
+- **Light it.** The torch is a weapon like the sword and axe, always with the shield: taking it in hand (its tray
+  slot, F/Tab or SWAP) lights it, and switching to another weapon puts it out, keeping its fuel. There is no T key
+  and no torch in the shield hand. A lit torch gives a warm flickering point light (two sines) around the hero, much
+  stronger at night, so at night you choose between the sword or axe in the dark and the torch's light and fire.
 - **Fire as a weapon.** A lit torch swing deals +2 damage (3 instead of 1), sets the 4 s burn and throws flame bits.
   Unlit, the torch is a weak club: 1 damage, no burn.
 - **Fear and lure.** Within 7 units of a lit torch, slimes and spiders back off to about 5 units and circle the edge
   of the light, then dare a rush (2 s in every 7), so the light buys breathing room, not safety. Bats are drawn to
   it: they chase from 24 units instead of 12.
-- **Fuel.** A torch burns for 150 s of being lit (the HUD shows `torch N%`). A spent torch goes out; relighting it
-  costs one wood from the tray. Putting it out keeps what's left.
-- **Water and riding.** Swimming douses it (and you can't light it while swimming). On a mount the weapon is
-  stowed as before, so a lit torch rides in the left hand. In the boat it stands in the bow post (see the boat).
+- **Fuel.** A torch burns for 150 s of being lit (the HUD shows `torch N%`). A spent torch goes out and stays in your
+  hand as a club ("Your torch burnt out: pick it to relight (1 wood)"); taking it again relights it for
+  one wood. Putting it out keeps what's left.
+- **Water and riding.** Swimming douses it (and you can't light it while swimming); ashore, take it again to relight
+  it. On a mount or in a village the weapon is stowed as before. In the boat it stands in the bow post (see the boat).
 
 Cost: about +2.9 KB raw (`game.js` +2,369 bytes, about 0.9 KB of it comments; `compiler.js` +456; `index.html` +64;
 `models.json` +2 bytes minified, eight colours gaining a `!`). Estimate only: surprisal wasn't run here.
@@ -905,7 +906,7 @@ design discussion and the other options weighed are in [docs/goal-ideas.md](docs
   locks within 3° (0.05 rad) with a chime and a burst. A locked beacon stays locked.
 - **A new torch.** About one rock in eight has a glinting crystal over it. Swing the axe at it for a flint (the glint
   comes back after the same 30 minutes as a felled tree, kept in `warriorFelled` as `"f" + index`). With a wood and a
-  flint, slot 3 (or tapping the flint) makes a torch. T with no torch says the recipe.
+  flint, slot 3 (or tapping the flint) makes a torch.
 - **Beams from anywhere.** Every beam is drawn wherever you are, not only near its village. A far beam is moved
   toward the camera and shrunk by the same factor (12 / distance), which leaves its picture unchanged but keeps it
   inside the camera's 200-unit range. It is drawn long enough to run out past that range and fattened with distance

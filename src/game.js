@@ -569,7 +569,7 @@ function slot(i) {
   }
   if (k == 'torch' && !bag.torch) craft()
   if (k == 'boat') launch()
-  if (ITEMS.includes(k)) equip(ITEMS.indexOf(k))
+  if (ITEMS.includes(k)) equip(ITEMS.indexOf(k), 1)
 }
 function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
@@ -752,41 +752,40 @@ player.item = 0
 player.kills = 0
 player.air = 1
 let item
-// The torch lights the night (T or LIGHT). It burns in the right hand when it's the weapon (a fire swing: +2 damage
-// and the burn), else in the left hand in place of the shield, so the sword or axe can fight in its light. Unlit,
-// the torch weapon is a weak club. A torch burns for FUEL seconds; relighting a spent one costs a wood. Water douses it.
-// In the boat both hands are on the oars: the lit torch stands in the bow post, and goes back to his hand ashore.
+// The torch is a weapon like the sword and axe: taking it in hand (its slot, F or SWAP) lights it (a fire swing: +2
+// damage and the burn) and lights the night. Unlit, it's a weak club. A torch burns for FUEL seconds; relighting a
+// spent one (take it again) costs a wood. Water douses it. In the boat the lit torch stands in the bow post.
 const FUEL = 150
 let lit = 0
 let fuel = FUEL
 let boat
 function torch() {
-  const w = ITEMS[player.item] == 'torch' && player.m.props.handR
-  hold(lib, player.m, 'handL', player.boat ? null : lit && !w ? 'torch' : 'shield')
+  hold(lib, player.m, 'handL', player.boat ? null : 'shield')
   boat && hold(lib, boat, 'post', player.boat && lit ? 'torch' : null)
   for (const b in player.m.props) if (player.m.props[b].bones.flame) player.m.props[b].bones.flame.visible = b != 'back' && lit > 0
   hud()
 }
 function light() {
-  if (player.swim || player.hp <= 0) return
-  if (!bag.torch) return craft()
-  if (!lit && fuel <= 0) {
+  if (lit || player.swim || ITEMS[player.item] != 'torch') return
+  if (fuel <= 0) {
     if (!bag.wood) return say('Your torch is spent: relighting it takes a wood')
     gain('wood', -1)
     fuel = FUEL
   }
-  lit ^= 1
-  beep(lit ? 200 : 90, 0.25, 'sawtooth', 0.03, lit ? 2 : 0.4)
+  lit = 1
+  beep(200, 0.25, 'sawtooth', 0.03, 2)
   torch()
 }
-function equip(i) {
+function equip(i, take) {
   player.item = (i + ITEMS.length) % ITEMS.length
   if (ITEMS[player.item] in bag && !bag[ITEMS[player.item]]) player.item = 0 // none left to hold
+  if (ITEMS[player.item] != 'torch') lit = 0
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
   torch()
   tray()
+  take && light()
 }
 const torchLight = new THREE.PointLight('#ff9a40', 0, 14, 1.5)
 scene.add(torchLight)
@@ -1893,10 +1892,9 @@ addEventListener('keydown', (e) => {
   keys[e.code] = 1
   if (!$('inv').hidden && !e.code.startsWith('Digit')) return e.code == 'Escape' && pack()
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
-  if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1)
+  if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1, 1)
   if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
   if (e.code == 'KeyB') launch()
-  if (e.code == 'KeyT') light()
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyN' || (e.code == 'Escape' && !$('big').hidden)) bigMap()
@@ -1910,10 +1908,9 @@ addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
 addEventListener('touchstart', (e) => {
   for (const t of e.changedTouches) {
-    if (t.target.id == 'swap') equip(player.item + 1)
+    if (t.target.id == 'swap') equip(player.item + 1, 1)
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
-    else if (t.target.id == 'lit') light()
     else if (t.target.id == 'mute' || t.target.closest('#tray,#nav,#big,#inv')) continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
@@ -2088,7 +2085,7 @@ function frame() {
   player.update(dt, run)
   if (player.boat) grip()
   player.safe -= dt
-  if (lit && (fuel -= dt) <= 0) (lit = 0), torch(), say('Your torch burnt out')
+  if (lit && (fuel -= dt) <= 0) (lit = 0), torch(), say('Your torch burnt out: pick it to relight (1 wood)')
   if (lit && (fuel | 0) != ((fuel + dt) | 0)) hud()
   if (!alive && (player.dead += dt) > 3) {
     player.hp = player.maxHp
@@ -2243,7 +2240,7 @@ function frame() {
   }
 
   // torch light follows the flame, flickering
-  const flame = lit && (boat?.props.post?.bones.flame || player.m.props.handR?.bones.flame || player.m.props.handL?.bones.flame)
+  const flame = lit && (boat?.props.post?.bones.flame || player.m.props.handR?.bones.flame)
   const t = clock.elapsedTime
   if (flame) {
     flame.getWorldPosition(torchLight.position)
