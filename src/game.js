@@ -62,7 +62,41 @@ function height(x, z) {
   let h = 0
   for (let o = 0, f = 0.015, a = 6; o < 4; o++, f *= 2.1, a *= 0.45) h += (noise(x * f + o * 17, z * f) - 0.5) * a
   const edge = Math.max(Math.abs(x), Math.abs(z)) / (SIZE / 2)
-  return h + 1.2 + Math.max(0, edge - 0.8) * 60 // the map's rim rises into hills
+  return flatten(x, z, h + 1.2 + Math.max(0, edge - 0.8) * 60) // the map's rim rises into hills
+}
+
+// ---------- villages: pick a dry, gentle site near the start and level the ground there ----------
+// A village is a circular zone: no weapons inside, and monsters stay out.
+let town = null
+function flatten(x, z, h) {
+  if (!town) return h
+  const d = Math.hypot(x - town.x, z - town.z)
+  const k = Math.min(1, Math.max(0, (d - town.r) / 8))
+  return town.y + (h - town.y) * k * k * (3 - 2 * k)
+}
+const inTown = (x, z, pad = 0) => Math.hypot(x - town.x, z - town.z) < town.r + pad
+{
+  const VR = rng(7)
+  let best
+  let hx = 0
+  let hz = 0
+  for (let a = 0; height(hx, hz) < 2; a += 0.5) (hx = Math.cos(a) * a * 0.3), (hz = Math.sin(a) * a * 0.3) // the start point
+  for (let i = 0; i < 60; i++) {
+    const a = VR() * 7
+    const d = 27 + VR() * 10
+    const x = hx + Math.cos(a) * d
+    const z = hz + Math.sin(a) * d
+    let lo = 1e9
+    let hi = -1e9
+    for (let j = 0; j < 8; j++) {
+      const y = height(x + Math.cos(j) * 12, z + Math.sin(j) * 12)
+      lo = Math.min(lo, y)
+      hi = Math.max(hi, y)
+    }
+    const score = hi - lo + (lo < WATER + 1 ? 99 : 0) // flattest dry ring wins
+    if (!best || score < best[2]) best = [x, z, score]
+  }
+  town = { x: best[0], z: best[1], y: height(best[0], best[1]), r: 15, hx, hz }
 }
 
 {
@@ -97,10 +131,11 @@ function height(x, z) {
 
 // start on dry land near the middle of the map
 const home = new THREE.Vector3()
-for (let a = 0; height(home.x, home.z) < 2; a += 0.5) home.set(Math.cos(a) * a * 0.3, 0, Math.sin(a) * a * 0.3)
+home.set(town.hx, 0, town.hz) // found before the village levelled its ground (see villages: site)
 
 // ---------- scenery: each kind compiled from text in a few seeded variants, then instanced ----------
 const trees = [] // colliders: [x, z, radius]
+const blockers = [] // extra colliders: (x, z, actor) => [x, z]
 for (const [kind, count, radius] of [
   ['pine', 500, 0.5],
   ['oak', 300, 0.6],
@@ -118,7 +153,7 @@ for (const [kind, count, radius] of [
         x = (R() - 0.5) * SIZE * 0.9
         z = (R() - 0.5) * SIZE * 0.9
         h = height(x, z)
-      } while (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6)
+      } while (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3))
       const s = 0.8 + R() * 0.5
       o.position.set(x, h - 0.1, z)
       o.rotation.y = R() * 7
@@ -169,6 +204,7 @@ class Actor {
         z = tz + (ez / d) * (r + 0.4)
       }
     }
+    for (const f of blockers) [x, z] = f(x, z, this)
     const lim = SIZE / 2 - 25
     this.pos.x = Math.max(-lim, Math.min(lim, x))
     this.pos.z = Math.max(-lim, Math.min(lim, z))
@@ -184,7 +220,7 @@ class Actor {
     ]
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
-    this.pos.y = Math.max(WATER - 0.35, height(this.pos.x, this.pos.z))
+    this.pos.y = this.floor ?? Math.max(WATER - 0.35, height(this.pos.x, this.pos.z))
     this.g.rotation.y = this.dir
     this.flash = Math.max(0, this.flash - dt * 4)
     this.m.mat.emissive.setRGB(this.flash * 0.7 + this.burn * 0.12, this.flash * 0.3 + this.burn * 0.04, this.flash * 0.3)
@@ -195,7 +231,7 @@ class Actor {
 const $ = (id) => document.getElementById(id)
 function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
 
 // ---------- player ----------
@@ -210,6 +246,7 @@ function equip(i) {
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   torchLight.intensity = item.burn ? 30 : 0
+  if (village?.in) village.stow(1)
   hud()
 }
 const torchLight = new THREE.PointLight('#ff9a40', 0, 12, 1.5)
@@ -235,7 +272,7 @@ function spawn(f) {
     const d = 18 + R() * 30
     x = player.pos.x + Math.cos(a) * d
     z = player.pos.z + Math.sin(a) * d
-  } while (height(x, z) < WATER + 0.3 && R() < 0.95)
+  } while ((height(x, z) < WATER + 0.3 && R() < 0.95) || inTown(x, z, 4))
   e.pos.set(x, 0, z)
   const s = e.m.root.scale.x
   e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4 }[kind] * (0.6 + s * 0.6))
@@ -283,6 +320,248 @@ function bars(dt) {
     b.fill.scale.x = Math.max(0.001, b.v * b.w)
     b.fill.material = barFills[f > 0.6 ? 2 : f > 0.3 ? 1 : 0]
     b.quaternion.copy(barQ.copy(e.g.quaternion).invert()).multiply(camera.quaternion) // billboard
+  }
+}
+
+// ---------- villages: houses round a square, townsfolk, doors into rooms ----------
+// Rooms sit deep under the village (the ground hides them). A door fades to black and moves you down into the
+// room, where a fixed camera looks in over a low front wall (a cutaway). Walking back out of the door reverses it.
+var village
+{
+  const T = town
+  const VR = rng(42)
+  const TAU = Math.PI * 2
+  const add = (name, seed, x, y, z, ry = 0) => {
+    const m = make(lib, name, seed)
+    m.root.position.set(x, y, z)
+    m.root.rotation.y = ry
+    scene.add(m.root)
+    return m
+  }
+  // push (x, z) out of a box of half-size hw x hd centred on (cx, cz), turned by ry
+  const box = (x, z, cx, cz, hw, hd, ry = 0) => {
+    const c = Math.cos(ry)
+    const s = Math.sin(ry)
+    let lx = (x - cx) * c - (z - cz) * s
+    let lz = (x - cx) * s + (z - cz) * c
+    if (Math.abs(lx) >= hw || Math.abs(lz) >= hd) return [x, z]
+    if (hw - Math.abs(lx) < hd - Math.abs(lz)) lx = Math.sign(lx) * hw
+    else lz = Math.sign(lz) * hd
+    return [cx + lx * c + lz * s, cz - lx * s + lz * c]
+  }
+  const syl = ['Oak', 'Ash', 'Mill', 'Brook', 'Thorn', 'Elm', 'wick', 'by', 'ford', 'ham', 'stead', 'well']
+  const name = syl[(VR() * 6) | 0] + syl[6 + ((VR() * 6) | 0)]
+
+  add('plaza', 1, T.x, T.y, T.z).root.scale.set(5.5, 1, 5.5)
+  add('well', 1, T.x, T.y, T.z)
+  const gate = Math.atan2(home.z - T.z, home.x - T.x) // the main gate faces the start point
+  const path = (a, len) => {
+    const m = add('path', 1, T.x, T.y - 0.01, T.z, Math.PI / 2 - a)
+    m.root.scale.z = len
+  }
+  path(gate, T.r + 4)
+  path(gate + Math.PI, T.r + 4)
+
+  // houses, evenly round the square with the gate between two of them, doors facing the well
+  const houses = []
+  const n = 5 + ((VR() * 2) | 0)
+  for (let i = 0; i < n; i++) {
+    const a = gate + ((i + 0.5 + (VR() - 0.5) * 0.3) * TAU) / n
+    const r = 9 + VR() * 1.5
+    const x = T.x + Math.cos(a) * r
+    const z = T.z + Math.sin(a) * r
+    const ry = Math.atan2(T.x - x, T.z - z)
+    const m = add('house', i + 1, x, T.y, z, ry)
+    const { w, d } = m.vars
+    const sx = Math.sin(ry)
+    const sz = Math.cos(ry)
+    path(a + Math.PI, r - d / 2)
+    const room = add('room', i + 1, x, T.y - 40 - i * 15, z)
+    m.mat.transparent = true
+    houses.push({ m, x, z, ry, w, d, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d })
+  }
+
+  // fence ring with two gates
+  {
+    const m = make(lib, 'fence', 1)
+    const count = Math.floor((TAU * T.r) / 2.1)
+    const mesh = new THREE.InstancedMesh(bake(m), m.mat, count)
+    mesh.castShadow = true
+    const o = new THREE.Object3D()
+    let k = 0
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * TAU
+      if (Math.abs(Math.sin((a - gate) / 2)) < 0.07 || Math.abs(Math.cos((a - gate) / 2)) < 0.07) continue
+      o.position.set(T.x + Math.cos(a) * T.r, T.y, T.z + Math.sin(a) * T.r)
+      o.rotation.y = -a - Math.PI / 2
+      o.updateMatrix()
+      mesh.setMatrixAt(k++, o.matrix)
+    }
+    mesh.count = k
+    scene.add(mesh)
+  }
+
+  // townsfolk: the warrior's skeleton in seeded clothes, strolling between doors and the well
+  const spots = [...houses.map((h) => [h.out[0] + Math.cos(h.ry) * 1.6, h.out[1] - Math.sin(h.ry) * 1.6]), ...[0, 1, 2, 3].map((i) => [T.x + Math.cos(i * 1.6) * 2.2, T.z + Math.sin(i * 1.6) * 2.2])]
+  const folk = []
+  for (let i = 0; i < 7; i++) {
+    const f = new Actor('villager', 200 + i)
+    const [x, z] = spots[i % spots.length]
+    f.pos.set(x, 0, z)
+    f.goal = spots[(VR() * spots.length) | 0]
+    f.wait = VR() * 3
+    folk.push(f)
+  }
+
+  // colliders: houses (outside), the well, the fence, room walls and furniture (inside), townsfolk, and monsters kept out
+  blockers.push((x, z, who) => {
+    if (foes.includes(who)) {
+      const dx = x - T.x
+      const dz = z - T.z
+      const d = Math.hypot(dx, dz) || 1
+      return d < T.r + 1 ? [T.x + (dx / d) * (T.r + 1), T.z + (dz / d) * (T.r + 1)] : [x, z]
+    }
+    const h = who.room
+    if (h) {
+      const gap = Math.abs(x - h.x) < 0.8
+      x = Math.max(h.x - h.rw / 2 + 0.35, Math.min(h.x + h.rw / 2 - 0.35, x))
+      z = Math.max(h.z - h.rd / 2 + 0.7, Math.min(h.z + h.rd / 2 - (gap ? 0.1 : 0.45), z))
+      ;[x, z] = box(x, z, h.x - h.rw / 2 + 0.8, h.z - h.rd / 2 + 1.3, 0.95, 1.4) // bed
+      ;[x, z] = box(x, z, h.x + h.rw / 2 - 1.6, h.z + 0.2, 1.1, 1.3) // table and stools
+      return box(x, z, h.x + h.rw / 2 - 0.35, h.z - h.rd / 2 + 0.8, 0.6, 0.9) // shelf
+    }
+    for (const o of houses) [x, z] = box(x, z, o.x, o.z, o.w / 2 + 0.4, o.d / 2 + 0.4, o.ry)
+    if (who == player) for (const f of folk) [x, z] = box(x, z, f.pos.x, f.pos.z, 0.45, 0.45)
+    const dx = x - T.x
+    const dz = z - T.z
+    const d = Math.hypot(dx, dz) || 1
+    const a = Math.atan2(dz, dx)
+    const gap = Math.abs(Math.sin((a - gate) / 2)) < 0.07 || Math.abs(Math.cos((a - gate) / 2)) < 0.07
+    let r = Math.max(d, 1.5) // the well
+    if (who != player) r = Math.min(r, T.r - 1) // townsfolk stay in
+    else if (!gap && Math.abs(d - T.r) < 0.45) r = d < T.r ? T.r - 0.45 : T.r + 0.45 // the fence
+    return r == d ? [x, z] : [T.x + (dx / d) * r, T.z + (dz / d) * r]
+  })
+
+  // the weapon hangs on the warrior's back inside the village
+  const back = new THREE.Object3D()
+  back.position.set(0, 0.35, -0.27)
+  back.rotation.set(-70 * DEG, 0, 35 * DEG, 'ZYX') // tip down and back, then lean across the back
+  player.m.bones.chest.add(back)
+  player.m.bones.back = back
+  function stow(on) {
+    hold(lib, player.m, 'back', on ? ITEMS[player.item] : null)
+    if (on) hold(lib, player.m, 'handR', null)
+    else equip(player.item)
+    torchLight.intensity = 0
+  }
+
+  // fade to black, do the move, fade back in
+  const veil = document.createElement('div')
+  veil.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .25s'
+  document.body.appendChild(veil)
+  let fading = 0
+  const fade = (fn) => {
+    if (fading) return
+    fading = 1
+    veil.style.opacity = 1
+    setTimeout(() => {
+      fn()
+      veil.style.opacity = 0
+      setTimeout(() => (fading = 0), 300)
+    }, 260)
+  }
+  const glow = new THREE.PointLight('#ffb070', 0, 16, 1.2)
+  scene.add(glow)
+  const BLACK = new THREE.Color(0)
+  let yaw = 0 // the outdoor camera angle, kept while indoors
+
+  village = {
+    name,
+    houses,
+    folk,
+    stow,
+    in: false,
+    enter(h) {
+      fade(() => {
+        player.room = h
+        player.floor = h.y
+        yaw = camYaw
+        player.pos.set(h.x, h.y, h.z + h.rd / 2 - 0.9)
+        player.vel.set(0, 0)
+        player.dir = Math.PI
+        glow.position.set(h.x, h.y + 1.2, h.z - h.rd / 2 + 1.2)
+      })
+    },
+    leave() {
+      const h = player.room
+      fade(() => {
+        player.room = player.floor = null
+        camYaw = yaw
+        player.pos.set(h.out[0], T.y, h.out[1])
+        player.vel.set(0, 0)
+        player.dir = h.ry
+        camera.position.set(h.out[0] + Math.sin(camYaw) * 7, T.y + 7.5, h.out[1] + Math.cos(camYaw) * 7)
+      })
+    },
+    update(dt) {
+      const p = player.pos
+      const was = this.in
+      this.in = player.hp > 0 && inTown(p.x, p.z)
+      if (this.in != was) {
+        stow(this.in)
+        hud()
+      }
+      const h = player.room
+      if (h) {
+        if (p.z > h.z + h.rd / 2 - 0.3) this.leave()
+        camYaw = 0 // move relative to the room camera
+        // a fixed room camera, warm firelight, no sky
+        camera.position.set(h.x + (p.x - h.x) * 0.3, h.y + 5.5, h.z + h.rd / 2 + 3.2)
+        camera.lookAt(h.x + (p.x - h.x) * 0.3, h.y + 0.6, h.z - 0.4)
+        glow.intensity = 30 * (1 + Math.sin(clock.elapsedTime * 13) * 0.08)
+        sun.intensity = 0
+        hemi.intensity = 0.7
+        scene.background = BLACK
+      } else {
+        glow.intensity = 0
+        scene.background = sky
+        for (const o of houses) {
+          // pressed against the front wall, within the door's width
+          const c = Math.cos(o.ry)
+          const s = Math.sin(o.ry)
+          const lx = (p.x - o.x) * c - (p.z - o.z) * s
+          const lz = (p.x - o.x) * s + (p.z - o.z) * c
+          if (Math.abs(lx) < 0.6 && lz > 0 && lz < o.d / 2 + 0.5) this.enter(o)
+        }
+        // a house between the camera and the player fades to see-through
+        const ax = camera.position.x
+        const az = camera.position.z
+        const bx = p.x - ax
+        const bz = p.z - az
+        for (const o of houses) {
+          const t = Math.min(1, Math.max(0, ((o.x - ax) * bx + (o.z - az) * bz) / (bx * bx + bz * bz)))
+          const hide = t < 0.98 && Math.hypot(ax + bx * t - o.x, az + bz * t - o.z) < Math.max(o.w, o.d) / 2 + 0.6
+          o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
+        }
+      }
+      for (const f of folk) {
+        const dx = f.goal[0] - f.pos.x
+        const dz = f.goal[1] - f.pos.z
+        const d = Math.hypot(dx, dz)
+        f.speed = 0
+        if ((f.wait -= dt) > 0) f.move(0, 0, dt)
+        else if (d < 0.6) {
+          f.wait = 2 + VR() * 5
+          f.goal = spots[(VR() * spots.length) | 0]
+        } else {
+          f.speed = 1.6
+          f.dir = Math.atan2(dx, dz)
+          f.move((dx / d) * 1.6 * dt, (dz / d) * 1.6 * dt, dt)
+        }
+        f.update(dt, 1.6)
+      }
+    },
   }
 }
 
@@ -367,7 +646,7 @@ addEventListener('touchend', (e) => {
 
 // ---------- combat ----------
 function attack() {
-  if (player.busy || player.hp <= 0) return
+  if (player.busy || player.hp <= 0 || village?.in) return
   player.play(item.anim)
   player.struck = false
   beep(180, 0.15, 'sawtooth', 0.04, 0.4)
@@ -489,7 +768,7 @@ function frame() {
       spawn(e)
       continue
     }
-    if (alive && d < 12 && !(e.burn > 0 && e.kind != 'slime')) {
+    if (alive && d < 12 && !village.in && !(e.burn > 0 && e.kind != 'slime')) {
       // chase, then attack when close
       if (d > e.reach) {
         tx = dx / d
@@ -576,6 +855,7 @@ function frame() {
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
   sun.target.position.copy(target)
 
+  village.update(dt)
   bars(dt)
   renderer.render(scene, camera)
   requestAnimationFrame(frame)
@@ -583,4 +863,4 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, equip, attack, clock, audio } // for play-testing from the console
+window.game = { player, foes, equip, attack, clock, audio, village } // for play-testing from the console

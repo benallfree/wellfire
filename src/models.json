@@ -2535,5 +2535,1288 @@
         "chance": 0.6
       }
     ]
+  },
+  "villager": {
+    "vars": {
+      "s": ".85~1.05",
+      "fat": ".85~1.25",
+      "skin": "e8b088|c89068|a87050|f0c8a0",
+      "shirt": "4a6a9a|8a4a3a|6a8a4a|9a8a5a|7a5a8a|c8b890",
+      "pants": "4a3a2a|3a3a4a|5a4a3a|2f3f2f",
+      "hair": "3a2a1a|7a4a2a|c8a050|ddd|222"
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "hip",
+        "parent": "root",
+        "position": [
+          0,
+          0.95,
+          0
+        ]
+      },
+      {
+        "name": "chest",
+        "parent": "hip",
+        "position": [
+          0,
+          0.05,
+          0
+        ]
+      },
+      {
+        "name": "head",
+        "parent": "chest",
+        "position": [
+          0,
+          0.6,
+          0
+        ]
+      },
+      {
+        "name": "arm*",
+        "parent": "chest",
+        "position": [
+          ".27*fat",
+          0.52,
+          0
+        ]
+      },
+      {
+        "name": "hand*",
+        "parent": "arm*",
+        "position": [
+          0,
+          -0.55,
+          0.02
+        ]
+      },
+      {
+        "name": "leg*",
+        "parent": "hip",
+        "position": [
+          0.11,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "foot*",
+        "parent": "leg*",
+        "position": [
+          0,
+          -0.5,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "chest",
+        "color": "shirt",
+        "position": [
+          0,
+          0.27,
+          0
+        ],
+        "size": [
+          ".44*fat",
+          0.55,
+          ".26*fat"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "hip",
+        "color": "pants",
+        "position": [
+          0,
+          -0.06,
+          0
+        ],
+        "size": [
+          ".42*fat",
+          0.2,
+          ".26*fat"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "chest",
+        "color": "e8e0c8|a89060",
+        "position": [
+          0,
+          0.1,
+          "{.13*fat+.01}"
+        ],
+        "size": [
+          ".36*fat",
+          0.5,
+          0.02
+        ],
+        "chance": 0.5
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "skin",
+        "position": [
+          0,
+          0.17,
+          0
+        ],
+        "size": [
+          0.17,
+          0.2,
+          0.17
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "hair",
+        "position": [
+          0,
+          0.24,
+          -0.03
+        ],
+        "size": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "hair",
+        "position": [
+          0,
+          0.12,
+          -0.12
+        ],
+        "size": [
+          0.14,
+          0.18,
+          0.1
+        ],
+        "chance": 0.3
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "222",
+        "position": [
+          0.065,
+          0.19,
+          0.15
+        ],
+        "size": [
+          0.025,
+          0.03,
+          0.02
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "c8a050|6a4a2a|8a3a2a",
+        "position": [
+          0,
+          0.36,
+          0
+        ],
+        "size": [
+          0.14,
+          0.14,
+          0.22
+        ],
+        "segments": 8,
+        "chance": 0.35
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "c8a050|6a4a2a",
+        "position": [
+          0,
+          0.31,
+          0
+        ],
+        "size": [
+          0.32,
+          0.03,
+          0.32
+        ],
+        "segments": 8,
+        "chance": 0.35
+      },
+      {
+        "shape": "box",
+        "bone": "arm*",
+        "color": "shirt",
+        "position": [
+          0,
+          -0.15,
+          0
+        ],
+        "size": [
+          0.12,
+          0.3,
+          0.12
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "arm*",
+        "color": "skin",
+        "position": [
+          0,
+          -0.4,
+          0
+        ],
+        "size": [
+          0.1,
+          0.2,
+          0.1
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "hand*",
+        "color": "skin",
+        "position": [
+          0,
+          -0.03,
+          0
+        ],
+        "size": [
+          0.065,
+          0.065,
+          0.065
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "leg*",
+        "color": "pants",
+        "position": [
+          0,
+          -0.22,
+          0
+        ],
+        "size": [
+          0.15,
+          0.44,
+          0.16
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "foot*",
+        "color": "3a2a1a",
+        "position": [
+          0,
+          -0.04,
+          0.04
+        ],
+        "size": [
+          0.15,
+          0.1,
+          0.24
+        ]
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 3,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              4
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -15,
+              0,
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "arm*",
+            "channel": "rz",
+            "keys": [
+              3,
+              5
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 1,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "leg^",
+            "channel": "rx",
+            "keys": [
+              25,
+              -25
+            ]
+          },
+          {
+            "bone": "arm^",
+            "channel": "rx",
+            "keys": [
+              -20,
+              20
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.03,
+              0,
+              0.03
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              3,
+              3
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "house": {
+    "vars": {
+      "w": "3.6~5",
+      "d": "3~4.2",
+      "h": "2.1~2.6",
+      "r": "1.2~1.8",
+      "wall": "ede0c8|d8c8a0|c8b090|e0d0b8",
+      "beam": "4a3020|5a3a22",
+      "roof": "a5452f|8a5a3a|6a6a7a|c8a050|7a3a2a"
+    },
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "8a8070",
+        "position": [
+          0,
+          0.15,
+          0
+        ],
+        "size": [
+          "w+.2",
+          0.3,
+          "d+.2"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wall",
+        "position": [
+          0,
+          "{h/2}",
+          0
+        ],
+        "size": [
+          "w",
+          "h",
+          "d"
+        ]
+      },
+      {
+        "shape": "ext",
+        "bone": "root",
+        "color": "wall",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          "d",
+          "{-w/2}",
+          "h",
+          "{w/2}",
+          "h",
+          0,
+          "{h+r}"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "roof",
+        "position": [
+          "{-w/4}",
+          "{h+r/2+.06}",
+          0
+        ],
+        "size": [
+          "{Math.hypot(w/2,r)+.4}",
+          0.14,
+          "d+.6"
+        ],
+        "rotation": [
+          0,
+          0,
+          "{Math.atan2(r,w/2)*57.3}"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "roof",
+        "position": [
+          "{w/4}",
+          "{h+r/2+.06}",
+          0
+        ],
+        "size": [
+          "{Math.hypot(w/2,r)+.4}",
+          0.14,
+          "d+.6"
+        ],
+        "rotation": [
+          0,
+          0,
+          "{-Math.atan2(r,w/2)*57.3}"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "beam",
+        "position": [
+          "{w/2}",
+          "{h/2}",
+          "{d/2}"
+        ],
+        "size": [
+          0.16,
+          "h",
+          0.16
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "beam",
+        "position": [
+          "{w/2}",
+          "{h/2}",
+          "{-d/2}"
+        ],
+        "size": [
+          0.16,
+          "h",
+          0.16
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "beam",
+        "position": [
+          0,
+          "h",
+          "{d/2+.02}"
+        ],
+        "size": [
+          "w",
+          0.14,
+          0.06
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "5a3a22",
+        "position": [
+          0,
+          0.95,
+          "{d/2+.03}"
+        ],
+        "size": [
+          0.9,
+          1.7,
+          0.06
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "3a2416",
+        "position": [
+          0,
+          0.95,
+          "{d/2+.05}"
+        ],
+        "size": [
+          1,
+          1.8,
+          0.02
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "c9a64a",
+        "position": [
+          0.3,
+          0.95,
+          "{d/2+.08}"
+        ],
+        "size": [
+          0.04,
+          0.04,
+          0.04
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "2a2a35",
+        "position": [
+          "{w/2+.01}",
+          "{h*.55}",
+          0
+        ],
+        "size": [
+          0.04,
+          0.6,
+          0.7
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "beam",
+        "position": [
+          "{w/2+.03}",
+          "{h*.55}",
+          0
+        ],
+        "size": [
+          0.04,
+          0.7,
+          0.1
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "2a2a35",
+        "position": [
+          "{w/4+.25}",
+          "{h*.6}",
+          "{d/2+.01}"
+        ],
+        "size": [
+          0.55,
+          0.5,
+          0.04
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "7a6a60",
+        "position": [
+          "{w/4}",
+          "{h+r*.7}",
+          "{-d/4}"
+        ],
+        "size": [
+          0.45,
+          "r+.6",
+          0.45
+        ],
+        "chance": 0.6
+      }
+    ]
+  },
+  "room": {
+    "vars": {
+      "w": "6~7.5",
+      "d": "5~6",
+      "wall": "e0d0b0|d8c8a0|c8b8a0",
+      "wood": "8a6040|7a5030|9a7048",
+      "cloth": "a83a3a|3a6a8a|6a8a4a|9a7a3a"
+    },
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          0,
+          -0.1,
+          0
+        ],
+        "size": [
+          "w+.6",
+          0.2,
+          "d+.6"
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "3a2a1a",
+        "position": [
+          0,
+          1.5,
+          "{-d/2-.15}"
+        ],
+        "size": [
+          "w+.6",
+          3,
+          0.3
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wall",
+        "position": [
+          "{w/2+.15}",
+          1.5,
+          0
+        ],
+        "size": [
+          0.3,
+          3,
+          "d+.6"
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wall",
+        "position": [
+          0,
+          1.5,
+          "{-d/2+.01}"
+        ],
+        "size": [
+          "w",
+          0.9,
+          0.02
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "6a4a2a",
+        "position": [
+          "{-w/2+.6+i*(w-1.2)/4}",
+          1.5,
+          "{-d/2+.05}"
+        ],
+        "size": [
+          0.14,
+          3,
+          0.1
+        ],
+        "repeat": 5,
+        "var": "i"
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "3a2a1a",
+        "position": [
+          "{w/4+.4}",
+          0.2,
+          "{d/2+.15}"
+        ],
+        "size": [
+          "{w/2-.9}",
+          0.4,
+          0.3
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "7a5a3a",
+        "position": [
+          0,
+          1.6,
+          "{-d/2+.2}"
+        ],
+        "size": [
+          7,
+          0.2,
+          0.2
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "8a8070",
+        "position": [
+          0,
+          0.8,
+          "{-d/2+.25}"
+        ],
+        "size": [
+          1.8,
+          1.6,
+          0.5
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "2a2018",
+        "position": [
+          0,
+          0.55,
+          "{-d/2+.3}"
+        ],
+        "size": [
+          1,
+          0.9,
+          0.5
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "f72!",
+        "position": [
+          0,
+          0.25,
+          "{-d/2+.6}"
+        ],
+        "size": [
+          0.3,
+          0.2,
+          0.15
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "fd4!",
+        "position": [
+          0,
+          0.25,
+          "{-d/2+.7}"
+        ],
+        "size": [
+          0.15,
+          0.25,
+          0.1
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "8a8070",
+        "position": [
+          0,
+          2.3,
+          "{-d/2+.2}"
+        ],
+        "size": [
+          0.8,
+          1.4,
+          0.4
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{-w/2+.8}",
+          0.3,
+          "{-d/2+1.3}"
+        ],
+        "size": [
+          1.2,
+          0.35,
+          2.2
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "cloth",
+        "position": [
+          "{-w/2+.8}",
+          0.52,
+          "{-d/2+1.5}"
+        ],
+        "size": [
+          1.15,
+          0.12,
+          1.8
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "eee",
+        "position": [
+          "{-w/2+.8}",
+          0.55,
+          "{-d/2+.5}"
+        ],
+        "size": [
+          0.8,
+          0.15,
+          0.4
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{-w/2+.8}",
+          0.6,
+          "{-d/2+.25}"
+        ],
+        "size": [
+          1.2,
+          0.7,
+          0.1
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{w/2-1.6}",
+          0.75,
+          0.2
+        ],
+        "size": [
+          1.4,
+          0.08,
+          0.9
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{w/2-1}",
+          0.37,
+          0.2
+        ],
+        "size": [
+          0.08,
+          0.75,
+          0.8
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{w/2-2.2}",
+          0.37,
+          0.2
+        ],
+        "size": [
+          0.08,
+          0.75,
+          0.8
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{w/2-1.6}",
+          0.37,
+          "{.2+.7}"
+        ],
+        "size": [
+          0.5,
+          0.45,
+          0.5
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{w/2-1.6}",
+          0.37,
+          "{.2-.7}"
+        ],
+        "size": [
+          0.5,
+          0.45,
+          0.5
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "eee",
+        "position": [
+          "{w/2-1.7}",
+          0.85,
+          0.2
+        ],
+        "size": [
+          0.1,
+          0.12,
+          0.08
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "c9a64a",
+        "position": [
+          "{w/2-1.3}",
+          0.82,
+          0.3
+        ],
+        "size": [
+          0.06,
+          0.06,
+          0.06
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "cloth",
+        "position": [
+          0,
+          0.02,
+          0.5
+        ],
+        "size": [
+          2.2,
+          0.02,
+          1.4
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          "{w/2-.35}",
+          1,
+          "{-d/2+.8}"
+        ],
+        "size": [
+          0.5,
+          2,
+          1.2
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "c84|48a|6a4|a44",
+        "position": [
+          "{w/2-.4}",
+          "{.6+i*.5}",
+          "{-d/2+.8}"
+        ],
+        "size": [
+          0.5,
+          0.25,
+          0.9
+        ],
+        "repeat": 3,
+        "var": "i"
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "7a5030",
+        "position": [
+          "{-w/2+.5}",
+          0.4,
+          "{d/2-.6}"
+        ],
+        "size": [
+          0.3,
+          0.8,
+          0.3
+        ],
+        "segments": 8,
+        "chance": 0.7
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "7a5030",
+        "position": [
+          "{-w/2+1.1}",
+          0.4,
+          "{d/2-.5}"
+        ],
+        "size": [
+          0.3,
+          0.8,
+          0.3
+        ],
+        "segments": 8,
+        "chance": 0.5
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "3a5a2a",
+        "position": [
+          "{w/2-.4}",
+          0.3,
+          "{d/2-.8}"
+        ],
+        "size": [
+          0.5,
+          0.6,
+          0.5
+        ],
+        "chance": 0.6
+      }
+    ]
+  },
+  "well": {
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "8a8a8a",
+        "position": [
+          0,
+          0.4,
+          0
+        ],
+        "size": [
+          0.9,
+          0.8,
+          1
+        ],
+        "segments": 10
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "2a4a6a",
+        "position": [
+          0,
+          0.7,
+          0
+        ],
+        "size": [
+          0.75,
+          0.05,
+          0.75
+        ],
+        "segments": 10
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "6b4423",
+        "position": [
+          0.85,
+          1.2,
+          0
+        ],
+        "size": [
+          0.12,
+          1.6,
+          0.12
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "6b4423",
+        "position": [
+          0,
+          1.95,
+          0
+        ],
+        "size": [
+          1.9,
+          0.1,
+          0.1
+        ]
+      },
+      {
+        "shape": "ext",
+        "bone": "root",
+        "color": "a5452f",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          1.2,
+          -1.2,
+          1.9,
+          1.2,
+          1.9,
+          0,
+          2.5
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "6b4423",
+        "position": [
+          0,
+          1.5,
+          0
+        ],
+        "size": [
+          0.12,
+          0.25,
+          0.12
+        ],
+        "segments": 6
+      }
+    ]
+  },
+  "fence": {
+    "vars": {
+      "wood": "8a6a40|7a5a38"
+    },
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          1,
+          0.45,
+          0
+        ],
+        "size": [
+          0.12,
+          0.9,
+          0.12
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          0,
+          0.65,
+          0
+        ],
+        "size": [
+          2.1,
+          0.08,
+          0.06
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "wood",
+        "position": [
+          0,
+          0.35,
+          0
+        ],
+        "size": [
+          2.1,
+          0.08,
+          0.06
+        ]
+      }
+    ]
+  },
+  "plaza": {
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "b8a478",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          1,
+          0.1,
+          1
+        ],
+        "segments": 16
+      }
+    ]
+  },
+  "path": {
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "b8a478",
+        "position": [
+          0,
+          0,
+          0.5
+        ],
+        "size": [
+          1.3,
+          0.1,
+          1
+        ]
+      }
+    ]
   }
 }

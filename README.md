@@ -258,6 +258,58 @@ fight layer that was mostly bass, which laptop speakers barely play, so it went 
 and the choice is remembered. The music module, score and hooks add 12,985 bytes raw to the build and **1,044 bytes at
 surprisal -1** (the whole game goes from 3,068 to 4,112 bytes). With the old text score the music cost 1,204.
 
+## Villages
+
+![Brookford from the square](docs/village.jpg)
+
+A seeded village sits about 30 units from the start: five or six houses round a square with a well, dirt paths to each
+door, and a fence ring with two gates. Seven townspeople stroll between the doors and the well and stop to idle. Walk
+in and the warrior hangs the weapon on his back; attacking is disabled and the HUD shows the village's name. Walk out
+and the weapon is back in hand. Monsters don't spawn inside, stop chasing once you're in, and are pushed back at the
+fence, so they wait at the edge. Walk into any door: the screen fades to black and you're inside, by the fire. Walk
+back out of the door and you're outside again, in front of it.
+
+| weapon stowed | inside a house |
+|---|---|
+| ![sword on the back](docs/village-stowed.jpg) | ![interior](docs/village-interior.jpg) |
+
+How other games do this cheaply, and what I picked:
+
+- **Zones.** MMO sanctuaries and towns are just a radius check. Monsters "leash": they give up the chase at the
+  boundary. Here the village is a circle: inside it you stow the weapon, monsters drop the chase, and a collider keeps
+  them outside the fence.
+- **Interiors.** The usual options are a streamed separate map behind a load door (Zelda, Pokémon, Skyrim), a roof
+  that lifts off when you step in (Ultima VII, Fallout 1/2), or a cutaway room with the near walls cut low (The Sims,
+  Diablo). I picked a **door warp with a fade to black, into a cutaway room**. Each room is built under its house, 40
+  units and more below the ground, where the terrain hides it. The same scene, renderer and `Actor` movement apply,
+  with no scene swap and no streaming. The fade hides the jump. Inside, a fixed camera looks in over a low front wall,
+  so no wall-occlusion code is needed, and the sky turns black, the sun goes off and the hearth's light comes up.
+  A roof lift-off would need real interiors inside every house shell and a camera that copes with walls.
+- **Houses in the way.** Outside, a house between the camera and the player fades see-through (Diablo-style), so the
+  warrior is never lost behind a roof.
+
+The models are JSON in `src/models.json` like everything else: `villager` (the warrior's skeleton with seeded skin, shirt, trousers, hair,
+optional apron and straw hat, and seeded build), `house` (seeded width, depth, wall height, roof pitch and colours,
+with gable, slanted roof, timber frame, door, windows and an optional chimney), `room` (seeded size and colours, with
+bed, table and stools, hearth with a glowing fire, bookshelf, rug, and optional barrels and a crate), and `well`,
+`fence`, `plaza` and `path`. The layout (where houses go, which way they face, the paths, the fence and its gates, the
+name, e.g. "Brookford") is generated in `game.js` from a seed. The terrain is levelled under the village by blending
+`height()` toward the site's height.
+
+**Model format additions: none.** Solid house shells plus separate rooms meant no hollow boxes or door cutouts. A door
+is a dark box on the front wall, a gable is an `ext` triangle, and the roof slopes are boxes whose angle is an
+expression (`"{Math.atan2(r,w/2)*57.3}"`). The existing variables, `a~b` ranges, `|` picks and `chance` parts covered
+all the variation. (The village models were first written in the old DSL and converted with `parse()` from
+`tools/formats.mjs`, the same converter that produced the rest of `models.json`.)
+
+Code hooks outside the village blocks are small, so they should merge cleanly with other work on `game.js`:
+`height()` returns through `flatten()`; `Actor.move` runs a `blockers` list of extra colliders; `Actor.update`
+respects `actor.floor` (the room's floor); `equip`, `attack`, `hud` and monster chasing check `village.in`; and the main
+loop calls `village.update(dt)` before the health bars and rendering.
+
+Cost: about 32.6 KB raw (game code +10.9 KB, model JSON +21.7 KB). Not measured with surprisal. At ~90% for code
+and the ~97% that `models.json` packs to overall, that's roughly 1.1 KB + 0.6 KB, so about 1.7 KB shipped.
+
 ## Size
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal
