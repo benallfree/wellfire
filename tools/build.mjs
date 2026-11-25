@@ -1,12 +1,13 @@
 // Builds dist/index.html: one file holding the game code, the model and music compilers, the model JSON and the score JSON.
-// three.js is loaded from a pinned CDN (see the import map) and is not part of the shipped bytes.
+// Comments are dropped on the way (tools/strip.mjs). three.js is loaded from a pinned CDN (see the import map) and is not part of the shipped bytes.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { strip } from './strip.mjs'
 
 const read = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8')
 const imports = new Set()
 const code = ['compiler.js', 'music.js', 'game.js']
   .map((f) =>
-    read(f)
+    strip(read(f)) // comments stay in the source and never ship
       .split('\n')
       .filter((l) => {
         if (!l.startsWith('import ')) return true
