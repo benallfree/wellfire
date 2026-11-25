@@ -881,6 +881,12 @@ Cost: about +2.9 KB raw (`game.js` +2,369 bytes, about 0.9 KB of it comments; `c
 
 ## The goal: beacons for the star
 
+**Wellfire** is the game's name. The title screen is in the live world at dusk: the name in 3D voxel letters (drawn
+into a small canvas, one box per lit pixel, coloured yellow to red) floats over Oakdale's well, a flickering flame of
+additive cones and sparks rises from the well behind it, and the camera circles. The HUD is hidden, with only a start
+prompt. Any key, click or tap starts the game and its audio and restarts the day at mid-morning; the warrior starts (and gets back up after falling) beside Oakdale's well. `home`, the world's origin for the village grid and "m from start", is unchanged. The lore: the star is an eye that watches, its brood grows bolder where no fire burns, and every well once held a fire
+aimed at it. Five beams pin the eye and the night goes blind, which is the end screen's headline.
+
 The game has an ending now. One bright star hangs at a fixed, seeded direction in the sky (about 15-40° up), as if
 infinitely far away, so the right aim is the same from every village. Set your torch in the beacon on five villages'
 wells, turn each mirror until its beam meets the star, and the five beams start a light show and the end screen. The

@@ -717,7 +717,10 @@ function minimap() {
 // ---------- player ----------
 const player = new Actor('warrior', 1)
 player.hp = player.maxHp = 30
-player.pos.copy(home)
+const W = site(0, 0)
+const bed = new THREE.Vector3(W.x, W.y, W.z + 3)
+player.pos.copy(bed)
+player.dir = Math.PI
 player.item = 0
 player.kills = 0
 player.air = 1
@@ -1768,14 +1771,13 @@ function shine(dt) {
     if (show > 4 && show - dt <= 4) {
       const e = document.createElement('div')
       e.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;text-align:center;font-size:20px;line-height:2;background:#0007;text-shadow:0 2px 4px #000'
-      e.innerHTML = `<b style="font-size:40px;color:#fd4">✦ The beacons meet the star ✦</b>${Object.keys(beacon).filter((k) => beacon[k][2]).map((k) => siteAt(k).name).join(' · ')}<br>${gold} gold · ${player.kills} kills · ${Math.hypot(p.x - home.x, p.z - home.z) | 0} m from where you began<small style="opacity:.7">tap to wander on</small>`
+      e.innerHTML = `<b style="font-size:40px;color:#fd4">✦ The eye is pinned ✦</b>The night goes blind<br>${Object.keys(beacon).filter((k) => beacon[k][2]).map((k) => siteAt(k).name).join(' · ')}<br>${gold} gold · ${player.kills} kills · ${Math.hypot(p.x - home.x, p.z - home.z) | 0} m from where you began<small style="opacity:.7">tap to wander on</small>`
       e.onpointerdown = () => e.remove()
       document.body.append(e)
     }
     if (show > 14) show = 0
   }
 }
-
 // after the rower is posed: each oar turns in its lock towards a hand across the boat
 const hand = new THREE.Vector3()
 function grip() {
@@ -2042,7 +2044,7 @@ function frame() {
     player.hp = player.maxHp
     player.air = 1
     player.once = null
-    player.pos.copy(home)
+    player.pos.copy(bed)
     if (player.boat) (player.boat = player.floor = null), village.stow(0)
     hud()
   }
@@ -2200,7 +2202,8 @@ function frame() {
 
   // day and night: a 3-minute cycle, starting mid-morning. A full night is near-black but for a faint blue moon:
   // the fog closes in and turns black, so only torches, fires, windows, eyes and coins show beyond arm's reach.
-  day = Math.min(1, Math.max(0, Math.cos(t / 30 + 0.6) * 0.8 + 0.6))
+  day = Math.min(1, Math.max(0, Math.cos((t - morn) / 30 + 0.6) * 0.8 + 0.6)) * dawn
+  dawn += ((title ? 0.15 : 1) - dawn) * Math.min(1, dt / 2)
   sky.lerpColors(NIGHT, DAY, day)
   scene.fog.color.copy(sky)
   scene.fog.near = 6 + day * 34
@@ -2228,7 +2231,20 @@ function frame() {
     fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
     fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
-  if (!aim && !show) {
+  if (title) {
+    const r = 30 / Math.min(1, camera.aspect)
+    camera.position.set(W.x + Math.sin(t / 9) * r, W.y + 4, W.z + Math.cos(t / 9) * r)
+    camera.lookAt(W.x, W.y + 7, W.z)
+    word.position.set(W.x, W.y + 8, W.z).lerp(camera.position, 0.1)
+    word.lookAt(camera.position)
+    word.rotateY(Math.sin(t / 2) * 0.4)
+    fire.children.map((f, i) => (f.scale.y = (5 + i * 0.7) * (0.8 + 0.3 * Math.sin(t * (9 + i) + i * 7))))
+    fire.rotation.y = t * 3
+    burst(W, new THREE.Color().setHSL(R() * 0.1, 1, 0.55), 2)
+    bits.slice(-2).map((b) => b.v.multiply({ x: 0.5, y: 2.4, z: 0.5 }))
+    torchLight.position.copy(word.position).lerp(camera.position, 0.15).y -= 3
+    torchLight.intensity = 90 * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
+  } else if (!aim && !show) {
     // (holding a beacon's mirror, or in the light show, shine() runs the camera)
     camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
     if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
@@ -2245,9 +2261,51 @@ function frame() {
   renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }
+const word = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.3, 1.2), new THREE.MeshLambertMaterial({ emissive: '#310', fog: false }), 999)
+const fire = new THREE.Group()
+for (let i = 0; i < 12; i++) {
+  const f = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1, 5).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(i * 0.011, 1, 0.5), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }))
+  f.position.set(Math.sin(i * 2.4) * (2 - i * 0.15), 0, Math.cos(i * 2.4) * (2 - i * 0.15))
+  fire.add(f)
+}
+fire.position.set(W.x, W.y + 3, W.z)
+scene.add(fire)
+{
+  const c = document.createElement('canvas').getContext('2d')
+  c.font = '900 13px serif'
+  c.fillText('WELLFIRE', 0, 12)
+  const d = c.getImageData(0, 0, 80, 14).data
+  let n = 0
+  for (let y = 0; y < 14; y++) for (let x = 0; x < 80; x++) if (d[(y * 80 + x) * 4 + 3] > 99) word.setMatrixAt(n, new THREE.Matrix4().makeTranslation(x * 0.3 - 11, 2 - y * 0.3, 0)), word.setColorAt(n++, new THREE.Color().setHSL(0.15 - y * 0.011, 1, 0.55))
+  word.count = n
+  word.position.set(W.x, W.y + 8, W.z)
+  scene.add(word)
+}
+let dawn = 0.15
+let morn = 0
+let title = 1
+const hide = (o) => ['ui', 'nav', 'tray', 'help', 'mute'].map((k) => ($(k).style.opacity = o))
+hide(0)
+$('tip').textContent = 'press any key or tap to begin'
+$('tip').style.opacity = 1
+for (const ev of ['keydown', 'pointerdown'])
+  addEventListener(
+    ev,
+    (e) => {
+      if (!title) return
+      title = 0
+      morn = clock.elapsedTime
+      scene.remove(word, fire)
+      hide('')
+      $('tip').style.opacity = ''
+      audio.start()
+      e.stopImmediatePropagation()
+      if (!done()) say(`Set torches in ${GOAL} villages' beacons and aim them at the star ✦`)
+    },
+    true,
+  )
 hud()
 frame()
-if (!done()) say(`Set torches in ${GOAL} villages' beacons and aim them at the star ✦`)
 
 window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, depth, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
