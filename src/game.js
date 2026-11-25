@@ -553,7 +553,7 @@ function tray() {
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
-      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
+      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + (ICON[m] || '<i></i>')).join(' + ')}</b>`)
       .join('') +
     (village?.in ? '' : '<br>Craft in a village') +
     '<br>tap two slots to swap'
