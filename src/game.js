@@ -530,7 +530,7 @@ function hud() {
 // the tray (models.json "tray"): six slots, keys 1-6 or a tap, each item taken in hand (Space drops wood or flint);
 // the boat slot launches one. Slot 7 (key 7) opens crafting: recipes (tap one; only in a village; a recipe's
 // inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them. The game
-// pauses while it's open. The bag (counts) and the slot layout are kept in localStorage.
+// keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
 const belt = kept('warriorSlots', lib.tray.slots)
 let pick = -1
@@ -1467,6 +1467,7 @@ function earn(n) {
     localStorage.warriorGold = gold
   } catch {}
   hud()
+  tray()
   $('gold').animate([{ transform: 'scale(1.6)', color: n < 0 ? '#f55' : '#fff' }, { transform: 'scale(1)' }], n < 0 ? 900 : 250)
 }
 // dropped wood or flint (thrown ahead, or the logs of a felled tree): lies spinning until you walk onto it
@@ -1902,7 +1903,7 @@ const keys = {}
 let camYaw = 45 * DEG
 addEventListener('keydown', (e) => {
   keys[e.code] = 1
-  if (!$('inv').hidden && !e.code.startsWith('Digit')) return e.code == 'Escape' && pack()
+  if (e.code == 'Escape' && !$('inv').hidden) pack()
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1, 1)
   if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
@@ -2001,7 +2002,6 @@ const fwd = new THREE.Vector3()
 let inRoom = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
-  if (!$('inv').hidden) return requestAnimationFrame(frame)
   if (!$('big').hidden) {
     const W = ($('big').width = innerWidth)
     const H = ($('big').height = innerHeight)

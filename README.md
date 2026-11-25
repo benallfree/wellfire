@@ -823,7 +823,8 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 - **The economy.** `models.json` `tray.recipes` maps each item to its inputs, which can include `gold`: wood (20 gold) and
   flint (200 gold) are gold-only, a torch is 1 wood + 1 flint, a boat is 10 wood + 30 gold. Slot 7 lists every recipe
   with its cost, greyed when short; crafting and buying only work in a village (outside, it says "Craft in a village").
-  The sword and axe are permanent and not for sale.
+  The sword and axe are permanent and not for sale. The game keeps running while the panel is open: you can walk,
+  fight and pick things up with it showing (number keys there pick slots to swap; Esc or 7 closes it).
 - **The boat.** Slot 6 counts boats owned. B (or tapping that slot) with a boat, standing by water at least 0.3 deep, spends one and launches a rowboat
   (the `boat` model) 2-4 units away, searching out from straight ahead. R boards it
   within 4.5 units, on foot or swimming; a rider gets off the mount first, so mounts never board. In the boat you sit
