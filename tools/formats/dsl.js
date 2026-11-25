@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
 // The model language compiler ("JIT"): model text in, three.js rigs out.
-// See README.md for the language. Everything here runs at load time in the browser.
+// The game shipped this before moving to JSON models (src/compiler.js); kept as the baseline for tools/formats.mjs.
+// Its language reference is the "model language" section of README.md as of commit dd58400.
 
 export const DEG = Math.PI / 180
 

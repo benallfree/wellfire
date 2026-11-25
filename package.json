@@ -5,9 +5,11 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "size": "node tools/size.mjs",
+    "formats": "node tools/formats.mjs",
     "start": "node tools/build.mjs && node tools/serve.mjs"
   },
   "devDependencies": {
-    "three": "0.170.0"
+    "three": "0.170.0",
+    "yaml": "^2.9.1"
   }
 }

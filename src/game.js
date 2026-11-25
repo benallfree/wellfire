@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import { DEG, rng, library, make, hold, pose, bake } from './dsl.js'
+import { DEG, rng, library, make, hold, pose, bake } from './compiler.js'
 
-// The model library is plain text shipped in the page (see models.txt).
+// The model library is JSON shipped in the page (see models.json).
 const lib = library(document.getElementById('models').textContent)
 
 const SIZE = 260 // world is SIZE x SIZE units, centred on 0,0

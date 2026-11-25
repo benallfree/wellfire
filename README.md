@@ -1,8 +1,8 @@
 # Warrior: a 3D js13k spike measured with surprisal
 
 A small third-person action game: a warrior runs around a seeded open world fighting slimes, goblins, spiders and bats
-with a sword, an axe or a torch. Every model in it (the warrior, the props, the creatures, the trees) is **text**, and
-the compiler that turns that text into rigged three.js meshes ships in the same page. The question behind it: if js13k
+with a sword, an axe or a torch. Every model in it (the warrior, the props, the creatures, the trees) is **text** (plain
+JSON), and the compiler that turns it into rigged three.js meshes ships in the same page. The question behind it: if js13k
 measured entries with [surprisal](https://github.com/benallfree/surprisal) (a language-model compressor) instead of
 zip, what does a "language + JIT" architecture buy you?
 
@@ -30,31 +30,37 @@ The whole game, readable and unminified, is about 33 KB in one HTML file. Surpri
 the characters and props) packs to 916 bytes. So the budget is not the constraint here: by the working rule of thumb
 of **~90% under surprisal**, this architecture leaves room for roughly four times as much game. I stopped measuring
 after those spot checks and used that ratio while building; the full table below is a tool you can run, not
-something I ran to completion.
+something I ran to completion. (Those numbers predate the switch from the text DSL to JSON models, which made the
+compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-dsl.md](docs/json-vs-dsl.md).)
 
 ## Architecture
 
 ```
-src/models.txt   all models, skeletons and animation clips, as text (~5.8 KB)
-src/dsl.js       the compiler + rig runtime: text -> three.js bones, merged meshes, clips (~9 KB)
+src/models.json  all models, skeletons and animation clips, as pretty-printed JSON (~42 KB raw, ~1 KB packed)
+src/compiler.js  the compiler + rig runtime: JSON -> three.js bones, merged meshes, clips (~8.4 KB)
 src/game.js      world, actors, combat, AI, camera, input, HUD (~17 KB)
 src/index.html   page shell: HUD markup, import map for three.js
 tools/build.mjs  inlines everything into one file: dist/index.html (the shipped artifact)
 tools/size.mjs   the size report (below)
+tools/formats.mjs  JSON vs. the old text DSL and other formats under surprisal (docs/json-vs-dsl.md)
 tools/viewer.html  dev-only model viewer: /tools/viewer.html?m=goblin&seeds=1,2,3&clip=walk
 ```
 
-The game is **one HTML file**. The build inlines `models.txt` as a `<script type="text/plain">` block and concatenates
-`dsl.js` and `game.js` into one module script. At load time the page reads the model text, compiles what it needs, and
+The game is **one HTML file**. The build inlines `models.json` as a `<script type="application/json">` block and
+concatenates `compiler.js` and `game.js` into one module script. At load time the page parses the models, compiles what it needs, and
 starts. There is no binary asset anywhere: no textures, no meshes, no audio files (sounds are synthesized oscillator
 blips).
 
 **three.js** is r170 (`three@0.170.0`), loaded from jsDelivr through a pinned import map. It does not count toward the
 budget. The game leans on it heavily on purpose: `BoxGeometry`, `SphereGeometry`, `CylinderGeometry`,
-`LatheGeometry` and `ExtrudeGeometry` are the language's primitives, so the compiler is mostly a parser and a
-transform stack. `npm install` only pulls three.js so Node can run the same compiler for the size report.
+`LatheGeometry` and `ExtrudeGeometry` are the format's primitives, so the compiler is mostly a transform stack. `npm install` only pulls three.js so Node can run the same compiler for the size report.
 
-## The model language
+## The model format
+
+> The models were first written in a custom line-based DSL (`box chest cloth 0 .27 0 .46 .55 .28`). Measuring showed
+> that the same content as plain pretty-printed JSON packs about 10% smaller under surprisal, and the whole
+> compiler + models bundle smaller too, even though the JSON is seven times bigger raw. So the game now ships JSON. The
+> comparison, and the old DSL with its compiler, are in [docs/json-vs-dsl.md](docs/json-vs-dsl.md) and `tools/formats/`.
 
 Prior art I weighed:
 
@@ -68,46 +74,50 @@ Prior art I weighed:
 - **Voxels**: trivially simple to interpret, but voxel models are grids of data, closer to binary than to language.
 
 I picked **primitives with transforms, mirroring, bones and a few generative tricks**: the cheapest to interpret
-(three.js does the geometry), naturally skeletal (every part names the bone it rides on), and it reads like code, which
-is what a coder language model predicts best. Each line is one statement:
+(three.js does the geometry), naturally skeletal (every part names the bone it rides on), and written in a form a
+language model predicts well. `src/models.json` maps each model name to a block like this (shortened; the file is
+`JSON.stringify(models, null, 2)`, which puts every array element on its own line):
 
-```text
-=warrior                                   # a model block
-$ cloth 9b2f2f                             # a variable (number, expression, color, or name)
-b arm* chest .3 .52 0                      # bone "arm*" on parent chest at (x y z): * = mirrored pair armL/armR
-b hand* arm* 0 -.55 .02 / -25 0 0          # optional rest rotation after "/", degrees
-box chest cloth 0 .27 0 .46 .55 .28        # shape bone color  x y z  size...
-ball8 head steel 0 .25 0 .2 .15 .2         # trailing digits = segment count
-ball* head 222 .065 .19 .14 .025 .03 .02   # * on a shape = also add its mirror image (two eyes, one line)
-hold handL shield                          # attach another model to a bone (a socket)
-@walk .7                                   # a looping clip, .7 s per cycle
-leg^ rx 35 -35                             # bone channel keys...: ^ = mirrored pair, half a cycle apart
-@!swing .45                                # a one-shot clip
-armR rx 0 -170 -40 0
+```json
+"warrior": {
+  "vars": { "cloth": "9b2f2f", "steel": "bcc6d0" },
+  "bones": [
+    { "name": "arm*", "parent": "chest", "position": [0.3, 0.52, 0] },
+    { "name": "hand*", "parent": "arm*", "position": [0, -0.55, 0.02], "rotation": [-25, 0, 0] }
+  ],
+  "parts": [
+    { "shape": "box", "bone": "chest", "color": "cloth", "position": [0, 0.27, 0], "size": [0.46, 0.55, 0.28] },
+    { "shape": "ball", "bone": "head", "color": "steel", "position": [0, 0.25, 0], "size": [0.2, 0.15, 0.2], "segments": 8 },
+    { "shape": "ball", "bone": "head", "color": "222", "position": [0.065, 0.19, 0.14], "size": [0.025, 0.03, 0.02], "mirror": true }
+  ],
+  "holds": [{ "bone": "handL", "model": "shield" }],
+  "clips": {
+    "walk": { "duration": 0.7, "loop": true, "channels": [{ "bone": "leg^", "channel": "rx", "keys": [35, -35] }] },
+    "swing": { "duration": 0.45, "loop": false, "channels": [{ "bone": "armR", "channel": "rx", "keys": [0, -170, -40, 0] }] }
+  }
+}
 ```
 
-| statement | meaning |
+| field | meaning |
 |---|---|
-| `=name` | start a model block. `=common` holds clips every model inherits unless it defines its own. |
-| `$ n v` | variable. `v` may be a number, `a~b` (seeded random in [a, b]), an expression (`.3*s`), a color, or `a\|b\|c` (seeded pick). |
-| `b name parent x y z [/ rx ry rz]` | a bone. `name*` makes a mirrored L/R pair (L at +x, R at −x, rotations mirrored); a `parent*` resolves per side. |
-| `box ball cyl lathe ext` | shapes: box `w h d`; ball (ellipsoid) `rx ry rz`; cyl `rTop h rBottom` (a cone when rTop is 0); lathe `r y r y ...`; ext `depth x y x y ...` (an extruded polygon). Optional `/ rx ry rz`, optional segment count suffix, optional `*` mirror. |
-| color | 3- or 6-digit hex, a variable, or a `\|` pick. A trailing `!` makes it glow (the torch flame). |
-| `S s` | scale the whole model. |
-| `hold bone model` | attach a prop model to a bone. `club\|spear` picks one per seed. |
-| `?p line` | keep the line with probability `p` (optional parts). |
-| `* n i` | repeat the next line `n` times with `i` = 0..n−1; `{expr}` in a line is evaluated, so names like `leg{i}*` work. |
-| `@name dur` / `@!name dur` | start a looping / one-shot clip. Following lines are channels until the next statement. |
-| `bone ch k k k...` | a clip channel. `ch` is `rx ry rz` (degrees), `x y z` (offset), `s` or `sx sy sz` (scale offset). Keys are evenly spaced and smoothstep-interpolated; loops wrap. `bone*` mirrors, `bone^` mirrors half a cycle out of phase (walk cycles). |
+| model name | a top-level key. `common` holds clips every model inherits unless it defines its own. |
+| `vars` | variables. A value may be a number, `"a~b"` (seeded random in [a, b]), an expression (`".3*s"`), a color, a name, or `"a\|b\|c"` (seeded pick). |
+| `scale` | scale the whole model (number or expression). |
+| `bones[]` | `name`, `parent`, `position`, optional `rotation` (degrees). A name ending in `*` makes a mirrored L/R pair (L at +x, R at −x, rotations mirrored); a `parent*` resolves per side. |
+| `parts[]` | `shape`, `bone`, `color`, `position`, `size`, optional `rotation`, `segments`, `mirror`. Shapes: `box` size `w h d`; `ball` (ellipsoid) `rx ry rz`; `cyl` `rTop h rBottom` (a cone when rTop is 0); `lathe` `r y r y ...`; `ext` `depth x y x y ...` (an extruded polygon). `mirror: true` also adds the part's mirror image (two eyes, one entry). |
+| color | 3- or 6-digit hex string, a variable, or a `\|` pick. A trailing `!` makes it glow (the torch flame). |
+| `holds[]` | `bone`, `model`: attach a prop model to a bone (a socket). `"club\|spear"` picks one per seed. |
+| `chance` | on any bone, part, hold or channel: keep it with that probability (optional parts). |
+| `repeat`, `var` | on any bone, part, hold or channel: repeat it `repeat` times with `var` = 0..n−1. `"{expr}"` inside a string is evaluated, so names like `"leg{i}*"` and positions like `"{.2-i*.12}"` work. |
+| `clips` | `name: { duration, loop, channels }`. A channel is `bone`, `channel` (`rx ry rz` degrees, `x y z` offset, `s` or `sx sy sz` scale offset) and `keys`, evenly spaced and smoothstep-interpolated; loops wrap. `bone*` mirrors, `bone^` mirrors half a cycle out of phase (walk cycles). |
 
-Numbers anywhere can be expressions over variables, so a goblin's ears follow its random head size
-(`cyl4* head k .24*h .25 0 0 .3 .07 / 0 0 -70`). Variables also carry gameplay data: a prop's `$ dmg 6`,
-`$ reach 2.3`, `$ push 12`, `$ anim chop` are read by the game when you equip it, so an item is entirely defined by its
-text block.
+Numbers anywhere can be expressions over variables (strings), so a goblin's ears follow its random head size
+(`"position": [".24*h", 0.25, 0]`). Variables also carry gameplay data: a prop's `"dmg": 6`, `"reach": 2.3`,
+`"push": 12`, `"anim": "chop"` are read by the game when you equip it, so an item is entirely defined by its block.
 
 ## Compiler and rig
 
-`make(lib, name, seed)` in [src/dsl.js](src/dsl.js) runs a model's lines in order with a seeded random generator:
+`make(lib, name, seed)` in [src/compiler.js](src/compiler.js) walks a model's block in order (vars, bones, parts, holds, clips) with a seeded random generator:
 
 1. Bones become `Object3D`s in a hierarchy under the model's root; their rest transforms are recorded.
 2. Each shape becomes a three.js geometry, rotated and translated into its bone's space, stripped to positions, and
@@ -124,14 +134,15 @@ props run their own `idle` clip, which is how the torch flame flickers. Static m
 to one geometry per seeded variant and drawn with `InstancedMesh`: 16 variants, 1,450 instances.
 
 **Props and sockets.** A socket is just a bone. The warrior's `hand*` bones carry a shield on the left (`hold handL
-shield` in the warrior's own text) and whatever the player equips on the right; swapping calls `hold()` again, which
+shield` in the warrior's own block) and whatever the player equips on the right; swapping calls `hold()` again, which
 detaches the old prop and compiles the new one. Goblins use the same mechanism to carry a club or a spear. A prop's
-origin sits in the fist, and each prop orients itself in its own text with a rotated root bone (`b g root 0 -.03 0 /
--10 0 0` tips the sword's blade up and forward, the axe pitches its haft down so the edge leads the chop); the swing
-clip also snaps the wrist (`handR rx`) so the blade comes down level at the end of the cut.
+origin sits in the fist, and each prop orients itself in its own block with a rotated root bone (the sword's bone `g`
+on `root` with rotation `[-10, 0, 0]` tips the blade up and forward; the axe pitches its haft down so the edge leads
+the chop); the swing clip also snaps the wrist (a `handR` `rx` channel) so the blade comes down level at the end of
+the cut.
 
-**Deterministic creatures.** The slime, goblin, spider and bat blocks use `~` ranges, `|` picks, `?` optional parts
-and `S` scale, so every seed is a different, repeatable creature: size, color, head size, horns, hats, markings,
+**Deterministic creatures.** The slime, goblin, spider and bat blocks use `~` ranges, `|` picks, `chance` optional
+parts and `scale`, so every seed is a different, repeatable creature: size, color, head size, horns, hats, markings,
 weapons. Monster stats scale with the compiled size. The world itself is seeded too (value-noise terrain, rising at the
 rim to fence the map, sand by the water, rock on the heights).
 
@@ -160,9 +171,9 @@ What the report covers:
 
 - **The shipped game** (`dist/index.html`): raw, gzip -9, zip -9 (Deflate) and Zopfli zip (the formats js13k accepts
   today), Brotli, and surprisal at each level in `LEVELS` (default `1,9`), each against 13,312 bytes.
-- **Inside the build**: model text, compiler, game code and page shell, each compressed on its own.
-- **Model text vs. mesh exports** of the same eleven characters and props (one seeded variant each, bones and clips
-  included in every format): the DSL text, the same content rewritten as JavaScript calls, a JSON mesh export, a
+- **Inside the build**: model JSON, compiler, game code and page shell, each compressed on its own.
+- **Model JSON vs. mesh exports** of the same eleven characters and props (one seeded variant each, bones and clips
+  included in every format): the model JSON the game ships, a JSON mesh export, a
   float32 non-indexed binary (what the compiler hands the GPU), and a quantized, indexed int16 binary.
 
 Spot checks taken during development (surprisal level 1, 0.5B model):
@@ -170,7 +181,7 @@ Spot checks taken during development (surprisal level 1, 0.5B model):
 | input | raw | surprisal -1 | saved |
 |---|---:|---:|---:|
 | `dist/index.html`, the whole game | 32,727 | 3,033 | 90.7% |
-| model text for the 11 characters and props | 5,140 | 916 | 82.2% |
+| model text for the 11 characters and props (the old DSL) | 5,140 | 916 | 82.2% |
 
 The full run is slow on the mesh exports: the JSON export alone is 270 KB, and surprisal at level 1 manages roughly
 400 bytes of text a second on this Mac, slower on binary. Expect the whole report to take the better part of an
@@ -179,18 +190,22 @@ hour the first time; the cache makes reruns cheap.
 ## What fit, what didn't, and what I learned
 
 - **Everything fit, with lots of room.** At ~3 KB under surprisal, the game uses under a quarter of the budget. Under
-  plain gzip -9 the same readable source is 12,460 bytes, which squeaks under today's limit with ~850 bytes to
-  spare and no room to grow without minifying. The real difference is that under surprisal you never minify, mangle or Roadroller anything: readable
+  plain gzip -9 the readable source with the old DSL was 12,460 bytes, which squeaked under today's limit with ~850
+  bytes to spare. With pretty JSON models it's 13,614, over the limit: JSON is the right call only when surprisal is
+  the measure. The real difference is that under surprisal you never minify, mangle or Roadroller anything: readable
   source with real names *is* the compact form.
+- **JSON beat the custom DSL.** The same models as pretty-printed JSON pack ~10% smaller than the line-based DSL, despite
+  being 7× bigger raw: the model gets the syntax nearly free and the keys help it predict the numbers. Details in
+  [docs/json-vs-dsl.md](docs/json-vs-dsl.md).
 - **Text models are cheap, and get cheaper with structure.** Eleven rigged, animated models (the warrior, six props,
   four creature generators) are 5.1 KB of text and under 1 KB compressed. The compiled meshes they produce are about
   10,500 vertices; even a quantized binary export of one variant each is tens of kilobytes before compression, and
   binary is exactly what a language model can't predict. The text also isn't one variant: each creature block is a
   generator, so the game gets unlimited seeded variants (and four tree/rock/bush variants each) from the same bytes.
-- **The compiler costs about as much as the models.** `dsl.js` is ~9 KB raw, but it's ordinary JavaScript that the
+- **The compiler costs about as much as the models.** `compiler.js` is ~8.4 KB raw, but it's ordinary JavaScript that the
   model predicts well, and it's a fixed cost: every extra model is a few hundred bytes of text.
 - **Leaning on three.js is what makes the JIT small.** Primitive geometries, lathe, extrude, merging and instancing
-  all come free, so the "compiler" is a ~250-line parser and transform stack.
+  all come free, so the "compiler" is a ~250-line transform stack.
 - **Rigid parts on bones beat skinning here.** No weights to store, mirroring halves most models, and animation is a
   few keyframes per channel. The look is consistent with the low-poly style.
 - **What I left out:** CSG and SDF modeling (too much code or too slow to mesh at load time), skinned meshes, a real

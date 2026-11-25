@@ -1,0 +1,2539 @@
+{
+  "common": {
+    "clips": {
+      "hit": {
+        "duration": 0.3,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "root",
+            "channel": "rx",
+            "keys": [
+              0,
+              -18,
+              0
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.2,
+              0
+            ]
+          }
+        ]
+      },
+      "death": {
+        "duration": 1.2,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "root",
+            "channel": "rz",
+            "keys": [
+              0,
+              80,
+              90,
+              90
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "y",
+            "keys": [
+              0,
+              0.2,
+              -0.1,
+              -0.2
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "warrior": {
+    "vars": {
+      "skin": "e8b088",
+      "cloth": "9b2f2f",
+      "steel": "bcc6d0",
+      "leather": "5a3a22"
+    },
+    "bones": [
+      {
+        "name": "hip",
+        "parent": "root",
+        "position": [
+          0,
+          0.95,
+          0
+        ]
+      },
+      {
+        "name": "chest",
+        "parent": "hip",
+        "position": [
+          0,
+          0.05,
+          0
+        ]
+      },
+      {
+        "name": "head",
+        "parent": "chest",
+        "position": [
+          0,
+          0.6,
+          0
+        ]
+      },
+      {
+        "name": "cape",
+        "parent": "chest",
+        "position": [
+          0,
+          0.55,
+          -0.16
+        ]
+      },
+      {
+        "name": "arm*",
+        "parent": "chest",
+        "position": [
+          0.3,
+          0.52,
+          0
+        ]
+      },
+      {
+        "name": "hand*",
+        "parent": "arm*",
+        "position": [
+          0,
+          -0.55,
+          0.02
+        ],
+        "rotation": [
+          -25,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "leg*",
+        "parent": "hip",
+        "position": [
+          0.12,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "foot*",
+        "parent": "leg*",
+        "position": [
+          0,
+          -0.5,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "chest",
+        "color": "cloth",
+        "position": [
+          0,
+          0.27,
+          0
+        ],
+        "size": [
+          0.46,
+          0.55,
+          0.28
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "chest",
+        "color": "leather",
+        "position": [
+          0,
+          0.03,
+          0
+        ],
+        "size": [
+          0.5,
+          0.1,
+          0.32
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "chest",
+        "color": "c9a64a",
+        "position": [
+          0,
+          0.03,
+          0.16
+        ],
+        "size": [
+          0.1,
+          0.08,
+          0.02
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "hip",
+        "color": "cloth",
+        "position": [
+          0,
+          -0.08,
+          0
+        ],
+        "size": [
+          0.44,
+          0.22,
+          0.27
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "skin",
+        "position": [
+          0,
+          0.17,
+          0
+        ],
+        "size": [
+          0.17,
+          0.2,
+          0.17
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "steel",
+        "position": [
+          0,
+          0.25,
+          0
+        ],
+        "size": [
+          0.2,
+          0.15,
+          0.2
+        ],
+        "segments": 8
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "steel",
+        "position": [
+          0,
+          0.42,
+          0
+        ],
+        "size": [
+          0,
+          0.14,
+          0.06
+        ],
+        "segments": 4
+      },
+      {
+        "shape": "box",
+        "bone": "head",
+        "color": "steel",
+        "position": [
+          0,
+          0.21,
+          0.17
+        ],
+        "size": [
+          0.04,
+          0.16,
+          0.04
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "222",
+        "position": [
+          0.065,
+          0.19,
+          0.14
+        ],
+        "size": [
+          0.025,
+          0.03,
+          0.02
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "cape",
+        "color": "2f4f8f",
+        "position": [
+          0,
+          -0.33,
+          0
+        ],
+        "size": [
+          0.42,
+          0.7,
+          0.03
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "arm*",
+        "color": "steel",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.14,
+          0.11,
+          0.14
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "arm*",
+        "color": "skin",
+        "position": [
+          0,
+          -0.2,
+          0
+        ],
+        "size": [
+          0.12,
+          0.3,
+          0.12
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "arm*",
+        "color": "leather",
+        "position": [
+          0,
+          -0.4,
+          0
+        ],
+        "size": [
+          0.14,
+          0.2,
+          0.14
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "hand*",
+        "color": "skin",
+        "position": [
+          0,
+          -0.03,
+          0
+        ],
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "leg*",
+        "color": "3a3a4a",
+        "position": [
+          0,
+          -0.22,
+          0
+        ],
+        "size": [
+          0.16,
+          0.44,
+          0.17
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "foot*",
+        "color": "leather",
+        "position": [
+          0,
+          -0.04,
+          0.04
+        ],
+        "size": [
+          0.16,
+          0.1,
+          0.26
+        ]
+      }
+    ],
+    "holds": [
+      {
+        "bone": "handL",
+        "model": "shield"
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 2.4,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              3
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              2,
+              -2
+            ]
+          },
+          {
+            "bone": "arm*",
+            "channel": "rz",
+            "keys": [
+              4,
+              6
+            ]
+          },
+          {
+            "bone": "cape",
+            "channel": "rx",
+            "keys": [
+              5,
+              8
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.7,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "leg^",
+            "channel": "rx",
+            "keys": [
+              35,
+              -35
+            ]
+          },
+          {
+            "bone": "foot^",
+            "channel": "rx",
+            "keys": [
+              0,
+              -20
+            ]
+          },
+          {
+            "bone": "arm^",
+            "channel": "rx",
+            "keys": [
+              -30,
+              30
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              -15,
+              -15
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              4,
+              -4
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.05,
+              0,
+              0.05
+            ]
+          },
+          {
+            "bone": "cape",
+            "channel": "rx",
+            "keys": [
+              20,
+              30
+            ]
+          }
+        ]
+      },
+      "swing": {
+        "duration": 0.45,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -170,
+              -40,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              0,
+              -10,
+              10,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -20,
+              60,
+              0
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              0,
+              25,
+              -30,
+              0
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              -10,
+              15,
+              0
+            ]
+          }
+        ]
+      },
+      "chop": {
+        "duration": 0.7,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -190,
+              -190,
+              -10,
+              0
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              -15,
+              -15,
+              25,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.1,
+              0.1,
+              -0.1,
+              0
+            ]
+          }
+        ]
+      },
+      "jab": {
+        "duration": 0.35,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -60,
+              -95,
+              0
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              0,
+              -25,
+              10,
+              0
+            ]
+          }
+        ]
+      },
+      "hit": {
+        "duration": 0.3,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              -20,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              -25,
+              0
+            ]
+          }
+        ]
+      },
+      "death": {
+        "duration": 1.4,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "root",
+            "channel": "rx",
+            "keys": [
+              0,
+              -30,
+              -90,
+              -90
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "y",
+            "keys": [
+              0,
+              0.3,
+              -0.1,
+              -0.15
+            ]
+          },
+          {
+            "bone": "arm*",
+            "channel": "rz",
+            "keys": [
+              0,
+              40,
+              80,
+              80
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "shield": {
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "7a4a2a",
+        "position": [
+          0.06,
+          0,
+          0.05
+        ],
+        "size": [
+          0.26,
+          0.05,
+          0.26
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "segments": 10
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "8a8f99",
+        "position": [
+          0.06,
+          0,
+          0.05
+        ],
+        "size": [
+          0.28,
+          0.03,
+          0.28
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "segments": 10
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "c9a64a",
+        "position": [
+          0.1,
+          0,
+          0.05
+        ],
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ],
+        "segments": 6
+      }
+    ]
+  },
+  "sword": {
+    "vars": {
+      "name": "Sword",
+      "dmg": 3,
+      "reach": 2.4,
+      "push": 6,
+      "anim": "swing"
+    },
+    "bones": [
+      {
+        "name": "g",
+        "parent": "root",
+        "position": [
+          0,
+          -0.03,
+          0
+        ],
+        "rotation": [
+          -10,
+          0,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "g",
+        "color": "5a3a22",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.03,
+          0.22,
+          0.03
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "g",
+        "color": "c9a64a",
+        "position": [
+          0,
+          0,
+          0.12
+        ],
+        "size": [
+          0.05,
+          0.26,
+          0.05
+        ]
+      },
+      {
+        "shape": "ext",
+        "bone": "g",
+        "color": "dfe6ee",
+        "position": [
+          0,
+          0,
+          0.14
+        ],
+        "size": [
+          0.015,
+          -0.045,
+          0,
+          0.045,
+          0,
+          0.035,
+          0.85,
+          0,
+          0.98,
+          -0.035,
+          0.85
+        ],
+        "rotation": [
+          90,
+          0,
+          90
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "g",
+        "color": "c9a64a",
+        "position": [
+          0,
+          0,
+          -0.13
+        ],
+        "size": [
+          0.04,
+          0.04,
+          0.04
+        ],
+        "segments": 6
+      }
+    ]
+  },
+  "axe": {
+    "vars": {
+      "name": "Axe",
+      "dmg": 6,
+      "reach": 2.3,
+      "push": 12,
+      "anim": "chop"
+    },
+    "bones": [
+      {
+        "name": "h",
+        "parent": "root",
+        "position": [
+          0,
+          -0.03,
+          0
+        ],
+        "rotation": [
+          30,
+          0,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "h",
+        "color": "6b4423",
+        "position": [
+          0,
+          0,
+          0.25
+        ],
+        "size": [
+          0.035,
+          0.75,
+          0.035
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ]
+      },
+      {
+        "shape": "ext",
+        "bone": "h",
+        "color": "9aa3ad",
+        "position": [
+          0,
+          -0.02,
+          0.5
+        ],
+        "size": [
+          0.03,
+          -0.04,
+          0,
+          0.04,
+          0,
+          0.17,
+          0.26,
+          0,
+          0.22,
+          -0.17,
+          0.26
+        ],
+        "rotation": [
+          0,
+          90,
+          180
+        ]
+      },
+      {
+        "shape": "ext",
+        "bone": "h",
+        "color": "9aa3ad",
+        "position": [
+          0,
+          -0.02,
+          0.5
+        ],
+        "size": [
+          0.03,
+          -0.03,
+          0,
+          0.03,
+          0,
+          0.02,
+          -0.12,
+          -0.02,
+          -0.12
+        ],
+        "rotation": [
+          0,
+          90,
+          180
+        ]
+      }
+    ]
+  },
+  "torch": {
+    "vars": {
+      "name": "Torch",
+      "dmg": 1,
+      "reach": 2.1,
+      "push": 3,
+      "anim": "jab",
+      "burn": 4
+    },
+    "bones": [
+      {
+        "name": "stick",
+        "parent": "root",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          -55,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "flame",
+        "parent": "stick",
+        "position": [
+          0,
+          0,
+          0.5
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "stick",
+        "color": "6b4423",
+        "position": [
+          0,
+          0,
+          0.15
+        ],
+        "size": [
+          0.035,
+          0.55,
+          0.03
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "stick",
+        "color": "444",
+        "position": [
+          0,
+          0,
+          0.43
+        ],
+        "size": [
+          0.07,
+          0.1,
+          0.05
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "ball",
+        "bone": "flame",
+        "color": "f60!",
+        "position": [
+          0,
+          0.02,
+          0.06
+        ],
+        "size": [
+          0.09,
+          0.16,
+          0.09
+        ],
+        "rotation": [
+          35,
+          0,
+          0
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "flame",
+        "color": "fd4!",
+        "position": [
+          0,
+          0.02,
+          0.05
+        ],
+        "size": [
+          0.05,
+          0.1,
+          0.05
+        ],
+        "rotation": [
+          35,
+          0,
+          0
+        ],
+        "segments": 5
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 0.3,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "flame",
+            "channel": "s",
+            "keys": [
+              0,
+              0.25,
+              -0.1,
+              0.15
+            ]
+          },
+          {
+            "bone": "flame",
+            "channel": "rz",
+            "keys": [
+              0,
+              20,
+              -10
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "club": {
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "6b4423",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "size": [
+          0.04,
+          0.5,
+          0.06
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "7a5230",
+        "position": [
+          0,
+          0,
+          0.45
+        ],
+        "size": [
+          0.09,
+          0.09,
+          0.14
+        ],
+        "segments": 5
+      }
+    ]
+  },
+  "spear": {
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "6b4423",
+        "position": [
+          0,
+          0,
+          0.3
+        ],
+        "size": [
+          0.025,
+          0.9,
+          0.025
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "9aa3ad",
+        "position": [
+          0,
+          0,
+          0.8
+        ],
+        "size": [
+          0,
+          0.2,
+          0.05
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "segments": 4
+      }
+    ]
+  },
+  "slime": {
+    "vars": {
+      "s": ".7~1.2",
+      "c": "5c5|4ad|d85|c5c|dd4|5cc"
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "body",
+        "parent": "root",
+        "position": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0,
+          0.32,
+          0
+        ],
+        "size": [
+          0.42,
+          0.32,
+          0.42
+        ],
+        "segments": 10
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "fff",
+        "position": [
+          0.13,
+          0.42,
+          0.3
+        ],
+        "size": [
+          0.08,
+          0.1,
+          0.05
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "111",
+        "position": [
+          0.13,
+          0.42,
+          0.34
+        ],
+        "size": [
+          0.04,
+          0.05,
+          0.03
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0,
+          0.7,
+          0
+        ],
+        "size": [
+          0,
+          0.18,
+          0.08
+        ],
+        "segments": 4,
+        "chance": 0.5
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "fff",
+        "position": [
+          0,
+          0.62,
+          -0.1
+        ],
+        "size": [
+          0.1,
+          0.06,
+          0.1
+        ],
+        "segments": 6,
+        "chance": 0.3
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 1,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "sy",
+            "keys": [
+              0.05,
+              -0.05
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "s",
+            "keys": [
+              -0.02,
+              0.02
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.55,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "y",
+            "keys": [
+              0,
+              0.35,
+              0
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "sy",
+            "keys": [
+              -0.2,
+              0.15,
+              -0.2
+            ]
+          }
+        ]
+      },
+      "attack": {
+        "duration": 0.6,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.15,
+              0.7,
+              0
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "sy",
+            "keys": [
+              0,
+              -0.25,
+              0.25,
+              0
+            ]
+          }
+        ]
+      },
+      "hit": {
+        "duration": 0.3,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "sy",
+            "keys": [
+              0,
+              -0.3,
+              0
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.2,
+              0
+            ]
+          }
+        ]
+      },
+      "death": {
+        "duration": 0.7,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "sy",
+            "keys": [
+              0,
+              -0.92,
+              -0.95
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "s",
+            "keys": [
+              0,
+              0.4,
+              0.5
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "goblin": {
+    "vars": {
+      "s": ".55~.8",
+      "k": "6a4|7a5|596|8a4|9a5",
+      "h": ".9~1.3",
+      "cl": "754|564|645|456"
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "hip",
+        "parent": "root",
+        "position": [
+          0,
+          0.8,
+          0
+        ]
+      },
+      {
+        "name": "chest",
+        "parent": "hip",
+        "position": [
+          0,
+          0.05,
+          0
+        ]
+      },
+      {
+        "name": "head",
+        "parent": "chest",
+        "position": [
+          0,
+          0.55,
+          0.02
+        ]
+      },
+      {
+        "name": "arm*",
+        "parent": "chest",
+        "position": [
+          0.28,
+          0.45,
+          0
+        ]
+      },
+      {
+        "name": "hand*",
+        "parent": "arm*",
+        "position": [
+          0,
+          -0.5,
+          0.02
+        ]
+      },
+      {
+        "name": "leg*",
+        "parent": "hip",
+        "position": [
+          0.12,
+          0,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "chest",
+        "color": "cl",
+        "position": [
+          0,
+          0.25,
+          0
+        ],
+        "size": [
+          0.4,
+          0.5,
+          0.3
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "hip",
+        "color": "4a3a2a",
+        "position": [
+          0,
+          -0.08,
+          0
+        ],
+        "size": [
+          0.42,
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "k",
+        "position": [
+          0,
+          0.2,
+          0
+        ],
+        "size": [
+          ".25*h",
+          ".22*h",
+          ".22*h"
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "k",
+        "position": [
+          0,
+          0.14,
+          ".22*h"
+        ],
+        "size": [
+          0,
+          0.18,
+          0.05
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "segments": 4
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "k",
+        "position": [
+          ".24*h",
+          0.25,
+          0
+        ],
+        "size": [
+          0,
+          0.3,
+          0.07
+        ],
+        "rotation": [
+          0,
+          0,
+          -70
+        ],
+        "segments": 4,
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "ff4",
+        "position": [
+          0.09,
+          0.25,
+          ".17*h"
+        ],
+        "size": [
+          0.04,
+          0.05,
+          0.03
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "111",
+        "position": [
+          0.09,
+          0.25,
+          ".19*h"
+        ],
+        "size": [
+          0.02,
+          0.03,
+          0.02
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "5a3a22",
+        "position": [
+          0,
+          0.42,
+          0
+        ],
+        "size": [
+          0.14,
+          0.16,
+          0.2
+        ],
+        "segments": 5,
+        "chance": 0.4
+      },
+      {
+        "shape": "box",
+        "bone": "arm*",
+        "color": "k",
+        "position": [
+          0,
+          -0.22,
+          0
+        ],
+        "size": [
+          0.1,
+          0.44,
+          0.1
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "hand*",
+        "color": "k",
+        "position": [
+          0,
+          -0.02,
+          0
+        ],
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "leg*",
+        "color": "k",
+        "position": [
+          0,
+          -0.3,
+          0
+        ],
+        "size": [
+          0.12,
+          0.6,
+          0.12
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "leg*",
+        "color": "4a3a2a",
+        "position": [
+          0,
+          -0.58,
+          0.05
+        ],
+        "size": [
+          0.14,
+          0.08,
+          0.22
+        ]
+      }
+    ],
+    "holds": [
+      {
+        "bone": "handR",
+        "model": "club|spear|club"
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 1.6,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              8,
+              12
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -10,
+              10
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.45,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "leg^",
+            "channel": "rx",
+            "keys": [
+              40,
+              -40
+            ]
+          },
+          {
+            "bone": "arm^",
+            "channel": "rx",
+            "keys": [
+              -35,
+              35
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.07,
+              0,
+              0.07
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rz",
+            "keys": [
+              5,
+              -5
+            ]
+          }
+        ]
+      },
+      "attack": {
+        "duration": 0.6,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -150,
+              -20,
+              0
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              -15,
+              20,
+              0
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "spider": {
+    "vars": {
+      "s": ".45~.75",
+      "c": "333|543|425|354|444"
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "body",
+        "parent": "root",
+        "position": [
+          0,
+          0.38,
+          0
+        ]
+      },
+      {
+        "name": "leg{i}*",
+        "parent": "body",
+        "position": [
+          0.12,
+          0,
+          "{.2-i*.12}"
+        ],
+        "rotation": [
+          0,
+          "{-55+i*35}",
+          0
+        ],
+        "repeat": 4,
+        "var": "i"
+      }
+    ],
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0,
+          0.05,
+          -0.3
+        ],
+        "size": [
+          0.32,
+          0.26,
+          0.38
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0,
+          0,
+          0.15
+        ],
+        "size": [
+          0.18,
+          0.15,
+          0.2
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "e83|c22|eee",
+        "position": [
+          0,
+          0.26,
+          -0.34
+        ],
+        "size": [
+          0.12,
+          0.05,
+          0.16
+        ],
+        "segments": 6,
+        "chance": 0.6
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "d22",
+        "position": [
+          0.06,
+          0.06,
+          0.32
+        ],
+        "size": [
+          0.04,
+          0.04,
+          0.04
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "d22",
+        "position": [
+          0.12,
+          0.03,
+          0.3
+        ],
+        "size": [
+          0.025,
+          0.025,
+          0.025
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "leg{i}*",
+        "color": "c",
+        "position": [
+          0.2,
+          0.12,
+          0
+        ],
+        "size": [
+          0.44,
+          0.05,
+          0.05
+        ],
+        "rotation": [
+          0,
+          0,
+          30
+        ],
+        "repeat": 4,
+        "var": "i"
+      },
+      {
+        "shape": "box",
+        "bone": "leg{i}*",
+        "color": "c",
+        "position": [
+          0.55,
+          -0.12,
+          0
+        ],
+        "size": [
+          0.05,
+          0.5,
+          0.05
+        ],
+        "rotation": [
+          0,
+          0,
+          25
+        ],
+        "repeat": 4,
+        "var": "i"
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 1.2,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "y",
+            "keys": [
+              0,
+              0.02
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.35,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "leg0^",
+            "channel": "ry",
+            "keys": [
+              25,
+              -25
+            ]
+          },
+          {
+            "bone": "leg1^",
+            "channel": "ry",
+            "keys": [
+              -25,
+              25
+            ]
+          },
+          {
+            "bone": "leg2^",
+            "channel": "ry",
+            "keys": [
+              25,
+              -25
+            ]
+          },
+          {
+            "bone": "leg3^",
+            "channel": "ry",
+            "keys": [
+              -25,
+              25
+            ]
+          },
+          {
+            "bone": "leg0^",
+            "channel": "rz",
+            "keys": [
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "leg1^",
+            "channel": "rz",
+            "keys": [
+              0,
+              15
+            ]
+          },
+          {
+            "bone": "leg2^",
+            "channel": "rz",
+            "keys": [
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "leg3^",
+            "channel": "rz",
+            "keys": [
+              0,
+              15
+            ]
+          }
+        ]
+      },
+      "attack": {
+        "duration": 0.5,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "rx",
+            "keys": [
+              0,
+              -25,
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.1,
+              0.5,
+              0
+            ]
+          },
+          {
+            "bone": "leg0*",
+            "channel": "rz",
+            "keys": [
+              0,
+              30,
+              -10,
+              0
+            ]
+          }
+        ]
+      },
+      "death": {
+        "duration": 0.9,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "y",
+            "keys": [
+              0,
+              0.1,
+              -0.2,
+              -0.3
+            ]
+          },
+          {
+            "bone": "leg{i}*",
+            "channel": "rz",
+            "keys": [
+              0,
+              40,
+              60,
+              60
+            ],
+            "repeat": 4,
+            "var": "i"
+          }
+        ]
+      }
+    }
+  },
+  "bat": {
+    "vars": {
+      "s": ".6~.9",
+      "c": "433|324|222|523|335"
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "body",
+        "parent": "root",
+        "position": [
+          0,
+          1.5,
+          0
+        ]
+      },
+      {
+        "name": "wing*",
+        "parent": "body",
+        "position": [
+          0.15,
+          0.05,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.2,
+          0.2,
+          0.22
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0.1,
+          0.22,
+          0
+        ],
+        "size": [
+          0,
+          0.16,
+          0.06
+        ],
+        "rotation": [
+          0,
+          0,
+          -15
+        ],
+        "segments": 4,
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "f44",
+        "position": [
+          0.07,
+          0.05,
+          0.17
+        ],
+        "size": [
+          0.035,
+          0.035,
+          0.03
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "body",
+        "color": "fff",
+        "position": [
+          0.04,
+          -0.08,
+          0.18
+        ],
+        "size": [
+          0,
+          0.06,
+          0.02
+        ],
+        "rotation": [
+          180,
+          0,
+          0
+        ],
+        "segments": 4,
+        "mirror": true
+      },
+      {
+        "shape": "ext",
+        "bone": "wing*",
+        "color": "c",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.02,
+          0,
+          -0.1,
+          0.55,
+          -0.05,
+          0.5,
+          0.1,
+          0.3,
+          0.05,
+          0.2,
+          0.15,
+          0,
+          0.1
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ]
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 0.3,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "wing*",
+            "channel": "rz",
+            "keys": [
+              40,
+              -35
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "y",
+            "keys": [
+              0.05,
+              -0.05
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.25,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "wing*",
+            "channel": "rz",
+            "keys": [
+              45,
+              -40
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "y",
+            "keys": [
+              0.08,
+              -0.08
+            ]
+          }
+        ]
+      },
+      "attack": {
+        "duration": 0.5,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.3,
+              0.9,
+              0
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "y",
+            "keys": [
+              0,
+              0.2,
+              -0.6,
+              0
+            ]
+          },
+          {
+            "bone": "wing*",
+            "channel": "rz",
+            "keys": [
+              0,
+              60,
+              -60,
+              0
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "pine": {
+    "vars": {
+      "h": ".8~1.5",
+      "g": "2f6b3a|3a7a40|2a5e38|3f6e2f"
+    },
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "6b4a2a",
+        "position": [
+          0,
+          0.4,
+          0
+        ],
+        "size": [
+          0.12,
+          0.8,
+          0.16
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0,
+          "{.9+.6*h}",
+          0
+        ],
+        "size": [
+          0,
+          "1.4*h",
+          0.9
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0,
+          "{1.5+.9*h}",
+          0
+        ],
+        "size": [
+          0,
+          "1.1*h",
+          0.65
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0,
+          "{2+1.1*h}",
+          0
+        ],
+        "size": [
+          0,
+          ".8*h",
+          0.4
+        ],
+        "segments": 7
+      }
+    ]
+  },
+  "oak": {
+    "vars": {
+      "h": ".8~1.3",
+      "g": "4a8a3a|5a9a3a|6a8a30|3d7a3a"
+    },
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "6b4a2a",
+        "position": [
+          0,
+          ".7*h",
+          0
+        ],
+        "size": [
+          0.14,
+          "1.4*h",
+          0.2
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0,
+          "1.8*h",
+          0
+        ],
+        "size": [
+          1,
+          0.8,
+          1
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0.5,
+          "1.5*h",
+          0.3
+        ],
+        "size": [
+          0.7,
+          0.6,
+          0.7
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          -0.4,
+          "1.6*h",
+          -0.3
+        ],
+        "size": [
+          0.7,
+          0.6,
+          0.7
+        ],
+        "segments": 5
+      }
+    ]
+  },
+  "rock": {
+    "vars": {
+      "a": ".5~1.2",
+      "b": ".3~.8",
+      "g": "8a8a8a|7a7570|9a948a"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "size": [
+          "a",
+          "b",
+          "a*.8"
+        ],
+        "rotation": [
+          0,
+          "{a*90}",
+          0
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          ".4*a",
+          0.05,
+          0.3
+        ],
+        "size": [
+          0.4,
+          0.3,
+          0.35
+        ],
+        "segments": 4,
+        "chance": 0.5
+      }
+    ]
+  },
+  "bush": {
+    "vars": {
+      "g": "3a7a30|4a8a3a|2f6b3a"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0,
+          0.25,
+          0
+        ],
+        "size": [
+          0.5,
+          0.4,
+          0.5
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "g",
+        "position": [
+          0.3,
+          0.2,
+          0.2
+        ],
+        "size": [
+          0.35,
+          0.3,
+          0.35
+        ],
+        "segments": 4,
+        "chance": 0.5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "e44|ee4|eef",
+        "position": [
+          0.2,
+          0.55,
+          0.2
+        ],
+        "size": [
+          0.06,
+          0.06,
+          0.06
+        ],
+        "segments": 4,
+        "chance": 0.6
+      }
+    ]
+  }
+}

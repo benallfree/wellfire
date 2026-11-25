@@ -10,9 +10,9 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three'
-import { library, make, hold, pose } from '../src/dsl.js'
+import { library, make, hold, pose } from '../src/compiler.js'
 const q = new URLSearchParams(location.search)
-const lib = library(await (await fetch('../src/models.txt')).text())
+const lib = library(await (await fetch('../src/models.json')).text())
 const names = (q.get('m') || 'warrior,slime,goblin,spider,bat').split(',')
 const seeds = (q.get('seeds') || '1').split(',').map(Number)
 const clip = q.get('clip') || 'idle'

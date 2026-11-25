@@ -1,4 +1,4 @@
-// Size report: the shipped game against the 13,312-byte js13k budget, and model text against mesh exports.
+// Size report: the shipped game against the 13,312-byte js13k budget, and the model description against mesh exports.
 //
 //   node tools/size.mjs                      game at surprisal -1 and -9, models at -1
 //   SURPRISAL=/path/to/surprisal LEVELS=1 MODEL_LEVEL=1 node tools/size.mjs
@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync, statSync, rmSync, existsSync } 
 import { gzipSync, brotliCompressSync, constants } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
-import { library, make } from '../src/dsl.js'
+import { library, make } from '../src/compiler.js'
 
 const BUDGET = 13312
 const root = new URL('..', import.meta.url).pathname
@@ -83,7 +83,7 @@ const rows = [
 ]
 for (const l of LEVELS) rows.push([`surprisal -${l}`, surprisal(game, 'index', l)])
 md.push(
-  `## Shipped game: dist/index.html (game + compiler + model text; three.js excluded)`,
+  `## Shipped game: dist/index.html (game + compiler + model JSON; three.js excluded)`,
   '',
   `| packing | bytes | of 13,312 budget |`,
   `|---|---:|---:|`,
@@ -96,8 +96,8 @@ md.push(
 // ---------- what's inside the build ----------
 const src = (f) => readFileSync(root + 'src/' + f)
 const parts = [
-  ['model text (models.txt)', src('models.txt')],
-  ['compiler + rig runtime (dsl.js)', src('dsl.js')],
+  ['model JSON (models.json)', src('models.json')],
+  ['compiler + rig runtime (compiler.js)', src('compiler.js')],
   ['game (game.js)', src('game.js')],
   ['page shell (index.html)', src('index.html')],
 ]
@@ -105,17 +105,12 @@ md.push(`## Inside the build (each part compressed on its own)`, '', `| part | r
 for (const [k, b] of parts) md.push(`| ${k} | ${fmt(b.length)} | ${fmt(gzip(b))} | ${fmt(brotli(b))} |`)
 md.push('')
 
-// ---------- model text vs. the meshes it compiles to ----------
+// ---------- model JSON vs. the meshes it compiles to ----------
 // The characters and props, one seeded variant each: what you would otherwise export from a modeling tool.
-const lib = library(src('models.txt').toString())
+const lib = library(src('models.json').toString())
 const NAMES = ['warrior', 'shield', 'sword', 'axe', 'torch', 'club', 'spear', 'slime', 'goblin', 'spider', 'bat']
-const text = Buffer.from(
-  src('models.txt')
-    .toString()
-    .split(/^(?==)/m)
-    .filter((b) => ['common', ...NAMES].includes(b.slice(1).split('\n')[0].trim()))
-    .join('')
-)
+// The model JSON for just these models, formatted as in src/models.json.
+const text = Buffer.from(JSON.stringify(Object.fromEntries(['common', ...NAMES].map((n) => [n, lib[n]])), null, 2) + '\n')
 const meshes = []
 const animTotal = []
 for (const n of NAMES) {
@@ -168,31 +163,15 @@ for (const m of meshes)
 const meta = Buffer.from(JSON.stringify(meshes.map((m) => ({ n: m.name, b: m.bones, c: m.clips }))))
 const binA = Buffer.concat([...chunksA, meta])
 const binB = Buffer.concat([...chunksB, meta])
-// The same model text rewritten as JavaScript calls (not used by the game): does the syntax matter to the model?
-const asJs = Buffer.from(
-  text
-    .toString()
-    .split('\n')
-    .map((l) => {
-      const c = l.replace(/#.*/, '').trim()
-      if (!c) return ''
-      if (c[0] == '=') return `model('${c.slice(1)}')`
-      const [cmd, ...a] = c.split(/\s+/)
-      const arg = (t) => (/^-?[\d.]+$/.test(t) ? t : `'${t}'`)
-      return `${cmd[0] == '@' ? 'clip' : cmd == '$' ? 'set' : cmd == '*' ? 'repeat' : cmd.replace('*', 'Mirrored')}(${(cmd[0] == '@' ? [cmd.slice(1), ...a] : a).map(arg).join(', ')})`
-    })
-    .filter(Boolean)
-    .join('\n')
-)
+// Other ways to write the model description (DSL text, compact JSON, JS calls, YAML) are compared in tools/formats.mjs.
 const formats = [
-  ['model text (DSL)', text, 'models-text.txt'],
-  ['same text as JS calls', asJs, 'models-as-js.js'],
-  ['JSON mesh export', json, 'models.json'],
+  ['model JSON (what the game ships)', text, 'models-description.json'],
+  ['JSON mesh export', json, 'models-mesh.json'],
   ['binary, float32 non-indexed', binA, 'models-f32.bin'],
   ['binary, int16 indexed', binB, 'models-q16.bin'],
 ]
 md.push(
-  `## Model text vs. mesh exports of the same characters and props`,
+  `## Model JSON vs. mesh exports of the same characters and props`,
   '',
   `${NAMES.length} models, one seeded variant each: ${verts.toLocaleString()} vertices, bones and animation clips included in every format.`,
   '',
