@@ -38,7 +38,7 @@ compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-ds
 ```
 src/models.json  all models, skeletons and animation clips, as pretty-printed JSON (~42 KB raw, ~1 KB packed)
 src/compiler.js  the compiler + rig runtime: JSON -> three.js bones, merged meshes, clips (~8.4 KB)
-src/score.txt    the music, as text (~2.4 KB)
+src/score.json   the music: voices and sections as pretty-printed JSON, note patterns as strings (~3.8 KB)
 src/music.js     the score compiler + WebAudio sequencer (~8 KB)
 src/game.js      world, actors, combat, AI, camera, input, HUD (~17 KB)
 src/index.html   page shell: HUD markup, import map for three.js
@@ -48,10 +48,10 @@ tools/formats.mjs  JSON vs. the old text DSL and other formats under surprisal (
 tools/viewer.html  dev-only model viewer: /tools/viewer.html?m=goblin&seeds=1,2,3&clip=walk
 ```
 
-The game is **one HTML file**. The build inlines `models.json` as a `<script type="application/json">` block and `score.txt` as a
-`<script type="text/plain">` block, and concatenates `compiler.js`, `music.js` and `game.js` into one module script. At load time the page parses the models, compiles what it needs, and
+The game is **one HTML file**. The build inlines `models.json` as a `<script type="application/json">` block and `score.json`
+the same way, and concatenates `compiler.js`, `music.js` and `game.js` into one module script. At load time the page parses the models, compiles what it needs, and
 starts. There is no binary asset anywhere: no textures, no meshes, no audio files (the music is compiled from
-`score.txt` and synthesized with WebAudio; effects are oscillator blips).
+`score.json` and synthesized with WebAudio; effects are oscillator blips).
 
 **three.js** is r170 (`three@0.170.0`), loaded from jsDelivr through a pinned import map. It does not count toward the
 budget. The game leans on it heavily on purpose: `BoxGeometry`, `SphereGeometry`, `CylinderGeometry`,
@@ -161,7 +161,7 @@ and respawn somewhere around you; you regenerate slowly, and if you fall you get
 
 ## Music
 
-The background music is text too: [src/score.txt](src/score.txt), compiled at load by
+The background music is text too: [src/score.json](src/score.json), compiled at load by
 [src/music.js](src/music.js) and played by a small WebAudio sequencer. Up to fourteen voices sound at once (lead or bell,
 arpeggio, pad chords, bass, kick, hi-hat, and a part for each kind of monster), all synthesized: oscillators, a noise buffer,
 filters and gain envelopes, no samples.
@@ -173,20 +173,49 @@ I took the tracker's grid (one token per step, voices lined up) and ABC's note l
 sheets: a **chord track**. Bass and arpeggio lines are written as chord tones (`1` root, `2` third, `3` fifth, `4` root an
 octave up, ...), so one short line plays over any progression, and a new section only needs new chords and a melody.
 
-```text
-tempo 104 2 4                       # bpm, steps per beat, beats per bar (so a step is an eighth note)
-day A A B A                         # the section order by day...
-night N N M N                       # ...and after dark
-~bass  triangle 2 .15 .01 .12       # voice: wave octave volume attack release [filter Hz] [calm|monster]
-=A                                  # a section
-chords C G Am F                     # one chord per bar; "C,G" splits a bar
-lead   e . g . c6 - b . | b - g - d - . . | ...
-bass   1 . . 1 3 . 1 .              # chord tones; a line shorter than the section repeats
-pad    * - - - - - - -              # * is the whole chord
-hat    . x . x . x . x,x            # drums: x hit, o accent; "x,x" splits a step in two
-=B A                                # section B starts as a copy of A, then replaces chords and lead
-=*                                  # lines here join every section (the monster parts)
+The file follows the models' format choice ([docs/json-vs-dsl.md](docs/json-vs-dsl.md)): pretty-printed JSON with
+named keys, because under surprisal the keys are nearly free and tell the model what each number is. The note patterns
+stay strings: a pattern is the notation itself, the tokens are letters rather than numbers, and one string per part keeps
+the bars readable. (An earlier version was a line-based text format with the same patterns; the JSON compiles to
+identical notes. Neither was measured under surprisal.) Abridged:
+
+```json
+{
+  "tempo": { "bpm": 104, "stepsPerBeat": 2, "beatsPerBar": 4 },
+  "order": { "day": ["A", "A", "B", "A"], "night": ["N", "N", "M", "N"] },
+  "voices": {
+    "bass": { "wave": "sawtooth", "octave": 2, "volume": 0.07, "attack": 0.01, "release": 0.12, "filter": 700 },
+    "arp": { "wave": "triangle", "octave": 4, "volume": 0.06, "attack": 0.005, "release": 0.1, "calm": true },
+    "boing": { "wave": "sine", "octave": 4, "volume": 0.17, "attack": 0.005, "release": 0.12, "monster": "slime" }
+  },
+  "allSections": { "boing": "1,4 . . 1,4 . . 3,5 ." },
+  "sections": {
+    "A": {
+      "chords": "C G Am F",
+      "parts": {
+        "lead": "e . g . c6 - b . | b - g - d - . . | c . e . a - g . | a - g - f - . .",
+        "bass": "1 . . 1 3 . 1 .",
+        "pad": "* - - - - - - -",
+        "hat": ". x . x . x . x,x"
+      }
+    },
+    "B": { "base": "A", "chords": "F G Em Am", "parts": { "lead": "f . a . c6 - a . | ..." } }
+  }
+}
 ```
+
+(The real file is `JSON.stringify(score, null, 2)`, so arrays and objects are expanded one item per line.)
+
+- `tempo`: a step is one eighth note at 104 bpm; a bar is 8 steps.
+- `order`: the sections played by day and after dark, looping.
+- `voices`: `wave`, `octave` (for notes without one), `volume`, `attack` and `release` in seconds, optional `filter` in
+  Hz (low-pass, or high-pass on noise), and either `calm: true` (ducks while monsters are near) or `monster: "<kind>"`
+  (silent until that kind is near).
+- `allSections`: parts that join every section (the monster parts).
+- `sections`: `chords` (one chord per bar; `"C,G"` splits a bar), `parts` (voice name to pattern), and an optional
+  `base` section whose parts it starts from. A pattern shorter than the section repeats.
+
+Pattern tokens, separated by spaces:
 
 | token | meaning |
 |---|---|
@@ -200,9 +229,9 @@ hat    . x . x . x . x,x            # drums: x hit, o accent; "x,x" splits a ste
 | `\|` | bar line, ignored |
 
 Waves are the oscillator types (`sine`, `square`, `sawtooth`, `triangle`) plus `noise` (high-passed at the filter
-frequency) and `kick` (a sine dropping from 150 to 40 Hz). Chords are a root, optional `#`/`b`, optional `m`, optional `7`.
+frequency) and `kick` (a sine dropping from 300 to 45 Hz). Chords are a root, optional `#`/`b`, optional `m`, optional `7`.
 
-**Compiler and player.** `score()` parses the text and compiles every section into per-step event lists with notes
+**Compiler and player.** `score()` parses the JSON and compiles every section into per-step event lists with notes
 already resolved to frequencies and lengths, so the runtime never parses. `sequencer()` is the classic lookahead
 scheduler: every 50 ms it schedules the steps that start in the next 250 ms on the audio clock, so timing stays
 sample-accurate and sections loop without a seam. The same function renders into an `OfflineAudioContext`, which is how
@@ -226,8 +255,8 @@ see it, and a mixed pack stacks its parts:
 The parts are written in chord tones, so they fit every day and night section. Voices tagged `calm` (the arpeggio) duck
 out while any monster is near. The parts sit in the mid and high range on purpose: a first version used one shared
 fight layer that was mostly bass, which laptop speakers barely play, so it went unheard. Audio starts on the first key, click or touch (browsers require a gesture); muting suspends the AudioContext, so the scheduler pauses too,
-and the choice is remembered. The music module, score and hooks add about 12 KB raw to the build, roughly 1.2 KB at
-the ~90% surprisal rule of thumb.
+and the choice is remembered. The music module, score and hooks add about 13 KB raw to the build, roughly 1.3 KB at
+the ~90% surprisal rule of thumb (assumed, not measured).
 
 ## Size
 

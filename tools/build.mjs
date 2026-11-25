@@ -1,4 +1,4 @@
-// Builds dist/index.html: one file holding the game code, the model and music compilers, the model JSON and the score.
+// Builds dist/index.html: one file holding the game code, the model and music compilers, the model JSON and the score JSON.
 // three.js is loaded from a pinned CDN (see the import map) and is not part of the shipped bytes.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 
@@ -19,7 +19,7 @@ const code = ['compiler.js', 'music.js', 'game.js']
   .join('\n')
 const html = read('index.html')
   .replace('<!--MODELS-->', () => read('models.json').trim())
-  .replace('<!--SCORE-->', () => read('score.txt').trim())
+  .replace('<!--SCORE-->', () => read('score.json').trim())
   .replace('<!--CODE-->', () => [...imports].join('\n') + '\n' + code.trim()) // functions: no $-patterns
 mkdirSync(new URL('../dist/', import.meta.url), { recursive: true })
 writeFileSync(new URL('../dist/index.html', import.meta.url), html)

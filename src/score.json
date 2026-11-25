@@ -1,0 +1,183 @@
+{
+  "tempo": {
+    "bpm": 104,
+    "stepsPerBeat": 2,
+    "beatsPerBar": 4
+  },
+  "order": {
+    "day": [
+      "A",
+      "A",
+      "B",
+      "A"
+    ],
+    "night": [
+      "N",
+      "N",
+      "M",
+      "N"
+    ]
+  },
+  "voices": {
+    "lead": {
+      "wave": "square",
+      "octave": 5,
+      "volume": 0.04,
+      "attack": 0.01,
+      "release": 0.12,
+      "filter": 2200
+    },
+    "bell": {
+      "wave": "triangle",
+      "octave": 5,
+      "volume": 0.07,
+      "attack": 0.005,
+      "release": 0.5
+    },
+    "arp": {
+      "wave": "triangle",
+      "octave": 4,
+      "volume": 0.06,
+      "attack": 0.005,
+      "release": 0.1,
+      "calm": true
+    },
+    "pad": {
+      "wave": "sawtooth",
+      "octave": 3,
+      "volume": 0.025,
+      "attack": 0.35,
+      "release": 0.7,
+      "filter": 900
+    },
+    "bass": {
+      "wave": "sawtooth",
+      "octave": 2,
+      "volume": 0.07,
+      "attack": 0.01,
+      "release": 0.12,
+      "filter": 700
+    },
+    "kick": {
+      "wave": "kick",
+      "octave": 0,
+      "volume": 0.28,
+      "attack": 0.002,
+      "release": 0.25
+    },
+    "hat": {
+      "wave": "noise",
+      "octave": 0,
+      "volume": 0.05,
+      "attack": 0.001,
+      "release": 0.04,
+      "filter": 7000
+    },
+    "boing": {
+      "wave": "sine",
+      "octave": 4,
+      "volume": 0.17,
+      "attack": 0.005,
+      "release": 0.12,
+      "monster": "slime"
+    },
+    "wardrum": {
+      "wave": "kick",
+      "octave": 0,
+      "volume": 0.22,
+      "attack": 0.002,
+      "release": 0.2,
+      "monster": "goblin"
+    },
+    "snare": {
+      "wave": "noise",
+      "octave": 0,
+      "volume": 0.14,
+      "attack": 0.001,
+      "release": 0.13,
+      "filter": 1500,
+      "monster": "goblin"
+    },
+    "riff": {
+      "wave": "sawtooth",
+      "octave": 3,
+      "volume": 0.05,
+      "attack": 0.01,
+      "release": 0.06,
+      "filter": 1400,
+      "monster": "goblin"
+    },
+    "crawl": {
+      "wave": "square",
+      "octave": 5,
+      "volume": 0.055,
+      "attack": 0.002,
+      "release": 0.04,
+      "filter": 3000,
+      "monster": "spider"
+    },
+    "tick": {
+      "wave": "noise",
+      "octave": 0,
+      "volume": 0.08,
+      "attack": 0.001,
+      "release": 0.015,
+      "filter": 9000,
+      "monster": "spider"
+    },
+    "flutter": {
+      "wave": "sine",
+      "octave": 5,
+      "volume": 0.1,
+      "attack": 0.002,
+      "release": 0.05,
+      "monster": "bat"
+    }
+  },
+  "allSections": {
+    "boing": "1,4 . . 1,4 . . 3,5 .",
+    "wardrum": "x . . x x . . .",
+    "snare": ". . x . . . x . | . . x . . . x x",
+    "riff": "1 1 3 1 1 3 4 3",
+    "crawl": "1,2 3,2 4,3 2,1",
+    "tick": "x,x x,x x,x x,x",
+    "flutter": "4,5 4,5 . . 5,6 5,6 . ."
+  },
+  "sections": {
+    "A": {
+      "chords": "C G Am F",
+      "parts": {
+        "lead": "e . g . c6 - b . | b - g - d - . . | c . e . a - g . | a - g - f - . .",
+        "arp": "1 2 3 4 5 4 3 2",
+        "pad": "* - - - - - - -",
+        "bass": "1 . . 1 3 . 1 .",
+        "hat": ". x . x . x . x,x",
+        "kick": "x . . . x . . ."
+      }
+    },
+    "B": {
+      "base": "A",
+      "chords": "F G Em Am",
+      "parts": {
+        "lead": "f . a . c6 - a . | b . d6 . g6 - d6 . | e6 - d6 - b - g - | a - - - - - . ."
+      }
+    },
+    "N": {
+      "chords": "Am Am F E",
+      "parts": {
+        "bell": "e - - - . . a . | c6 - - - b - a - | a - - - . . f . | g# - - - - - . .",
+        "arp": "1 . 3 . 2 . 3 .",
+        "pad": "* - - - - - - -",
+        "bass": "1 - - - - - 3 -",
+        "kick": "x . x . . . . ."
+      }
+    },
+    "M": {
+      "base": "N",
+      "chords": "Dm Am E Am",
+      "parts": {
+        "bell": "f - - - e - d - | e - - - c - a4 - | b4 - - - g# - b - | a - - - - - . ."
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-// The music language compiler and player: score text in, WebAudio voices out.
+// The music compiler and player: score JSON in, WebAudio voices out.
 // See README.md "Music". The score compiles once into per-step event lists; a lookahead scheduler plays them.
 
 const NOTE = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }
@@ -29,43 +29,24 @@ function slots(tokens, unit) {
   return { out, n: t }
 }
 
-// Parse score text. Header lines: tempo, voices (~), section orders. "=name [base]" starts a section.
-export function score(text) {
-  const S = { tempo: [100, 2, 4], order: {}, voices: {}, sections: {} }
-  let sec
-  for (let line of text.split('\n')) {
-    line = line.replace(/(^|\s)#.*/, '').replace(/\|/g, ' ').trim() // "#" comments (not sharps), "|" bar lines
-    if (!line) continue
-    const [k, ...a] = line.split(/\s+/)
-    if (k[0] == '=') sec = S.sections[k.slice(1)] = { ...S.sections[a[0]] }
-    else if (k[0] == '~') {
-      const rest = a.slice(5)
-      S.voices[k.slice(1)] = {
-        name: k.slice(1),
-        wave: a[0],
-        oct: +a[1],
-        vol: +a[2],
-        att: +a[3],
-        rel: +a[4],
-        cut: +rest.find((x) => !isNaN(x)) || 0,
-        tag: rest.find((x) => isNaN(x)),
-      }
-    } else if (k == 'tempo') S.tempo = a.map(Number)
-    else if (sec) sec[k] = a
-    else S.order[k] = a
-  }
-  const all = S.sections['*'] || {}
-  delete S.sections['*']
-  for (const name in S.sections) S.sections[name] = build(S, { ...all, ...S.sections[name] })
+// Read the score JSON: tempo, section orders, voices, parts shared by all sections, and sections.
+// A section with a "base" starts as a copy of that section's parts. Patterns are strings of tokens; "|" is a bar line.
+export function score(json) {
+  const S = JSON.parse(json)
+  for (const name in S.voices) S.voices[name].name = name
+  const raw = S.sections
+  const parts = (name) => ({ ...(raw[name].base && parts(raw[name].base)), ...raw[name].parts })
+  S.sections = {}
+  for (const name in raw) S.sections[name] = build(S, raw[name].chords, { ...S.allSections, ...parts(name) })
   return S
 }
 
 // Compile one section into events per step: { v: voice, t: start step, d: length in steps, f: [Hz...], acc }.
-function build(S, lines) {
-  const bar = S.tempo[1] * S.tempo[2]
-  const ch = slots(lines.chords || ['C'], bar)
-  const voices = Object.keys(lines).filter((k) => k != 'chords')
-  const parsed = voices.map((k) => slots(lines[k], 1))
+function build(S, chords = 'C', lines) {
+  const tokens = (p) => p.replace(/\|/g, ' ').trim().split(/\s+/)
+  const ch = slots(tokens(chords), S.tempo.stepsPerBeat * S.tempo.beatsPerBar)
+  const voices = Object.keys(lines)
+  const parsed = voices.map((k) => slots(tokens(lines[k]), 1))
   const len = Math.max(ch.n, ...parsed.map((p) => p.n))
   const chordAt = (t) => {
     t %= ch.n
@@ -91,12 +72,12 @@ function build(S, lines) {
         if (tok == '.') continue
         let f
         if (DRUMS.includes(v.wave)) f = [0]
-        else if (tok == '*') f = chordAt(t).iv.map((_, j) => tone(chordAt(t), j + 1, v.oct))
-        else if (/^\d$/.test(tok)) f = [tone(chordAt(t), +tok, v.oct)]
+        else if (tok == '*') f = chordAt(t).iv.map((_, j) => tone(chordAt(t), j + 1, v.octave))
+        else if (/^\d$/.test(tok)) f = [tone(chordAt(t), +tok, v.octave)]
         else {
           const m = tok.match(/^([a-g])(#|b)?(\d)?$/)
           if (!m) throw Error(`bad note ${tok} in ${k}`)
-          f = [midi(NOTE[m[1]] + (m[2] == '#') - (m[2] == 'b'), m[3] ? +m[3] : v.oct)]
+          f = [midi(NOTE[m[1]] + (m[2] == '#') - (m[2] == 'b'), m[3] ? +m[3] : v.octave)]
         }
         steps[Math.floor(t)].push((last = { v, t, d, f: f.map(hz), acc: tok == 'o' }))
       }
@@ -107,8 +88,8 @@ function build(S, lines) {
 // A sequencer for a compiled score on an AudioContext. tick(until) schedules every step that starts before `until`.
 // The game drives it in real time; an OfflineAudioContext can drive it to render the song for checks.
 export function sequencer(S, ac, out) {
-  const step = 60 / S.tempo[0] / S.tempo[1] // seconds per step; the tempo never changes
-  const bar = S.tempo[1] * S.tempo[2]
+  const step = 60 / S.tempo.bpm / S.tempo.stepsPerBeat // seconds per step; the tempo never changes
+  const bar = S.tempo.stepsPerBeat * S.tempo.beatsPerBar
   const st = { day: 1, near: {}, steps: 0, section: '', order: 'day' }
   const master = ac.createBiquadFilter()
   master.connect(out)
@@ -118,9 +99,9 @@ export function sequencer(S, ac, out) {
   for (const v of Object.values(S.voices)) {
     const f = ac.createBiquadFilter()
     f.type = v.wave == 'noise' ? 'highpass' : 'lowpass'
-    f.frequency.value = v.cut || 20000
+    f.frequency.value = v.filter || 20000
     const g = (chan[v.name] = ac.createGain())
-    g.gain.value = v.tag && v.tag != 'calm' ? 0 : v.vol
+    g.gain.value = v.monster ? 0 : v.volume
     f.connect(g).connect(master)
     chan[v.name].in = f
   }
@@ -144,13 +125,13 @@ export function sequencer(S, ac, out) {
     const v = e.v
     const g = ac.createGain()
     const vol = (e.acc ? 1.6 : 1) / Math.sqrt(e.f.length)
-    const end = t + Math.max(d, v.att)
+    const end = t + Math.max(d, v.attack)
     g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(vol, t + v.att)
-    if (DRUMS.includes(v.wave)) g.gain.setTargetAtTime(0, t + v.att, v.rel / 3)
-    else g.gain.setValueAtTime(vol, end), g.gain.setTargetAtTime(0, end, v.rel / 3)
+    g.gain.linearRampToValueAtTime(vol, t + v.attack)
+    if (DRUMS.includes(v.wave)) g.gain.setTargetAtTime(0, t + v.attack, v.release / 3)
+    else g.gain.setValueAtTime(vol, end), g.gain.setTargetAtTime(0, end, v.release / 3)
     g.connect(chan[v.name].in)
-    const stop = end + v.rel * 2
+    const stop = end + v.release * 2
     for (const f of e.f) {
       let s
       if (v.wave == 'noise') {
@@ -182,7 +163,7 @@ export function sequencer(S, ac, out) {
     const any = Math.max(0, ...Object.values(st.near))
     master.frequency.setTargetAtTime(1200 + st.day * 6000, now, 0.5)
     for (const v of Object.values(S.voices))
-      chan[v.name].gain.setTargetAtTime(v.vol * (v.tag == 'calm' ? 1 - any * 0.8 : v.tag ? st.near[v.tag] || 0 : 1), now, 0.3)
+      chan[v.name].gain.setTargetAtTime(v.volume * (v.calm ? 1 - any * 0.8 : v.monster ? st.near[v.monster] || 0 : 1), now, 0.3)
     while (next < until) {
       for (const e of sec.steps[pos]) note(e, next + (e.t - pos) * step, e.d * step)
       next += step
