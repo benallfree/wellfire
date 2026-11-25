@@ -807,7 +807,7 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 
 | | |
 |---|---|
-| ![Three chops and a tree tips away from you, paying 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
+| ![Three chops and a tree tips away from you, dropping 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
 | ![B at the water: 10 wood launches a rowboat](docs/boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](docs/boat-rowing.jpg) |
 | ![A slime on the bank can't reach the boat](docs/boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](docs/boat-ashore.jpg) |
 | ![The torch in the boat at night: it stands in the bow post and lights the water](docs/boat-torch-night.jpg) | |
@@ -815,7 +815,8 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 - **Chopping.** The axe has `"chop": 1` in `models.json`; other weapons have no `chop` and pass through trees. A swing
   near a pine or oak (within reach, about 66° of your facing) hits it: wood chips, a thunk, and the tree shakes.
   The first hit moves that tree out of its InstancedMesh into a mesh of its own (same geometry and material), so only
-  it moves. Three hits and it tips over away from you, crashes, adds 3 wood straight to the tray and sinks.
+  it moves. Three hits and it tips over away from you, crashes, drops 3 wood items along where the trunk landed
+  (walk onto them to pick them up, like a tossed one) and sinks.
 - **Felled stays felled.** Each tree is the n-th candidate spot of its chunk's seeded loop, so a felled tree is stored
   as `{ "cx,cz": { n: time } }` in `localStorage.warriorFelled`, and `grow()` skips it. Trees regrow after 30 minutes
   (real time): expired entries are pruned on load, so the record stays small however far you roam.

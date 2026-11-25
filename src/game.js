@@ -1469,18 +1469,21 @@ function earn(n) {
   hud()
   $('gold').animate([{ transform: 'scale(1.6)', color: n < 0 ? '#f55' : '#fff' }, { transform: 'scale(1)' }], n < 0 ? 900 : 250)
 }
-// dropped wood or flint: thrown ahead, lies spinning until you walk onto it
+// dropped wood or flint (thrown ahead, or the logs of a felled tree): lies spinning until you walk onto it
 const geos = {}
 const itemMat = new THREE.MeshLambertMaterial({ vertexColors: true })
-function toss(k) {
+function shed(k, q, vx, vz) {
   const c = new THREE.Mesh((geos[k] ||= bake(make(lib, k, 1))), itemMat)
-  c.position.set(player.pos.x, player.pos.y + 1.2, player.pos.z)
-  c.v = new THREE.Vector3(Math.sin(player.dir) * 4, 3, Math.cos(player.dir) * 4)
+  c.position.copy(q)
+  c.v = new THREE.Vector3(vx, 3, vz)
   c.k = k
   c.age = 0
   c.castShadow = true
   scene.add(c)
   coins.push(c)
+}
+function toss(k) {
+  shed(k, player.pos.clone().setY(player.pos.y + 1.2), Math.sin(player.dir) * 4, Math.cos(player.dir) * 4)
   player.play('jab')
   gain(k, -1)
 }
@@ -1532,7 +1535,7 @@ function pickups(dt) {
 
 // ---------- wood: the axe (its "chop" var) fells pines and oaks for the tray ----------
 // A struck tree leaves its InstancedMesh for a mesh of its own that shakes; three chops and it falls away from you,
-// pays 3 wood and sinks. Its chunk key and candidate index go in `felled`, so grow() skips it until it regrows.
+// drops 3 logs along the trunk to pick up, and sinks. Its chunk key and candidate index go in `felled`, so grow() skips it until it regrows.
 const falling = []
 function chop() {
   const p = player.pos
@@ -1586,7 +1589,7 @@ function fells(dt) {
       f.quaternion.setFromAxisAngle(f.ax, Math.min(1.5, f.t * f.t * 2.5))
       if (f.t > 0.8 && !f.paid) {
         f.paid = 1
-        gain('wood', 3)
+        for (let i = 1; i < 4; i++) shed('wood', f.position.clone().add({ x: -f.ax.z * i * 1.2, y: 0.5, z: f.ax.x * i * 1.2 }), R() - 0.5, R() - 0.5) // logs along the trunk
         splash(0.25) // crash
         beep(55, 0.4, 'sawtooth', 0.06, 0.5)
         burst(f.position, '#7a5230', 10)
