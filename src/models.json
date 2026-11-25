@@ -107,7 +107,12 @@
         "parent": "root",
         "position": [
           0,
-          0.95,
+          0.85,
+          0.02
+        ],
+        "rotation": [
+          0,
+          -12,
           0
         ]
       },
@@ -118,6 +123,11 @@
           0,
           0.05,
           0
+        ],
+        "rotation": [
+          10,
+          -8,
+          0
         ]
       },
       {
@@ -126,6 +136,11 @@
         "position": [
           0,
           0.6,
+          0
+        ],
+        "rotation": [
+          -10,
+          18,
           0
         ]
       },
@@ -136,47 +151,165 @@
           0,
           0.55,
           -0.16
+        ],
+        "rotation": [
+          10,
+          0,
+          0
         ]
       },
       {
-        "name": "arm*",
+        "name": "armL",
         "parent": "chest",
         "position": [
           0.3,
           0.52,
           0
+        ],
+        "rotation": [
+          -20,
+          0,
+          15
         ]
       },
       {
-        "name": "hand*",
-        "parent": "arm*",
+        "name": "armR",
+        "parent": "chest",
         "position": [
-          0,
-          -0.55,
-          0.02
+          -0.3,
+          0.52,
+          0
         ],
         "rotation": [
           -25,
+          0,
+          -12
+        ]
+      },
+      {
+        "name": "foreL",
+        "parent": "armL",
+        "position": [
+          0,
+          -0.28,
+          0
+        ],
+        "rotation": [
+          -95,
           0,
           0
         ]
       },
       {
-        "name": "leg*",
+        "name": "foreR",
+        "parent": "armR",
+        "position": [
+          0,
+          -0.28,
+          0
+        ],
+        "rotation": [
+          -75,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "handL",
+        "parent": "foreL",
+        "position": [
+          0,
+          -0.27,
+          0.02
+        ],
+        "rotation": [
+          3,
+          -76,
+          -102
+        ]
+      },
+      {
+        "name": "handR",
+        "parent": "foreR",
+        "position": [
+          0,
+          -0.27,
+          0.02
+        ],
+        "rotation": [
+          50,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "legL",
         "parent": "hip",
         "position": [
           0.12,
           0,
           0
+        ],
+        "rotation": [
+          -37,
+          0,
+          6
         ]
       },
       {
-        "name": "foot*",
+        "name": "legR",
+        "parent": "hip",
+        "position": [
+          -0.12,
+          0,
+          0
+        ],
+        "rotation": [
+          -11,
+          0,
+          -6
+        ]
+      },
+      {
+        "name": "shin*",
         "parent": "leg*",
         "position": [
           0,
-          -0.5,
+          -0.45,
           0
+        ],
+        "rotation": [
+          49,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "footL",
+        "parent": "shinL",
+        "position": [
+          0,
+          -0.42,
+          0
+        ],
+        "rotation": [
+          -12,
+          0,
+          -6
+        ]
+      },
+      {
+        "name": "footR",
+        "parent": "shinR",
+        "position": [
+          0,
+          -0.42,
+          0
+        ],
+        "rotation": [
+          -39,
+          0,
+          6
         ]
       }
     ],
@@ -355,27 +488,42 @@
         "color": "skin",
         "position": [
           0,
-          -0.2,
+          -0.15,
           0
         ],
         "size": [
           0.12,
-          0.3,
+          0.28,
           0.12
         ]
       },
       {
+        "shape": "ball",
+        "bone": "fore*",
+        "color": "skin",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.065,
+          0.065,
+          0.065
+        ]
+      },
+      {
         "shape": "box",
-        "bone": "arm*",
+        "bone": "fore*",
         "color": "leather",
         "position": [
           0,
-          -0.4,
+          -0.13,
           0
         ],
         "size": [
           0.14,
-          0.2,
+          0.22,
           0.14
         ]
       },
@@ -404,9 +552,55 @@
           0
         ],
         "size": [
-          0.16,
-          0.44,
-          0.17
+          0.17,
+          0.46,
+          0.18
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "shin*",
+        "color": "3a3a4a",
+        "position": [
+          0,
+          -0.11,
+          0
+        ],
+        "size": [
+          0.15,
+          0.24,
+          0.16
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "shin*",
+        "color": "steel",
+        "position": [
+          0,
+          0,
+          0.06
+        ],
+        "size": [
+          0.07,
+          0.07,
+          0.05
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "box",
+        "bone": "shin*",
+        "color": "leather",
+        "position": [
+          0,
+          -0.31,
+          0
+        ],
+        "size": [
+          0.17,
+          0.22,
+          0.18
         ]
       },
       {
@@ -415,13 +609,13 @@
         "color": "leather",
         "position": [
           0,
-          -0.04,
-          0.04
+          -0.03,
+          0.06
         ],
         "size": [
-          0.16,
+          0.17,
           0.1,
-          0.26
+          0.28
         ]
       }
     ],
@@ -441,95 +635,213 @@
             "channel": "rx",
             "keys": [
               0,
-              3
+              6
             ]
           },
           {
             "bone": "head",
             "channel": "rx",
             "keys": [
-              2,
-              -2
-            ]
-          },
-          {
-            "bone": "arm*",
-            "channel": "rz",
-            "keys": [
-              4,
-              6
+              0,
+              -6
             ]
           },
           {
             "bone": "cape",
             "channel": "rx",
             "keys": [
-              5,
-              8
+              0,
+              6
+            ]
+          },
+          {
+            "bone": "arm*",
+            "channel": "rx",
+            "keys": [
+              0,
+              -6
+            ]
+          },
+          {
+            "bone": "fore*",
+            "channel": "rx",
+            "keys": [
+              0,
+              -8
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "y",
+            "keys": [
+              0,
+              0.03
             ]
           }
         ]
       },
       "walk": {
-        "duration": 0.7,
+        "duration": 0.6,
         "loop": true,
         "channels": [
           {
-            "bone": "leg^",
-            "channel": "rx",
+            "bone": "hip",
+            "channel": "ry",
             "keys": [
-              35,
-              -35
-            ]
-          },
-          {
-            "bone": "foot^",
-            "channel": "rx",
-            "keys": [
-              0,
-              -20
-            ]
-          },
-          {
-            "bone": "arm^",
-            "channel": "rx",
-            "keys": [
-              -30,
-              30
-            ]
-          },
-          {
-            "bone": "armR",
-            "channel": "rx",
-            "keys": [
-              -15,
-              -15
+              4,
+              12,
+              20,
+              12
             ]
           },
           {
             "bone": "chest",
             "channel": "ry",
             "keys": [
+              16,
               4,
-              -4
+              -8,
+              4
             ]
           },
           {
-            "bone": "hip",
-            "channel": "y",
+            "bone": "head",
+            "channel": "ry",
             "keys": [
-              0,
-              0.05,
-              0,
-              0.05
+              -24,
+              -14,
+              -4,
+              -14
             ]
           },
           {
             "bone": "cape",
             "channel": "rx",
             "keys": [
-              20,
-              30
+              12,
+              18,
+              12,
+              18
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              -10,
+              0,
+              10,
+              0
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              -8,
+              0,
+              8,
+              0
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              8,
+              0,
+              -8,
+              0
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              6,
+              0,
+              -6,
+              0
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              -7,
+              2,
+              17,
+              30,
+              41,
+              14,
+              -6,
+              -21
+            ]
+          },
+          {
+            "bone": "shin^",
+            "channel": "rx",
+            "keys": [
+              -8,
+              0,
+              -3,
+              -4,
+              6,
+              39,
+              47,
+              42
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              -3,
+              -2,
+              -14,
+              -26,
+              -22,
+              -39,
+              -37,
+              -28
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              14,
+              -12,
+              -32,
+              -47,
+              -33,
+              -24,
+              -9,
+              4
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              5,
+              -12,
+              -11,
+              -2,
+              23,
+              24,
+              13,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              -0.01,
+              0.03,
+              -0.01,
+              0.03
             ]
           }
         ]
@@ -539,32 +851,13 @@
         "loop": false,
         "channels": [
           {
-            "bone": "armR",
-            "channel": "rx",
+            "bone": "hip",
+            "channel": "ry",
             "keys": [
               0,
-              -170,
-              -40,
-              0
-            ]
-          },
-          {
-            "bone": "armR",
-            "channel": "rz",
-            "keys": [
-              0,
-              -10,
-              10,
-              0
-            ]
-          },
-          {
-            "bone": "handR",
-            "channel": "rx",
-            "keys": [
-              0,
-              -20,
-              60,
+              -13,
+              17,
+              22,
               0
             ]
           },
@@ -573,8 +866,9 @@
             "channel": "ry",
             "keys": [
               0,
-              25,
-              -30,
+              -27,
+              28,
+              43,
               0
             ]
           },
@@ -584,7 +878,184 @@
             "keys": [
               0,
               -10,
+              14,
+              12,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              0,
+              22,
+              -18,
+              -33,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              0,
+              -10,
+              -5,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -105,
+              -45,
+              20,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              0,
+              -28,
+              12,
+              57,
+              0
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              0,
               15,
+              65,
+              50,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              0,
+              75,
+              25,
+              9,
+              0
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -10,
+              0,
+              5,
+              0
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              0,
+              15,
+              20,
+              0
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              0,
+              35,
+              55,
+              55,
+              0
+            ]
+          },
+          {
+            "bone": "shinL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -13,
+              20,
+              17,
+              0
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              0,
+              10,
+              -17,
+              -14,
+              0
+            ]
+          },
+          {
+            "bone": "shinR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -3,
+              8,
+              7,
+              0
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              0,
+              6,
+              -13,
+              -11,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.02,
+              -0.06,
+              -0.05,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.06,
+              0.1,
+              0.08,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "ry",
+            "keys": [
+              0,
+              -30,
+              -10,
+              -20,
               0
             ]
           }
@@ -595,13 +1066,14 @@
         "loop": false,
         "channels": [
           {
-            "bone": "armR",
-            "channel": "rx",
+            "bone": "chest",
+            "channel": "ry",
             "keys": [
               0,
-              -190,
-              -190,
-              -10,
+              -2,
+              -2,
+              8,
+              13,
               0
             ]
           },
@@ -610,9 +1082,166 @@
             "channel": "rx",
             "keys": [
               0,
-              -15,
-              -15,
+              -28,
+              -32,
               25,
+              28,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              20,
+              22,
+              -20,
+              -20,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -165,
+              -175,
+              -15,
+              -7,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              0,
+              7,
+              7,
+              17,
+              22,
+              0
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              0,
+              5,
+              -10,
+              70,
+              65,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              0,
+              43,
+              53,
+              -33,
+              -33,
+              0
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              0,
+              0,
+              15,
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              0,
+              45,
+              45,
+              50,
+              50,
+              0
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              0,
+              20,
+              19,
+              -12,
+              -13,
+              0
+            ]
+          },
+          {
+            "bone": "shinL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -49,
+              -49,
+              37,
+              39,
+              0
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              0,
+              30,
+              30,
+              -25,
+              -26,
+              0
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              0,
+              4,
+              6,
+              -2,
+              -2,
+              0
+            ]
+          },
+          {
+            "bone": "shinR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -22,
+              -28,
+              26,
+              28,
+              0
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              0,
+              18,
+              22,
+              -24,
+              -26,
               0
             ]
           },
@@ -621,9 +1250,34 @@
             "channel": "y",
             "keys": [
               0,
+              0.07,
+              0.08,
+              -0.14,
+              -0.15,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.08,
+              -0.09,
               0.1,
               0.1,
-              -0.1,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "ry",
+            "keys": [
+              0,
+              -15,
+              -20,
+              5,
+              5,
               0
             ]
           }
@@ -634,22 +1288,172 @@
         "loop": false,
         "channels": [
           {
-            "bone": "armR",
-            "channel": "rx",
+            "bone": "chest",
+            "channel": "ry",
             "keys": [
               0,
-              -60,
-              -95,
+              -22,
+              33,
               0
             ]
           },
           {
             "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              0,
+              8,
+              0
+            ]
+          },
+          {
+            "bone": "head",
             "channel": "ry",
             "keys": [
               0,
-              -25,
+              12,
+              -28,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
               10,
+              -60,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              0,
+              -3,
+              17,
+              0
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -35,
+              70,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              0,
+              78,
+              73,
+              0
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              0,
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              0,
+              0,
+              45,
+              0
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              0,
+              2,
+              -7,
+              0
+            ]
+          },
+          {
+            "bone": "shinL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -15,
+              21,
+              0
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              0,
+              13,
+              -15,
+              0
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -5,
+              11,
+              0
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              0,
+              7,
+              -15,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.02,
+              -0.07,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.08,
+              0.16,
+              0
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "ry",
+            "keys": [
+              0,
+              35,
+              -25,
               0
             ]
           }
@@ -661,10 +1465,28 @@
         "channels": [
           {
             "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              0,
+              18,
+              0
+            ]
+          },
+          {
+            "bone": "chest",
             "channel": "rx",
             "keys": [
               0,
-              -20,
+              -25,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              0,
+              7,
               0
             ]
           },
@@ -676,6 +1498,123 @@
               -25,
               0
             ]
+          },
+          {
+            "bone": "cape",
+            "channel": "rx",
+            "keys": [
+              0,
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -25,
+              0
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              0,
+              -23,
+              0
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              0,
+              45,
+              0
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              20,
+              0
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              0,
+              55,
+              0
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -13,
+              0
+            ]
+          },
+          {
+            "bone": "shinL",
+            "channel": "rx",
+            "keys": [
+              0,
+              6,
+              0
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              0,
+              7,
+              0
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -18,
+              0
+            ]
+          },
+          {
+            "bone": "shinR",
+            "channel": "rx",
+            "keys": [
+              0,
+              21,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              -0.06,
+              0
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.12,
+              0
+            ]
           }
         ]
       },
@@ -684,11 +1623,232 @@
         "loop": false,
         "channels": [
           {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              0,
+              8,
+              8,
+              8,
+              8
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              0,
+              20,
+              0,
+              -15,
+              -15
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              0,
+              -18,
+              -18,
+              12,
+              17
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              35,
+              40,
+              20,
+              25
+            ]
+          },
+          {
+            "bone": "cape",
+            "channel": "rx",
+            "keys": [
+              0,
+              -10,
+              -20,
+              -20,
+              -20
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              0,
+              15,
+              -35,
+              -75,
+              -75
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              0,
+              2,
+              -38,
+              -58,
+              -63
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              0,
+              55,
+              45,
+              60,
+              65
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              0,
+              0,
+              0,
+              -75,
+              -75
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              0,
+              10,
+              -40,
+              -70,
+              -70
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              -5,
+              35,
+              55,
+              60
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              0,
+              75,
+              65,
+              75,
+              80
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -23,
+              -38,
+              -3,
+              -3
+            ]
+          },
+          {
+            "bone": "shinL",
+            "channel": "rx",
+            "keys": [
+              0,
+              45,
+              59,
+              1,
+              1
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -22,
+              -21,
+              32,
+              32
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -13,
+              -23,
+              -4,
+              -4
+            ]
+          },
+          {
+            "bone": "shinR",
+            "channel": "rx",
+            "keys": [
+              0,
+              42,
+              61,
+              -34,
+              -34
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              0,
+              -29,
+              -38,
+              59,
+              59
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              -0.2,
+              -0.3,
+              -0.33,
+              -0.33
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "z",
+            "keys": [
+              0,
+              0.03,
+              -0.02,
+              -0.02,
+              -0.02
+            ]
+          },
+          {
             "bone": "root",
             "channel": "rx",
             "keys": [
               0,
-              -30,
+              0,
+              -35,
               -90,
               -90
             ]
@@ -698,19 +1858,21 @@
             "channel": "y",
             "keys": [
               0,
+              0,
+              0.14,
               0.3,
-              -0.1,
-              -0.15
+              0.27
             ]
           },
           {
-            "bone": "arm*",
-            "channel": "rz",
+            "bone": "root",
+            "channel": "z",
             "keys": [
               0,
-              40,
-              80,
-              80
+              0,
+              -0.2,
+              -0.5,
+              -0.5
             ]
           }
         ]

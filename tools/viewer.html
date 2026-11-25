@@ -6,7 +6,7 @@
 <style>body{margin:0;overflow:hidden;font:14px system-ui;color:#222}#ui{position:fixed;left:12px;top:10px;background:#fffc;padding:6px 10px;border-radius:6px}</style>
 </head>
 <body>
-<div id="ui">Dev tool, not shipped. Query: <code>?m=warrior,goblin&amp;clip=walk&amp;seeds=1,2,3&amp;hold=axe</code></div>
+<div id="ui">Dev tool, not shipped. Query: <code>?m=warrior,goblin&amp;clip=walk&amp;seeds=1,2,3&amp;hold=axe&amp;t=0,0.1,0.2</code> (a list of t values poses one figure per time; <code>ry=90</code> turns them side on)</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three'
@@ -16,6 +16,7 @@ const lib = library(await (await fetch('../src/models.json')).text())
 const names = (q.get('m') || 'warrior,slime,goblin,spider,bat').split(',')
 const seeds = (q.get('seeds') || '1').split(',').map(Number)
 const clip = q.get('clip') || 'idle'
+const times = q.get('t') ? q.get('t').split(',').map(Number) : [null]
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(innerWidth, innerHeight)
 renderer.setPixelRatio(devicePixelRatio)
@@ -31,15 +32,19 @@ scene.add(ground)
 const models = []
 const w = 1.8
 let i = 0
-const total = names.length * seeds.length
+const total = names.length * seeds.length * times.length
 for (const n of names)
-  for (const s of seeds) {
+  for (const s of seeds)
+  for (const ft of times) {
     const m = make(lib, n, s)
-    if (q.get('hold') && m.bones.handR) hold(lib, m, 'handR', q.get('hold'))
+    m.t = ft
+    const props = (q.get('hold') || '').split(',') // a list goes round the figures
+    if (props[0] && m.bones.handR) hold(lib, m, 'handR', props[i % props.length])
     m.root.parent || 0
     const g = new THREE.Group()
     g.add(m.root)
     g.position.x = (i++ - (total - 1) / 2) * w
+    g.rotation.y = (q.get('ry') || 0) * (Math.PI / 180) // e.g. ry=90 shows every figure side on
     scene.add(g)
     models.push(m)
   }
@@ -50,8 +55,13 @@ cam.lookAt(0, 0.8, 0)
 const t0 = performance.now()
 renderer.setAnimationLoop(() => {
   const t = (performance.now() - t0) / 1000
-  const freeze = q.get('t')
-  for (const m of models) pose(m, [[clip, freeze ? +freeze : t, 1]])
+  for (const m of models) {
+    const c = m.clips[clip]
+    if (!c) continue
+    const u = m.t ?? (c.once ? t % (c.d + 0.6) : t) // a running one-shot repeats
+    // one-shots play over the idle stance, as in the game
+    pose(m, c.once ? [['idle', u, 1], [clip, u, 1]] : [[clip, u, 1]])
+  }
   renderer.render(scene, cam)
 })
 </script>

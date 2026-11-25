@@ -36,7 +36,7 @@ compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-ds
 ## Architecture
 
 ```
-src/models.json  all models, skeletons and animation clips, as pretty-printed JSON (~42 KB raw, ~1 KB packed)
+src/models.json  all models, skeletons and animation clips, as pretty-printed JSON (~86 KB raw)
 src/compiler.js  the compiler + rig runtime: JSON -> three.js bones, merged meshes, clips (~8.4 KB)
 src/score.json   the music: voices and sections as pretty-printed JSON, note patterns as strings (~3.8 KB)
 src/music.js     the score compiler, synthesized instruments + WebAudio sequencer (~16 KB)
@@ -46,6 +46,7 @@ tools/build.mjs  inlines everything into one file: dist/index.html (the shipped 
 tools/size.mjs   the size report (below)
 tools/formats.mjs  JSON vs. the old text DSL and other formats under surprisal (docs/json-vs-dsl.md)
 tools/viewer.html  dev-only model viewer: /tools/viewer.html?m=goblin&seeds=1,2,3&clip=walk
+tools/warrior.mjs  dev-only: writes the warrior's bones and clips into models.json (leg IK, stance baked into the rest pose)
 ```
 
 The game is **one HTML file**. The build inlines `models.json` as a `<script type="application/json">` block and `score.json`
@@ -84,8 +85,8 @@ language model predicts well. `src/models.json` maps each model name to a block 
 "warrior": {
   "vars": { "cloth": "9b2f2f", "steel": "bcc6d0" },
   "bones": [
-    { "name": "arm*", "parent": "chest", "position": [0.3, 0.52, 0] },
-    { "name": "hand*", "parent": "arm*", "position": [0, -0.55, 0.02], "rotation": [-25, 0, 0] }
+    { "name": "shin*", "parent": "leg*", "position": [0, -0.45, 0], "rotation": [49, 0, 0] },
+    { "name": "handR", "parent": "foreR", "position": [0, -0.27, 0.02], "rotation": [50, 0, 0] }
   ],
   "parts": [
     { "shape": "box", "bone": "chest", "color": "cloth", "position": [0, 0.27, 0], "size": [0.46, 0.55, 0.28] },
@@ -142,6 +143,35 @@ origin sits in the fist, and each prop orients itself in its own block with a ro
 on `root` with rotation `[-10, 0, 0]` tips the blade up and forward; the axe pitches its haft down so the edge leads
 the chop); the swing clip also snaps the wrist (a `handR` `rx` channel) so the blade comes down level at the end of
 the cut.
+
+**The warrior's rig.** He has three joints per limb: `arm*` (shoulder) → `fore*` (elbow) → `hand*` (wrist, the prop
+socket), and `leg*` (hip) → `shin*` (knee) → `foot*` (ankle), under `hip` → `chest` → `head`/`cape`. Thigh 0.45 + shin
+0.42 + 0.08 from ankle to sole puts his soles on the ground (the old single-segment legs left him hovering 0.36 above
+it). His **rest pose is the fighting stance**: knees bent, shield foot forward, sword arm cocked, shield up and turned
+to face forward, torso turned a little. Because the two sides of a stance differ, most limbs are written as separate
+`armL`/`armR` bones instead of one `arm*`. Every clip then stores only what moves away from the stance: `idle` is a
+breath (chest and guard), `walk` bends the knees through the stride with a heel strike and a toe off, swings the elbows
+and counter-rotates hips and shoulders, and the one-shots (`swing`, `chop`, `jab`, `hit`, `death`) are deltas laid on top
+of idle/walk, winding up and following through with shoulder, elbow, wrist and torso twist while the hips drop and
+shift over planted feet.
+
+Those bones and clips are not hand-typed: [tools/warrior.mjs](tools/warrior.mjs) (dev only) writes them into
+`models.json` from absolute poses. It solves each leg with planar two-bone IK from a hip offset and a foot target, so
+the feet stay on the ground (within a few cm) while the body crouches, lunges and dips; folds L/R pairs back into `*`
+and `^` channels where they mirror; keeps 4 walk keys instead of 8 where the curve allows; and drops channels that
+never move more than 5° or 2 cm. The wrist angles in the attack keys were solved so the blade, haft or torch points
+where the move needs it at each key. `chop` has six keys so its downswing passes through the game's hit moment (45% of
+the clip). Edit the poses there and run `node tools/warrior.mjs`; edit his parts in `models.json` directly. Other
+models are untouched, and `common` (hit and death on the root) still serves the monsters.
+
+Raw cost: the warrior's block grew from ~9.5 KB to ~28.4 KB of pretty JSON (+18.9 KB; ~3.8 → ~9.7 KB as compact JSON),
+almost all of it one-shot keyframes. Not measured under surprisal.
+
+| stance (sword, axe, torch) | walk |
+|---|---|
+| ![stance](docs/rig/stance.png) | ![walk](docs/rig/walk.png) |
+| **swing** | **death** |
+| ![swing](docs/rig/swing.png) | ![death](docs/rig/death.png) |
 
 **Deterministic creatures.** The slime, goblin, spider and bat blocks use `~` ranges, `|` picks, `chance` optional
 parts and `scale`, so every seed is a different, repeatable creature: size, color, head size, horns, hats, markings,
@@ -537,4 +567,6 @@ hour the first time; the cache makes reruns cheap.
   textures, and a bigger enemy roster or quests. Given the headroom, more content (bosses, a village,
   more items, more songs) is the obvious next step, not further squeezing.
 - **Dev notes:** `/tools/viewer.html` (dev only, not shipped) shows any model, seed, clip or held item, e.g.
-  `?m=goblin&seeds=1,2,3&clip=walk`. The page exposes `window.game` for play-testing from the console.
+  `?m=goblin&seeds=1,2,3&clip=walk`. `t` takes a list (one figure per time, one-shots posed over idle as in the
+  game), `hold` a list that goes round the figures, and `ry=90` turns every figure side on:
+  `?m=warrior&clip=swing&t=0.06,0.11,0.17,0.22,0.3&ry=-30&hold=sword`. The page exposes `window.game` for play-testing from the console.
