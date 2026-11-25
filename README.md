@@ -813,7 +813,11 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 - **Felled stays felled.** Each tree is the n-th candidate spot of its chunk's seeded loop, so a felled tree is stored
   as `{ "cx,cz": { n: time } }` in `localStorage.warriorFelled`, and `grow()` skips it. Trees regrow after 30 minutes
   (real time): expired entries are pruned on load, so the record stays small however far you roam.
-- **The boat.** B (or tapping the wood slot) with 10 wood, standing by water at least 0.3 deep, launches a rowboat
+- **The economy.** `models.json` `tray.recipes` maps each item to its inputs, which can include `gold`: wood (20 gold) and
+  flint (200 gold) are gold-only, a torch is 1 wood + 1 flint, a boat is 10 wood + 30 gold. Slot 7 lists every recipe
+  with its cost, greyed when short; crafting and buying only work in a village (outside, it says "Craft in a village").
+  The sword and axe are permanent and not for sale.
+- **The boat.** Slot 6 counts boats owned. B (or tapping that slot) with a boat, standing by water at least 0.3 deep, spends one and launches a rowboat
   (the `boat` model) 2-4 units away, searching out from straight ahead. R boards it
   within 4.5 units, on foot or swimming; a rider gets off the mount first, so mounts never board. In the boat you sit
   on the thwart facing the stern and row (the warrior's `row` clip), A/D turn, W rows at 3 u/s (half walking speed) with glide, S backs slowly, and it runs aground

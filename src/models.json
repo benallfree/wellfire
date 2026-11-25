@@ -7731,6 +7731,8 @@
       "torch": "🔥",
       "wood": "🪵",
       "flint": "🪨",
+      "boat": "🛶",
+      "gold": "🪙",
       "pack": "🛠️"
     },
     "slots": [
@@ -7738,16 +7740,28 @@
       "axe",
       "torch",
       "wood",
-      "flint"
+      "flint",
+      "boat"
     ],
     "materials": {
       "wood": "fell a tree with the axe",
-      "flint": "strike a glinting rock with the axe"
+      "flint": "strike a glinting rock with the axe",
+      "gold": "slay monsters"
     },
     "recipes": {
+      "wood": {
+        "gold": 20
+      },
+      "flint": {
+        "gold": 200
+      },
       "torch": {
         "wood": 1,
         "flint": 1
+      },
+      "boat": {
+        "wood": 10,
+        "gold": 30
       }
     }
   }

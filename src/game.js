@@ -526,23 +526,26 @@ function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
-// the tray (models.json "tray"): five slots, keys 1-5 or a tap, each item taken in hand (Space drops wood or flint).
-// Slot 6 (key 6) opens crafting: recipes (tap one), and tapping two slots swaps them. The game pauses while it's open.
-// The bag (counts) and the slot layout are kept in localStorage.
+// the tray (models.json "tray"): six slots, keys 1-6 or a tap, each item taken in hand (Space drops wood or flint);
+// the boat slot launches one. Slot 7 (key 7) opens crafting: recipes (tap one; only in a village; a recipe's
+// inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them. The game
+// pauses while it's open. The bag (counts) and the slot layout are kept in localStorage.
 const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
 const belt = kept('warriorSlots', lib.tray.slots)
 let pick = -1
-const place = (k) => belt.includes(k) || (belt[belt.indexOf('')] = k)
+const place = (k) => belt.includes(k) || belt.push(k)
 lib.tray.slots.map(place)
 const bag = kept('warriorBag', {})
 bag.wood ||= 0
 bag.flint ||= 0
+bag.boat ||= 0
 bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
 // beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star]
 const GOAL = 5
 const beacon = kept('warriorBeacons', {})
 const done = () => Object.values(beacon).filter((b) => b[2]).length
-const has = (r) => Object.keys(r).every((m) => bag[m] >= r[m])
+const own = (m) => (m == 'gold' ? gold : bag[m])
+const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
@@ -550,20 +553,22 @@ function tray() {
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
-      .map(([k, r]) => `<b data-r=${k} class=${has(r) ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
+      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
       .join('') +
+    (village?.in ? '' : '<br>Craft in a village') +
     '<br>tap two slots to swap'
 }
 const pack = () => (($('inv').hidden ^= 1), (pick = -1), tray())
 function slot(i) {
   const k = belt[i]
-  if (!(i in belt)) return i == 5 && pack()
+  if (!(i in belt)) return i == belt.length && pack()
   if (!$('inv').hidden) {
     if (pick >= 0) [belt[i], belt[pick]] = [belt[pick], belt[i]], keep('warriorSlots', belt), (i = -1)
     pick = i
     return tray()
   }
   if (k == 'torch' && !bag.torch) craft()
+  if (k == 'boat') launch()
   if (ITEMS.includes(k)) equip(ITEMS.indexOf(k))
 }
 function gain(k, n) {
@@ -1587,11 +1592,10 @@ function fells(dt) {
   }
 }
 
-// ---------- boat: built from BOAT wood at a shore, rowed across water, left where you get out ----------
+// ---------- boat: crafted in a village (its tray slot counts them), launched at a shore, left where you get out ----------
 // In the boat you sit and row (tank steering, about half walking speed, with glide) and cannot attack. Land
-// monsters can't reach you and eels can't bite through the hull; bats still can. There is one boat: building
-// another moves it. Its place is kept in localStorage.
-const BOAT = 10
+// monsters can't reach you and eels can't bite through the hull; bats still can. There is one boat in the world:
+// launching another spends one from the tray and moves it; the one left ashore can be boarded again. Its place is kept in localStorage.
 const afloat = (h) => h < WATER - 0.3
 // the nearest point 1.8-4.2 units from (x, z) whose ground passes `ok`, searching out from straight ahead
 function spot(x, z, dir, ok) {
@@ -1619,10 +1623,10 @@ if (docked) dock(...docked)
 addEventListener('pagehide', () => boat && keep('warriorBoat', [boat.g.position.x, boat.g.position.z, boat.g.rotation.y]))
 function launch() {
   if (player.boat || player.seat || village.in || player.hp <= 0) return
-  if (bag.wood < BOAT) return say(`A boat takes ${BOAT} wood`)
+  if (!bag.boat) return say('No boat: craft one in a village')
   const s = spot(player.pos.x, player.pos.z, player.dir, afloat)
   if (!s) return say('Stand at the water to launch a boat')
-  gain('wood', -BOAT)
+  gain('boat', -1)
   dock(...s)
   splash(0.3)
   ripple(boat.g.position, 2)
@@ -1703,13 +1707,14 @@ const dir = (b) => ray.setFromSphericalCoords(1, b[1], b[0])
 function craft(k = 'torch') {
   const r = RECIPES[k]
   const e = Object.entries(r)
-  if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(bag[m] >= n))[0]]}`)
-  for (const [m, n] of e) gain(m, -n)
+  if (!village.in) return say('Craft in a village')
+  if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(own(m) >= n))[0]] || 'craft one'}`)
+  for (const [m, n] of e) m == 'gold' ? earn(-n) : gain(m, -n)
   gain(k, 1)
   place(k)
   keep('warriorSlots', belt)
   if (k == 'torch') fuel = FUEL
-  say(`You made a ${k}`)
+  say(`+1 ${ICON[k]} ${k}`)
 }
 function setTorch() {
   if (!bag.torch) return craft()
@@ -1800,7 +1805,7 @@ function shine(dt) {
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
   if (T && T != well) {
     const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (6)')
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (7)')
   }
   well = T || null
   if (!well) aim = null
