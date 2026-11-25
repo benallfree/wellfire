@@ -707,7 +707,10 @@ function steer(dt, ix, iz, il) {
   const m = player.seat
   const v = m.m.vars
   let sp = 0
-  if (il > 0.1) {
+  if (chase) {
+    m.dir -= ix * v.turn * 0.8 * dt + drag
+    sp = -iz * v.run * (iz > 0 ? 0.3 : 1) * (m.busy ? 0.4 : 1) // reins: turn on the spot, back up slowly
+  } else if (il > 0.1) {
     const c = Math.cos(camYaw)
     const s = Math.sin(camYaw)
     let a = Math.atan2(ix * c + iz * s, -ix * s + iz * c) - m.dir
@@ -1388,7 +1391,11 @@ addEventListener('keydown', (e) => {
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyR') mountUp()
+  if (e.code == 'KeyC') chase = !chase // chase camera (tank controls) or the old free camera
 })
+let chase = 1
+let drag = 0 // mouse-drag turning, in radians, used up each frame
+addEventListener('pointermove', (e) => e.buttons && e.pointerType == 'mouse' && (drag += e.movementX * 0.006))
 addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
 addEventListener('touchstart', (e) => {
@@ -1400,7 +1407,7 @@ addEventListener('touchstart', (e) => {
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
   $('pad').style.display = 'block'
-  $('help').textContent = 'Drag to move'
+  $('help').textContent = 'Drag: up/down to walk, sideways to turn'
 })
 addEventListener('touchmove', (e) => {
   for (const t of e.changedTouches)
@@ -1420,6 +1427,20 @@ function attack() {
   if (player.busy || player.hp <= 0 || village?.in || player.swim) return
   player.play(item.anim)
   player.struck = false
+  // chase mode: the swing turns toward the nearest monster in front, so you needn't line up exactly
+  let best = 4
+  let to = player.dir
+  if (chase)
+    for (const e of foes) {
+      const d = Math.hypot(e.pos.x - player.pos.x, e.pos.z - player.pos.z)
+      const t = Math.atan2(e.pos.x - player.pos.x, e.pos.z - player.pos.z)
+      const a = t - player.dir
+      if (e.hp > 0 && d < best && Math.cos(a) > 0.55) {
+        best = d
+        to = t
+      }
+    }
+  player.dir = to
   beep(180, 0.15, 'sawtooth', 0.04, 0.4)
 }
 function hurt(e, dmg, from, push) {
@@ -1454,19 +1475,32 @@ function hurt(e, dmg, from, push) {
 const clock = new THREE.Clock()
 const near = { slime: 0, goblin: 0, spider: 0, bat: 0 } // how present each monster kind is, for the music
 const fwd = new THREE.Vector3()
+let inRoom = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
-  if (keys.KeyQ) camYaw += dt * 2
-  if (keys.KeyE) camYaw -= dt * 2
+  const tank = chase && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves
+  const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
+  if (!tank) camYaw += q * dt * 2
 
-  // player movement relative to the camera
+  // on foot or riding: A/D turn and W/S walk along the facing (Q/E strafe), or, in free mode, move relative to the camera
   let ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + stick.x
   let iz = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + stick.y
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
   const run = 6
-  if (player.seat) steer(dt, ix, iz, il)
-  else if (il > 0.1 && alive) {
+  if (player.seat) {
+    steer(dt, ix, iz, il)
+    player.dir = player.seat.dir
+  } else if (tank && alive) {
+    player.dir -= ix * 2.8 * dt + drag
+    const f = Math.max(-1, Math.min(1, -iz)) * (iz > 0 ? 0.6 : 1) // backing up is slower
+    const r = q * 0.8
+    const k = run * (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
+    const c = Math.cos(player.dir)
+    const s = Math.sin(player.dir)
+    player.move((f * s + r * c) * k * dt, (f * c - r * s) * k * dt, dt)
+    player.speed = Math.hypot(f, r) * k
+  } else if (il > 0.1 && alive) {
     ix /= Math.max(1, il)
     iz /= Math.max(1, il)
     const c = Math.cos(camYaw)
@@ -1685,12 +1719,22 @@ function frame() {
   for (const k in near) near[k] += ((close[k] || 0) - near[k]) * Math.min(1, dt * (close[k] ? 2 : 0.5))
   audio.mood(day, near)
 
-  // camera: a high three-quarter view that trails the player, pulled back while riding
+  // camera: a high three-quarter view that trails the player, pulled back while riding; in chase mode it swings
+  // round behind the facing (lagging a little), sits lower, looks a step ahead, and rises over higher ground behind
   const target = player.pos
-  const back = player.seat ? 1.35 : 1
-  fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back)
-  camera.position.lerp(fwd.add(target), clock.elapsedTime < 0.2 ? 1 : Math.min(1, dt * 5))
-  camera.lookAt(target.x, target.y + 1, target.z)
+  const back = (player.seat ? 1.35 : 1) * (camera.aspect < 1 ? 1.3 : 1) // and on a tall phone screen
+  const snap = clock.elapsedTime < 0.2 || inRoom != !!player.room
+  inRoom = !!player.room
+  drag = 0
+  if (tank) {
+    let a = player.dir + Math.PI - camYaw
+    camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
+    fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
+    fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
+  } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
+  camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
+  if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
+  else camera.lookAt(target.x, target.y + 1, target.z)
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
   sun.target.position.copy(target)
 

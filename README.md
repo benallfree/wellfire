@@ -13,8 +13,11 @@ npm install && npm start
 Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serves it; three.js comes from a CDN, so you
 need a network connection.)
 
-**Controls:** WASD or arrows move · Space or J attack · F, Tab or 1-3 swap the item in hand · Q/E turn the camera · M or the ♪ button toggles sound.
-On a touch screen: drag anywhere to move, plus HIT and SWAP buttons.
+**Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
+Space or J attack · F, Tab or 1-3 swap the item in hand · R ride · C switches to the old free camera (WASD moves
+relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
+On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons. See
+[Chase camera](#chase-camera).
 
 | | |
 |---|---|
@@ -530,8 +533,8 @@ riding one. Hit the goblin and it falls off, and the mount bolts and is then fre
 
 **Riding.** Walk up to a free mount: the HUD shows `R · ride <name> the <kind>` (on touch, the RIDE button). Press R to
 climb on. The warrior's hip sits on the saddle socket in the ride pose, his weapon goes on his back (the village stow),
-and the HUD shows the mount's name and health bar. The stick or WASD turns the mount toward the direction you hold, at
-its own turn rate, and it runs along its facing with a little momentum, slowing in tight turns. Space or HIT triggers
+and the HUD shows the mount's name and health bar. A/D or the stick's x turn the mount (reins, see [Chase camera](#chase-camera)); in the free camera
+the stick or WASD turns it toward the direction you hold, at its own turn rate, and it runs along its facing with a little momentum, slowing in tight turns. Space or HIT triggers
 the mount's attack, with damage, reach, arc, knockback, cooldown and hit timing (`at`, a fraction of the clip) all from
 its vars. R again climbs off and leaves it standing.
 
@@ -722,6 +725,39 @@ the 75%-opaque water, eel shadows included.
 Cost: about 14.8 KB raw. Game code is +5.6 KB and HTML/CSS +0.16 KB. Models are +9 KB of pretty JSON: the eel is
 about 5.2 KB and the swim clip about 2.2 KB, plus indentation. Not measured with surprisal; at ~90% that's roughly
 1.5 KB shipped.
+
+## Chase camera
+
+The camera stays behind the hero. A/D (or the stick's x, or a mouse drag) turn him at 2.8 rad/s, W/S walk along his
+facing (backing up at 60% speed), Q/E strafe, and the camera swings round to sit behind him with a short lag (it
+closes 4 × the angle gap per second), so turns feel smooth rather than bolted on.
+
+| | |
+|---|---|
+| ![Turning: the camera lags a little, then settles behind](docs/chase-turn.jpg) | ![A swing turns to the nearest monster in front](docs/chase-fight.jpg) |
+| ![Riding: reins steering, the camera farther back](docs/chase-ride.jpg) | ![On a phone: the stick's y walks, its x turns](docs/chase-touch.jpg) |
+| ![A house's room keeps its fixed cutaway camera](docs/chase-interior.jpg) | ![Out of the door, the camera snaps behind and the house fades](docs/chase-door.jpg) |
+
+- **Framing.** 7 units back and 4.8 up, looking at a point 3 units ahead of him at waist height: a slight downward
+  angle that shows the ground ahead and monsters in front instead of the hero's back. If the ground behind is
+  higher, the camera rises to 1.5 above it, and it never goes below the water.
+- **Combat.** With no free aim, a swing turns him toward the nearest live monster within 4 units and about 57° of his
+  facing, so you only need to roughly face a fight.
+- **Riding.** Reins: A/D turn the mount at 80% of its own turn rate (on the spot too), W runs at its speed, S backs
+  slowly. The camera pulls back 1.35×, as before, and the hero's facing follows the mount's, so the minimap arrow
+  and the camera agree.
+- **Phones.** On a portrait screen the camera pulls back 1.3× so the hero doesn't fill the view.
+- **Village rooms** keep their fixed cutaway camera, and moves there stay screen-relative, because a chase camera
+  would be inside the walls of a 6-unit room. On leaving, the camera snaps behind the hero at the door; the house
+  behind him turns see-through like any house between the camera and the player.
+- **Swimming.** Same turning controls in deep water, at the swimmer's 55% speed; the camera stays above the surface.
+- **Minimap.** It still turns with the camera, so up on the map is the way the camera looks; it lags with the camera,
+  matching the view.
+- **Free camera.** Kept behind C, for ~100 bytes: the old high three-quarter view with screen-relative WASD and Q/E
+  camera turns. It's useful for looking around and is what the room code already relies on.
+
+Cost: about +2.4 KB raw in `src/game.js` (58,139 vs 55,763 bytes, much of it comments) and +29 bytes in the page
+shell; at ~90% compression, roughly +0.24 KB in the shipped build.
 
 ## Size
 
