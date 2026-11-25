@@ -158,7 +158,16 @@ You start with one torch. Light and aim the first village (27–37 units away, s
 four more villages, each needing a new torch: fell trees for wood, find flint, craft, travel by road, steed, drake or
 boat, light, aim. Night is when the star is easiest to see, and when the monsters are thickest.
 
-### Open questions for Ben
+### Decided (Ben, 2026-11-25)
+
+- **Flint:** glinting rocks. About 1 in 15 of the existing rocks glints, and breaking one with the axe gives flint.
+  It uses the felled/regrowth store.
+- **Aiming:** turning swings the beam round and W/S tilts it. The beam warms from white to gold and locks within a
+  few degrees.
+- **Count:** 5 villages, and the start village counts.
+- **Star:** fixed (not asked; the simplest choice).
+
+### Open questions as first asked
 
 1. **Flint:** a rare drop from one monster (for example rocky-hills goblins, about 1 in 6), or glinting rocks you
    break with the axe (1 in about 15 of the existing rocks, so it reuses chopping and the felled/regrowth store)?
