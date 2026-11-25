@@ -35,6 +35,16 @@ const SHAPES = {
   },
 }
 
+// A vertex colour of 2 or more is self-lit (eyes, flames, windows): it shows its own colour in the dark.
+export const glow = (m) => (
+  (m.onBeforeCompile = (s) =>
+    (s.fragmentShader = s.fragmentShader.replace(
+      '#include <color_fragment>',
+      '#include <color_fragment>\nif (vColor.r > 1.9) { totalEmissiveRadiance += vColor - 2.; diffuseColor.rgb *= 0.; }'
+    ))),
+  m
+)
+
 // Build one model from the library. Returns { root, bones, clips, vars, mat }.
 export function make(lib, name, seed = 1, mat) {
   const R = rng(seed * 7919 + name.length)
@@ -45,7 +55,7 @@ export function make(lib, name, seed = 1, mat) {
   const geos = {}
   const clips = {}
   const holds = []
-  mat ||= new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
+  mat ||= glow(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }))
 
   // A number token: a literal, a variable, an expression over variables, with "a~b" meaning a seeded random in [a, b].
   const num = (t) => {
@@ -102,7 +112,8 @@ export function make(lib, name, seed = 1, mat) {
     each(m.parts, ({ shape, segments, mirror: mirrored, bone, color: c, position: [x, y, z], size, rotation = [0, 0, 0] }) => {
       const r = rotation.map(num)
       const cs = pick(c) + ''
-      const color = new THREE.Color('#' + cs.replace('!', '')).multiplyScalar(cs.endsWith('!') ? 3 : 1) // "f60!" glows
+      const color = new THREE.Color('#' + cs.replace('!', ''))
+      const lit = cs.endsWith('!') ? 2 : 0 // "f60!" glows: stored as colour + 2, read back by glow()
       let g = SHAPES[shape](size.map(num), segments)
       g = (g.index ? g.toNonIndexed() : g)
         .rotateX(r[0] * DEG)
@@ -114,9 +125,9 @@ export function make(lib, name, seed = 1, mat) {
       const col = new Float32Array(n * 3)
       for (let i = 0; i < n; i++) {
         const f = 0.9 + 0.1 * (((((i / 3) | 0) * 7919) % 13) / 13) // per-face shade jitter
-        col[i * 3] = color.r * f
-        col[i * 3 + 1] = color.g * f
-        col[i * 3 + 2] = color.b * f
+        col[i * 3] = color.r * f + lit
+        col[i * 3 + 1] = color.g * f + lit
+        col[i * 3 + 2] = color.b * f + lit
       }
       g.setAttribute('color', new THREE.BufferAttribute(col, 3))
       const copies = mirrored ? [g, mirror(g)] : [g]

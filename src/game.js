@@ -29,7 +29,9 @@ renderer.shadowMap.enabled = true
 document.body.appendChild(renderer.domElement)
 const scene = new THREE.Scene()
 const DAY = new THREE.Color('#9cc8e8')
-const NIGHT = new THREE.Color('#16204a')
+const NIGHT = new THREE.Color('#03050c')
+const SUN = new THREE.Color('#fff4dd')
+const MOON = new THREE.Color('#5a78c8')
 const sky = DAY.clone()
 let day = 1
 scene.background = sky
@@ -37,7 +39,7 @@ scene.fog = new THREE.Fog(sky, 40, 110)
 const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 200)
 const hemi = new THREE.HemisphereLight('#dfefff', '#4a5a30', 1.3)
 scene.add(hemi)
-const sun = new THREE.DirectionalLight('#fff4dd', 2.2)
+const sun = new THREE.DirectionalLight(SUN, 2.2)
 sun.castShadow = true
 sun.shadow.mapSize.set(2048, 2048)
 Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 120 })
@@ -508,7 +510,7 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
 // the tray: the weapons, then every kind of goods (wood now; potions or loot later add a GOODS entry and a use).
 // Number keys or a tap pick a slot: a weapon is equipped, goods are used. The bag is kept in localStorage.
@@ -670,16 +672,38 @@ player.item = 0
 player.kills = 0
 player.air = 1
 let item
+// The torch lights the night (T or LIGHT). It burns in the right hand when it's the weapon (a fire swing: +2 damage
+// and the burn), else in the left hand in place of the shield, so the sword or axe can fight in its light. Unlit,
+// the torch weapon is a weak club. A torch burns for FUEL seconds; relighting a spent one costs a wood. Water douses it.
+const FUEL = 150
+let lit = 0
+let fuel = FUEL
+function torch() {
+  const w = ITEMS[player.item] == 'torch' && player.m.props.handR
+  hold(lib, player.m, 'handL', lit && !w ? 'torch' : 'shield')
+  for (const b in player.m.props) if (player.m.props[b].bones.flame) player.m.props[b].bones.flame.visible = b != 'back' && lit > 0
+  hud()
+}
+function light() {
+  if (player.swim || player.hp <= 0) return
+  if (!lit && fuel <= 0) {
+    if (!bag.wood) return say('Your torch is spent: relighting it takes a wood')
+    gain('wood', -1)
+    fuel = FUEL
+  }
+  lit ^= 1
+  beep(lit ? 200 : 90, 0.25, 'sawtooth', 0.03, lit ? 2 : 0.4)
+  torch()
+}
 function equip(i) {
   player.item = (i + ITEMS.length) % ITEMS.length
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
-  torchLight.intensity = item.burn ? 30 : 0
   if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
-  hud()
+  torch()
   tray()
 }
-const torchLight = new THREE.PointLight('#ff9a40', 0, 12, 1.5)
+const torchLight = new THREE.PointLight('#ff9a40', 0, 14, 1.5)
 scene.add(torchLight)
 equip(0)
 
@@ -1171,9 +1195,8 @@ var village
       })
       turn.quaternion.setFromUnitVectors(far.normalize(), v3.set(0, 0, p.vars.burn ? -1 : 1))
     }
-    if (on) hold(lib, player.m, 'handR', null)
+    if (on) hold(lib, player.m, 'handR', null), torch()
     else equip(player.item)
-    torchLight.intensity = 0
   }
 
   // fade to black, do the move, fade back in
@@ -1246,10 +1269,12 @@ var village
         glow.intensity = 30 * (1 + Math.sin(clock.elapsedTime * 13) * 0.08)
         sun.intensity = 0
         hemi.intensity = 0.7
+        scene.fog.far = 1e3
         scene.background = BLACK
       } else {
         glow.intensity = 0
         scene.background = sky
+        if (here) hemi.intensity = Math.max(hemi.intensity, 0.4) // lamplight: a village needs no torch
         for (const o of here?.houses || []) {
           // pressed against the front wall, within the door's width
           const c = Math.cos(o.ry)
@@ -1613,6 +1638,7 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1)
   if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
   if (e.code == 'KeyB') launch()
+  if (e.code == 'KeyT') light()
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyR') mountUp()
@@ -1628,6 +1654,7 @@ addEventListener('touchstart', (e) => {
     if (t.target.id == 'swap') equip(player.item + 1)
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
+    else if (t.target.id == 'lit') light()
     else if (t.target.id == 'mute' || t.target.closest('#tray')) continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
@@ -1745,6 +1772,7 @@ function frame() {
   // swimming: deep water sinks the warrior to his shoulders, stows the weapon and costs breath
   const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.seat && !player.boat
   if (deep != !!player.swim) {
+    if (deep && lit) (lit = 0), say('The water put out your torch')
     player.swim = deep ? 1.25 : 0
     player.once = null // no swing carries into (or out of) the water
     village.stow(deep)
@@ -1765,6 +1793,8 @@ function frame() {
   // the blow lands partway through the swing
   if (player.once && player.once[0] == item.anim && !player.struck && player.once[1] > player.m.clips[item.anim].d * 0.45) {
     player.struck = true
+    const fire = item.burn && lit
+    if (fire) burst(torchLight.position, '#fa3', 10)
     for (const e of [...foes, ...mounts.filter((m) => !m.rider)]) {
       if (e.hp <= 0) continue
       const dx = e.pos.x - player.pos.x
@@ -1773,8 +1803,8 @@ function frame() {
       let a = Math.atan2(dx, dz) - player.dir
       a = Math.atan2(Math.sin(a), Math.cos(a))
       if (d < item.reach + e.m.root.scale.x * 0.4 && Math.abs(a) < 1.2) {
-        hurt(e, item.dmg, player.pos, item.push)
-        if (item.burn) e.burn = item.burn
+        hurt(e, item.dmg + (fire ? 2 : 0), player.pos, item.push)
+        if (fire) e.burn = item.burn
       }
     }
     if (item.chop) chop()
@@ -1784,6 +1814,8 @@ function frame() {
   fells(dt)
   player.update(dt, run)
   player.safe -= dt
+  if (lit && (fuel -= dt) <= 0) (lit = 0), torch(), say('Your torch burnt out')
+  if (lit && (fuel | 0) != ((fuel + dt) | 0)) hud()
   if (!alive && (player.dead += dt) > 3) {
     player.hp = player.maxHp
     player.air = 1
@@ -1848,8 +1880,14 @@ function frame() {
       tx /= l
       tz /= l
       sp = e.run * 0.7
-    } else if (alive && d < 12 && !village.in && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
-      if (barred && d > e.reach) {
+    } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) && !village.in && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
+      // slimes and spiders shy from a lit torch, circling its edge, but dare a rush every few seconds
+      if (lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
+        const k = d < 5 ? -1 : 0
+        tx = (dx / d) * k + (dz / d) * 0.7
+        tz = (dz / d) * k - (dx / d) * 0.7
+        sp = e.run * 0.6
+      } else if (barred && d > e.reach) {
         // pace up and down the shore, glaring
         const p = Math.sin(e.time * 1.7) * 0.6
         tx = (dz / d) * p
@@ -1930,19 +1968,24 @@ function frame() {
     }
   }
 
-  // torch light follows the flame
-  const flame = player.m.props.handR?.bones.flame
+  // torch light follows the flame, flickering
+  const flame = lit && (player.m.props.handR?.bones.flame || player.m.props.handL?.bones.flame)
+  const t = clock.elapsedTime
   if (flame) {
     flame.getWorldPosition(torchLight.position)
-    torchLight.intensity = (2 + 10 * (1 - day)) * (1 + Math.sin(clock.elapsedTime * 20) * 0.15)
-  }
+    torchLight.intensity = (4 + 26 * (1 - day)) * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
+  } else if (!player.seat) torchLight.intensity = 0
 
-  // day and night: a 3-minute cycle, starting mid-morning
-  day = Math.min(1, Math.max(0, Math.cos(clock.elapsedTime / 30 + 0.6) * 0.8 + 0.6))
+  // day and night: a 3-minute cycle, starting mid-morning. A full night is near-black but for a faint blue moon:
+  // the fog closes in and turns black, so only torches, fires, windows, eyes and coins show beyond arm's reach.
+  day = Math.min(1, Math.max(0, Math.cos(t / 30 + 0.6) * 0.8 + 0.6))
   sky.lerpColors(NIGHT, DAY, day)
   scene.fog.color.copy(sky)
-  sun.intensity = 2.4 * day
-  hemi.intensity = 0.5 + day * 0.8
+  scene.fog.near = 6 + day * 34
+  scene.fog.far = 40 + day * 70
+  sun.color.lerpColors(MOON, SUN, day)
+  sun.intensity = 0.2 + 2.2 * day
+  hemi.intensity = 0.03 + day * 1.27
 
   // music: each monster kind within 14 units brings in its own part (fast in, slow out); night darkens the rest
   const close = {}

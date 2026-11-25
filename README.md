@@ -112,7 +112,7 @@ language model predicts well. `src/models.json` maps each model name to a block 
 | `scale` | scale the whole model (number or expression). |
 | `bones[]` | `name`, `parent`, `position`, optional `rotation` (degrees). A name ending in `*` makes a mirrored L/R pair (L at +x, R at −x, rotations mirrored); a `parent*` resolves per side. |
 | `parts[]` | `shape`, `bone`, `color`, `position`, `size`, optional `rotation`, `segments`, `mirror`. Shapes: `box` size `w h d`; `ball` (ellipsoid) `rx ry rz`; `cyl` `rTop h rBottom` (a cone when rTop is 0); `lathe` `r y r y ...`; `ext` `depth x y x y ...` (an extruded polygon). `mirror: true` also adds the part's mirror image (two eyes, one entry). |
-| color | 3- or 6-digit hex string, a variable, or a `\|` pick. A trailing `!` makes it glow (the torch flame). |
+| color | 3- or 6-digit hex string, a variable, or a `\|` pick. A trailing `!` makes it self-lit: it shows its own colour even in the dark (flames, eyes, windows). |
 | `holds[]` | `bone`, `model`: attach a prop model to a bone (a socket). `"club\|spear"` picks one per seed. |
 | `chance` | on any bone, part, hold or channel: keep it with that probability (optional parts). |
 | `repeat`, `var` | on any bone, part, hold or channel: repeat it `repeat` times with `var` = 0..n−1. `"{expr}"` inside a string is evaluated, so names like `"leg{i}*"` and positions like `"{.2-i*.12}"` work. |
@@ -827,6 +827,41 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 Cost: about +8.8 KB raw in `src/game.js` (81,542 vs 72,770 bytes, a good share of it comments), +1.3 KB in
 `models.json` once minified (the boat is 1.2 KB of that), and +0.74 KB in the page shell for the tray CSS. At the
 usual ~90% compression that is roughly +1 KB in the shipped build. That's an estimate: surprisal wasn't run here.
+
+## Dark nights and the torch
+
+At full night the world is near-black: the sky and fog go to `#03050c`, the fog closes in from 40-110 to 6-40, the
+hemisphere light drops to almost nothing, and the sun turns into a faint blue moon (0.2) so silhouettes barely read.
+Dusk and dawn are the same 3-minute cycle as before, everything lerped on `day`. What shows in the dark is what
+glows: parts whose colour ends in `!` are self-lit (the compiler stores them as colour + 2 and a one-line
+`onBeforeCompile` patch turns that into emission), so monster eyes, house windows, flames and hearths, and the coins'
+pulse are points of light. A village is lamplit (a floor on the hemisphere light), and rooms ignore the fog, so
+neither needs a torch. The minimap and HUD are unchanged and stay readable.
+
+| | |
+|---|---|
+| ![Day](docs/night-day.jpg) | ![Dusk](docs/night-dusk.jpg) |
+| ![Night, no torch: near-black, a faint moonlit silhouette](docs/night-unlit.jpg) | ![Night, torch lit in the left hand](docs/night-lit.jpg) |
+| ![A lit torch swing: flame bits, two slimes burning](docs/night-fight.jpg) | |
+
+- **Light it.** T (or the LIGHT touch button) lights and puts out the torch. A lit torch gives a warm flickering point
+  light (two sines) around the hero, much stronger at night.
+- **Which hand.** I went past the a/b choice: the torch goes in whichever hand is free. When the torch is your weapon
+  (tray 3) it burns in your sword hand; with the sword or axe out, a lit torch replaces the shield in the left hand.
+  So you choose between fighting *with* fire and fighting *by* firelight, and the light never asks you to drop your
+  best weapon. The left-hand torch isn't swung (no new clip, no new bytes); fire damage is the torch weapon's job.
+- **Fire as a weapon.** A lit torch swing deals +2 damage (3 instead of 1), sets the 4 s burn and throws flame bits.
+  Unlit, the torch is a weak club: 1 damage, no burn.
+- **Fear and lure.** Within 7 units of a lit torch, slimes and spiders back off to about 5 units and circle the edge
+  of the light, then dare a rush (2 s in every 7), so the light buys breathing room, not safety. Bats are drawn to
+  it: they chase from 24 units instead of 12.
+- **Fuel.** A torch burns for 150 s of being lit (the HUD shows `torch N%`). A spent torch goes out; relighting it
+  costs one wood from the tray. Putting it out keeps what's left.
+- **Water and riding.** Swimming douses it (and you can't light it while swimming). On a mount or in the boat the
+  weapon is stowed as before, so a lit torch rides in the left hand.
+
+Cost: about +2.9 KB raw (`game.js` +2,369 bytes, about 0.9 KB of it comments; `compiler.js` +456; `index.html` +64;
+`models.json` +2 bytes minified, eight colours gaining a `!`). Estimate only: surprisal wasn't run here.
 
 ## Size
 

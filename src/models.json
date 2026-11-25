@@ -2654,7 +2654,7 @@
       {
         "shape": "ball",
         "bone": "body",
-        "color": "fff",
+        "color": "fff!",
         "position": [
           0.13,
           0.42,
@@ -2999,7 +2999,7 @@
       {
         "shape": "ball",
         "bone": "head",
-        "color": "ff4",
+        "color": "ff4!",
         "position": [
           0.09,
           0.25,
@@ -3288,7 +3288,7 @@
       {
         "shape": "ball",
         "bone": "body",
-        "color": "d22",
+        "color": "d22!",
         "position": [
           0.06,
           0.06,
@@ -3304,7 +3304,7 @@
       {
         "shape": "ball",
         "bone": "body",
-        "color": "d22",
+        "color": "d22!",
         "position": [
           0.12,
           0.03,
@@ -3582,7 +3582,7 @@
       {
         "shape": "ball",
         "bone": "body",
-        "color": "f44",
+        "color": "f44!",
         "position": [
           0.07,
           0.05,
@@ -3807,7 +3807,7 @@
       {
         "shape": "ball",
         "bone": "head",
-        "color": "ee3",
+        "color": "ee3!",
         "position": [
           0.09,
           0.06,
@@ -4877,7 +4877,7 @@
       {
         "shape": "box",
         "bone": "root",
-        "color": "2a2a35",
+        "color": "c84!",
         "position": [
           "{w/2+.01}",
           "{h*.55}",
@@ -4909,7 +4909,7 @@
       {
         "shape": "box",
         "bone": "root",
-        "color": "2a2a35",
+        "color": "c84!",
         "position": [
           "{w/4+.25}",
           "{h*.6}",
@@ -7235,7 +7235,7 @@
           0.1
         ],
         "size": [
-          1.0,
+          1,
           0.06,
           0.32
         ]
@@ -7250,7 +7250,7 @@
           -0.9
         ],
         "size": [
-          1.0,
+          1,
           0.06,
           0.3
         ]
