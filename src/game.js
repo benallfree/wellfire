@@ -443,14 +443,31 @@ var village
     return r == d ? [x, z] : [T.x + (dx / d) * r, T.z + (dz / d) * r]
   })
 
-  // the weapon hangs on the warrior's back inside the village
+  // the weapon hangs on the warrior's back inside the village, its longest end down (a torch's flame up)
   const back = new THREE.Object3D()
-  back.position.set(0, 0.35, -0.27)
-  back.rotation.set(-70 * DEG, 0, 35 * DEG, 'ZYX') // tip down and back, then lean across the back
+  const turn = new THREE.Object3D() // aims whichever prop is stowed
+  back.position.set(-0.05, 0.62, -0.27)
+  back.rotation.set(110 * DEG, 0, 35 * DEG, 'ZYX') // +z points down and back, leaning across the back
+  back.add(turn)
   player.m.bones.chest.add(back)
-  player.m.bones.back = back
+  player.m.bones.back = turn
+  const v = new THREE.Vector3()
   function stow(on) {
-    hold(lib, player.m, 'back', on ? ITEMS[player.item] : null)
+    const p = hold(lib, player.m, 'back', on ? ITEMS[player.item] : null)
+    if (p) {
+      // find the prop's far end in its own space, then turn that end to +z
+      turn.quaternion.identity()
+      p.root.updateMatrixWorld(true)
+      const inv = p.root.matrixWorld.clone().invert()
+      const far = new THREE.Vector3()
+      p.root.traverse((o) => {
+        if (!o.isMesh) return
+        const a = o.geometry.attributes.position
+        const M = inv.clone().multiply(o.matrixWorld)
+        for (let i = 0; i < a.count; i++) if (v.fromBufferAttribute(a, i).applyMatrix4(M).length() > far.length()) far.copy(v)
+      })
+      turn.quaternion.setFromUnitVectors(far.normalize(), v.set(0, 0, p.vars.burn ? -1 : 1))
+    }
     if (on) hold(lib, player.m, 'handR', null)
     else equip(player.item)
     torchLight.intensity = 0

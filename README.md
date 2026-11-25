@@ -264,7 +264,8 @@ surprisal -1** (the whole game goes from 3,068 to 4,112 bytes). With the old tex
 
 A seeded village sits about 30 units from the start: five or six houses round a square with a well, dirt paths to each
 door, and a fence ring with two gates. Seven townspeople stroll between the doors and the well and stop to idle. Walk
-in and the warrior hangs the weapon on his back; attacking is disabled and the HUD shows the village's name. Walk out
+in and the warrior hangs the weapon on his back (each item is aimed by its own shape: its longest end points down,
+a torch's flame up); attacking is disabled and the HUD shows the village's name. Walk out
 and the weapon is back in hand. Monsters don't spawn inside, stop chasing once you're in, and are pushed back at the
 fence, so they wait at the edge. Walk into any door: the screen fades to black and you're inside, by the fire. Walk
 back out of the door and you're outside again, in front of it.
