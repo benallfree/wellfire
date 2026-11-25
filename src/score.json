@@ -4,6 +4,7 @@
     "stepsPerBeat": 2,
     "beatsPerBar": 4
   },
+  "mix": 0.6,
   "order": {
     "day": [
       "A",
@@ -20,117 +21,137 @@
   },
   "voices": {
     "lead": {
-      "wave": "square",
+      "wave": "flute",
       "octave": 5,
-      "volume": 0.04,
-      "attack": 0.01,
-      "release": 0.12,
-      "filter": 2200
+      "volume": 0.06,
+      "attack": 0.06,
+      "release": 0.15,
+      "pan": 0.15,
+      "reverb": 0.4
     },
     "bell": {
-      "wave": "triangle",
+      "wave": "bell",
       "octave": 5,
-      "volume": 0.07,
-      "attack": 0.005,
-      "release": 0.5
+      "volume": 0.155,
+      "attack": 0.002,
+      "release": 2.5,
+      "pan": 0.2,
+      "reverb": 0.5
     },
     "arp": {
-      "wave": "triangle",
+      "wave": "pluck",
       "octave": 4,
-      "volume": 0.06,
-      "attack": 0.005,
-      "release": 0.1,
+      "volume": 0.24,
+      "attack": 0.002,
+      "release": 1.2,
+      "bright": 0.55,
+      "sustain": 0.996,
+      "pan": -0.35,
+      "reverb": 0.35,
       "calm": true
     },
     "pad": {
-      "wave": "sawtooth",
+      "wave": "strings",
       "octave": 3,
       "volume": 0.025,
-      "attack": 0.35,
-      "release": 0.7,
-      "filter": 900
+      "attack": 0.45,
+      "release": 0.8,
+      "chorus": true,
+      "reverb": 0.45
     },
     "bass": {
-      "wave": "sawtooth",
+      "wave": "bass",
       "octave": 2,
-      "volume": 0.07,
-      "attack": 0.01,
-      "release": 0.12,
-      "filter": 700
-    },
-    "kick": {
-      "wave": "kick",
-      "octave": 0,
-      "volume": 0.28,
-      "attack": 0.002,
-      "release": 0.25
-    },
-    "hat": {
-      "wave": "noise",
-      "octave": 0,
-      "volume": 0.05,
-      "attack": 0.001,
-      "release": 0.04,
-      "filter": 7000
-    },
-    "boing": {
-      "wave": "sine",
-      "octave": 4,
-      "volume": 0.17,
+      "volume": 0.036,
       "attack": 0.005,
       "release": 0.12,
+      "reverb": 0.1
+    },
+    "kick": {
+      "wave": "taiko",
+      "octave": 0,
+      "volume": 0.16,
+      "attack": 0.001,
+      "release": 0.25,
+      "reverb": 0.25
+    },
+    "hat": {
+      "wave": "hat",
+      "octave": 0,
+      "volume": 0.072,
+      "attack": 0.001,
+      "release": 0.05,
+      "filter": 6000,
+      "pan": 0.4,
+      "reverb": 0.15
+    },
+    "boing": {
+      "wave": "marimba",
+      "octave": 4,
+      "volume": 0.27,
+      "attack": 0.002,
+      "release": 0.5,
+      "pan": -0.2,
       "monster": "slime"
     },
     "wardrum": {
       "wave": "kick",
       "octave": 0,
-      "volume": 0.22,
-      "attack": 0.002,
+      "volume": 0.155,
+      "attack": 0.001,
       "release": 0.2,
       "monster": "goblin"
     },
     "snare": {
-      "wave": "noise",
+      "wave": "snare",
       "octave": 0,
-      "volume": 0.14,
+      "volume": 0.126,
       "attack": 0.001,
-      "release": 0.13,
-      "filter": 1500,
+      "release": 0.15,
+      "pan": 0.15,
       "monster": "goblin"
     },
     "riff": {
-      "wave": "sawtooth",
+      "wave": "brass",
       "octave": 3,
-      "volume": 0.05,
-      "attack": 0.01,
-      "release": 0.06,
-      "filter": 1400,
+      "volume": 0.064,
+      "attack": 0.03,
+      "release": 0.08,
+      "pan": -0.25,
+      "reverb": 0.3,
       "monster": "goblin"
     },
     "crawl": {
-      "wave": "square",
+      "wave": "pluck",
       "octave": 5,
-      "volume": 0.055,
+      "volume": 0.36,
       "attack": 0.002,
-      "release": 0.04,
-      "filter": 3000,
+      "release": 0.06,
+      "bright": 0.9,
+      "sustain": 0.99,
+      "pan": 0.35,
+      "reverb": 0.2,
       "monster": "spider"
     },
     "tick": {
-      "wave": "noise",
+      "wave": "hat",
       "octave": 0,
-      "volume": 0.08,
+      "volume": 0.108,
       "attack": 0.001,
       "release": 0.015,
-      "filter": 9000,
+      "filter": 8000,
+      "pan": -0.4,
+      "reverb": 0.1,
       "monster": "spider"
     },
     "flutter": {
-      "wave": "sine",
+      "wave": "flute",
       "octave": 5,
-      "volume": 0.1,
-      "attack": 0.002,
+      "volume": 0.123,
+      "attack": 0.02,
       "release": 0.05,
+      "pan": 0.5,
+      "reverb": 0.4,
       "monster": "bat"
     }
   },

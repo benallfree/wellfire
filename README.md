@@ -39,7 +39,7 @@ compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-ds
 src/models.json  all models, skeletons and animation clips, as pretty-printed JSON (~42 KB raw, ~1 KB packed)
 src/compiler.js  the compiler + rig runtime: JSON -> three.js bones, merged meshes, clips (~8.4 KB)
 src/score.json   the music: voices and sections as pretty-printed JSON, note patterns as strings (~3.8 KB)
-src/music.js     the score compiler + WebAudio sequencer (~8 KB)
+src/music.js     the score compiler, synthesized instruments + WebAudio sequencer (~16 KB)
 src/game.js      world, actors, combat, AI, camera, input, HUD (~17 KB)
 src/index.html   page shell: HUD markup, import map for three.js
 tools/build.mjs  inlines everything into one file: dist/index.html (the shipped artifact)
@@ -163,8 +163,8 @@ and respawn somewhere around you; you regenerate slowly, and if you fall you get
 
 The background music is text too: [src/score.json](src/score.json), compiled at load by
 [src/music.js](src/music.js) and played by a small WebAudio sequencer. Up to fourteen voices sound at once (lead or bell,
-arpeggio, pad chords, bass, kick, hi-hat, and a part for each kind of monster), all synthesized: oscillators, a noise buffer,
-filters and gain envelopes, no samples.
+arpeggio, pad chords, bass, kick, hi-hat, and a part for each kind of monster), all synthesized in code: no samples, no
+audio files. See **Instruments** below for how each one is built.
 
 Prior art I weighed: **ZzFXM** and **Soundbox** (the js13k standards) store patterns as arrays of numbers, compact for
 zip but close to binary, which is what surprisal can't predict. **Tracker patterns** read well as a grid but spell out
@@ -184,9 +184,9 @@ identical notes and packs smaller: 392 → 265 bytes for the score alone at surp
   "tempo": { "bpm": 104, "stepsPerBeat": 2, "beatsPerBar": 4 },
   "order": { "day": ["A", "A", "B", "A"], "night": ["N", "N", "M", "N"] },
   "voices": {
-    "bass": { "wave": "sawtooth", "octave": 2, "volume": 0.07, "attack": 0.01, "release": 0.12, "filter": 700 },
-    "arp": { "wave": "triangle", "octave": 4, "volume": 0.06, "attack": 0.005, "release": 0.1, "calm": true },
-    "boing": { "wave": "sine", "octave": 4, "volume": 0.17, "attack": 0.005, "release": 0.12, "monster": "slime" }
+    "bass": { "wave": "bass", "octave": 2, "volume": 0.036, "attack": 0.005, "release": 0.12, "reverb": 0.1 },
+    "arp": { "wave": "pluck", "octave": 4, "volume": 0.24, "attack": 0.002, "release": 1.2, "bright": 0.55, "pan": -0.35, "calm": true },
+    "boing": { "wave": "marimba", "octave": 4, "volume": 0.27, "attack": 0.002, "release": 0.5, "monster": "slime" }
   },
   "allSections": { "boing": "1,4 . . 1,4 . . 3,5 ." },
   "sections": {
@@ -208,8 +208,11 @@ identical notes and packs smaller: 392 → 265 bytes for the score alone at surp
 
 - `tempo`: a step is one eighth note at 104 bpm; a bar is 8 steps.
 - `order`: the sections played by day and after dark, looping.
-- `voices`: `wave`, `octave` (for notes without one), `volume`, `attack` and `release` in seconds, optional `filter` in
-  Hz (low-pass, or high-pass on noise), and either `calm: true` (ducks while monsters are near) or `monster: "<kind>"`
+- `mix`: the level of the whole music bus, set so the music sits under the game's sound effects.
+- `voices`: `wave` (the instrument), `octave` (for notes without one), `volume`, `attack` and `release` in seconds
+  (release is also the damper on struck and plucked notes, and how long their buffer rings), optional `filter` in Hz
+  (low-pass, or high-pass on `hat`), `pan` (-1..1), `reverb` (send level, default 0.25), `chorus: true` (ensemble
+  chorus), `bright` and `sustain` for `pluck` (excitation brightness 0..1, per-period loss), and either `calm: true` (ducks while monsters are near) or `monster: "<kind>"`
   (silent until that kind is near).
 - `allSections`: parts that join every section (the monster parts).
 - `sections`: `chords` (one chord per bar; `"C,G"` splits a bar), `parts` (voice name to pattern), and an optional
@@ -228,8 +231,39 @@ Pattern tokens, separated by spaces:
 | `a,b` | split one step (or one bar, on the chord line) evenly between tokens |
 | `\|` | bar line, ignored |
 
-Waves are the oscillator types (`sine`, `square`, `sawtooth`, `triangle`) plus `noise` (high-passed at the filter
-frequency) and `kick` (a sine dropping from 300 to 45 Hz). Chords are a root, optional `#`/`b`, optional `m`, optional `7`.
+Waves are the instruments below, or any oscillator type (`sine`, `square`, `sawtooth`, `triangle`) with a plain
+envelope. Drums are `kick`, `taiko`, `snare` and `hat`. Chords are a root, optional `#`/`b`, optional `m`, optional `7`.
+
+**Instruments.** The first version played raw oscillators with on/off envelopes (full level until the note ended), no
+filter movement, no variation between notes, dry and in mono, which is what made it sound like a chip tune. Each
+instrument is now a small synthesis recipe, picked for what makes that instrument recognisable:
+
+| wave | used by | how |
+|---|---|---|
+| `flute` | lead (day melody), flutter (bat) | a sine-ish wave (a few soft harmonics) with a breath-noise chiff on the attack and vibrato that fades in only on held notes |
+| `pluck` | arp (harp), crawl (spider pizzicato) | Karplus-Strong: a noise burst circulating in a one-period delay line that is averaged every pass, with fractional-delay tuning so high notes stay in tune |
+| `bell` | bell (night melody) | inharmonic partials (1, 2, 3.01, 4.17, 5.43) with the high ones dying first, plus a beating copy of the fundamental; each partial is a two-pole resonator so a pitch renders in a few ms |
+| `strings` | pad | three detuned saws per note, a low-pass that opens over the slow attack, and a shared ensemble chorus (two LFO-swept delays panned apart) |
+| `brass` | riff (goblin) | two saws that scoop up into pitch, through a low-pass that blares open on the attack and settles |
+| `bass` | bass | a saw plus a sine under a filter that snaps shut: a round, plucked bass |
+| `marimba` | boing (slime) | a mallet sine whose pitch drops into place, plus a fast-dying fourth partial |
+| `taiko` / `kick` | kick (frame drum), wardrum (goblin) | a pitch-swept sine with a noise click (kick) or a dark skin-noise layer (taiko) |
+| `snare` / `hat` | snare, hat, tick | a two-mode tone body plus high-passed noise; hats are high-passed noise whose decay is the voice's release |
+
+Struck and plucked sounds are rendered once per pitch into a cached AudioBuffer. Every pitch the score uses is
+pre-rendered, one per scheduler tick, so a first note never stalls a frame. Held sounds are live oscillator graphs a few
+nodes deep. Every note is humanized: up to 6 ms of timing slop, ±12% velocity with lighter off-beats, and a few cents of
+pitch drift (drums ±30 cents, as hand drums vary). All voices share one convolution reverb, whose impulse is
+generated noise that decays and darkens as it fades, plus a stereo pan per voice. The master chain is the night low-pass,
+a 30 Hz rumble and DC cut, a gentle compressor (3:1 from -20 dB), and `mix` (0.6). The music now sits about 2 dB under
+its old level, so the combat blips cut through.
+
+Cost: `music.js` grew from 7,928 to 16,489 bytes raw (+8.6 KB) and the score's voice settings from 3,759 to 4,170
+(+0.4 KB). At the ~90% the project assumes for surprisal, that is roughly +0.9 KB shipped. At runtime a scheduler tick
+averages under 1 ms (about 0.1 ms once the buffers are warm), measured in Chrome with every monster part playing. Before
+and after renders of each section, made with an OfflineAudioContext (12 s each, AAC), are in
+[docs/audio/](docs/audio/): `A-before.m4a` / `A-after.m4a` and the same for `B`, `N` (night), `M`, and `monsters` (section
+A with every monster part in).
 
 **Compiler and player.** `score()` parses the JSON and compiles every section into per-step event lists with notes
 already resolved to frequencies and lengths, so the runtime never parses. `sequencer()` is the classic lookahead
@@ -247,10 +281,10 @@ see it, and a mixed pack stacks its parts:
 
 | monster | part |
 |---|---|
-| slime | `boing`: bouncing sine octave leaps |
-| goblin | `wardrum`, `snare`, `riff`: a marching war-drum beat under a sawtooth riff |
-| spider | `crawl`, `tick`: a skittering 16th-note square arpeggio over clicking legs |
-| bat | `flutter`: a high sine trill |
+| slime | `boing`: bouncing marimba octave leaps |
+| goblin | `wardrum`, `snare`, `riff`: a marching war-drum beat under a low brass riff |
+| spider | `crawl`, `tick`: a skittering 16th-note pizzicato arpeggio over clicking legs |
+| bat | `flutter`: a high flute trill |
 
 The parts are written in chord tones, so they fit every day and night section. Voices tagged `calm` (the arpeggio) duck
 out while any monster is near. The parts sit in the mid and high range on purpose: a first version used one shared
