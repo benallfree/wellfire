@@ -125,7 +125,10 @@ to one geometry per seeded variant and drawn with `InstancedMesh`: 16 variants, 
 
 **Props and sockets.** A socket is just a bone. The warrior's `hand*` bones carry a shield on the left (`hold handL
 shield` in the warrior's own text) and whatever the player equips on the right; swapping calls `hold()` again, which
-detaches the old prop and compiles the new one. Goblins use the same mechanism to carry a club or a spear.
+detaches the old prop and compiles the new one. Goblins use the same mechanism to carry a club or a spear. A prop's
+origin sits in the fist, and each prop orients itself in its own text with a rotated root bone (`b g root 0 -.03 0 /
+-10 0 0` tips the sword's blade up and forward, the axe pitches its haft down so the edge leads the chop); the swing
+clip also snaps the wrist (`handR rx`) so the blade comes down level at the end of the cut.
 
 **Deterministic creatures.** The slime, goblin, spider and bat blocks use `~` ranges, `|` picks, `?` optional parts
 and `S` scale, so every seed is a different, repeatable creature: size, color, head size, horns, hats, markings,
