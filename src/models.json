@@ -1945,6 +1945,172 @@
             ]
           }
         ]
+      },
+      "swim": {
+        "duration": 1.1,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "hip",
+            "channel": "rx",
+            "keys": [
+              62,
+              66
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "ry",
+            "keys": [
+              12,
+              12
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.04
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              -10,
+              -10
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              18,
+              -2
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              -40,
+              -35
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -26,
+              -10
+            ]
+          },
+          {
+            "bone": "cape",
+            "channel": "rx",
+            "keys": [
+              0,
+              5
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              -145,
+              -20
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              -7,
+              25
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              85,
+              35
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              -15,
+              -140
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              -28,
+              4
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              15,
+              65
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              55,
+              19,
+              55,
+              19,
+              55,
+              19
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              -7,
+              29,
+              -7,
+              29,
+              -7,
+              29
+            ]
+          },
+          {
+            "bone": "shin*",
+            "channel": "rx",
+            "keys": [
+              -39,
+              -35
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              45,
+              50
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              72,
+              77
+            ]
+          }
+        ]
       }
     }
   },
@@ -3557,6 +3723,339 @@
               0,
               60,
               -60,
+              0
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "eel": {
+    "vars": {
+      "s": ".8~1.2",
+      "c": "2a5|364|253|3a4|446",
+      "b": "cb6|db7|bc8",
+      "f": "f84|e63|fc4",
+      "gold": 3
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "head",
+        "parent": "root",
+        "position": [
+          0,
+          0,
+          0.4
+        ]
+      },
+      {
+        "name": "seg0",
+        "parent": "root",
+        "position": [
+          0,
+          0,
+          0.2
+        ]
+      },
+      {
+        "name": "seg{i+1}",
+        "parent": "seg{i}",
+        "position": [
+          0,
+          0,
+          -0.3
+        ],
+        "repeat": 5,
+        "var": "i"
+      }
+    ],
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "c",
+        "position": [
+          0,
+          0,
+          0.06
+        ],
+        "size": [
+          0.16,
+          0.12,
+          0.26
+        ],
+        "segments": 8
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "b",
+        "position": [
+          0,
+          -0.06,
+          0.08
+        ],
+        "size": [
+          0.12,
+          0.06,
+          0.2
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "ee3",
+        "position": [
+          0.09,
+          0.06,
+          0.14
+        ],
+        "size": [
+          0.045,
+          0.045,
+          0.04
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "111",
+        "position": [
+          0.11,
+          0.07,
+          0.16
+        ],
+        "size": [
+          0.02,
+          0.025,
+          0.02
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "fff",
+        "position": [
+          0.05,
+          -0.08,
+          0.24
+        ],
+        "size": [
+          0,
+          0.07,
+          0.02
+        ],
+        "rotation": [
+          180,
+          0,
+          0
+        ],
+        "segments": 4,
+        "mirror": true
+      },
+      {
+        "shape": "ball",
+        "bone": "seg{i}",
+        "color": "c",
+        "position": [
+          0,
+          0,
+          -0.15
+        ],
+        "size": [
+          "0.15-i*0.018",
+          "0.12-i*0.014",
+          "0.2"
+        ],
+        "segments": 7,
+        "repeat": 6,
+        "var": "i"
+      },
+      {
+        "shape": "ball",
+        "bone": "seg{i}",
+        "color": "b",
+        "position": [
+          0,
+          "-0.05+i*0.006",
+          -0.15
+        ],
+        "size": [
+          "0.11-i*0.014",
+          "0.07-i*0.008",
+          "0.17"
+        ],
+        "segments": 6,
+        "repeat": 6,
+        "var": "i"
+      },
+      {
+        "shape": "ext",
+        "bone": "seg{i}",
+        "color": "f",
+        "position": [
+          0,
+          "0.1-i*0.012",
+          0
+        ],
+        "size": [
+          0.02,
+          0,
+          0,
+          0.08,
+          0.12,
+          0.3,
+          0.06,
+          0.3,
+          0
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "repeat": 5,
+        "var": "i"
+      },
+      {
+        "shape": "ext",
+        "bone": "seg5",
+        "color": "f",
+        "position": [
+          0,
+          0,
+          -0.25
+        ],
+        "size": [
+          0.02,
+          0,
+          0,
+          0.3,
+          0.2,
+          0.25,
+          0,
+          0.3,
+          -0.2
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ]
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 2,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "seg{i}",
+            "channel": "ry",
+            "keys": [
+              "10*Math.sin(i*1.1)",
+              "10*Math.cos(i*1.1)",
+              "-10*Math.sin(i*1.1)",
+              "-10*Math.cos(i*1.1)"
+            ],
+            "repeat": 6,
+            "var": "i"
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -6,
+              0,
+              6,
+              0
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "y",
+            "keys": [
+              0,
+              0.03,
+              0,
+              -0.04
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.8,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "seg{i}",
+            "channel": "ry",
+            "keys": [
+              "24*Math.sin(i*1.1)",
+              "24*Math.cos(i*1.1)",
+              "-24*Math.sin(i*1.1)",
+              "-24*Math.cos(i*1.1)"
+            ],
+            "repeat": 6,
+            "var": "i"
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -10,
+              0,
+              10,
+              0
+            ]
+          }
+        ]
+      },
+      "attack": {
+        "duration": 0.7,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "root",
+            "channel": "z",
+            "keys": [
+              0,
+              -0.3,
+              0.8,
+              0
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "y",
+            "keys": [
+              0,
+              0,
+              0.35,
+              0
+            ]
+          },
+          {
+            "bone": "root",
+            "channel": "rx",
+            "keys": [
+              0,
+              10,
+              -25,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              0,
+              -20,
               0
             ]
           }

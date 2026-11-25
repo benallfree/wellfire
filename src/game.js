@@ -16,6 +16,11 @@ const FOES = [
 ]
 const CROWD = [1, 1.3, 1.1, 0.7]
 const R = rng(1337)
+// habitats: the ground height a creature may stand over. Land kinds stop at the shoreline (ankle-deep at most),
+// water kinds keep to water deeper than a swimmer, bats fly anywhere but tire over water (see the monster loop).
+const SWIM = WATER - 1 // ground lower than this and the warrior swims
+const HABITAT = { eel: (h) => h < SWIM - 0.1, bat: () => 1 }
+const onLand = (h) => h > WATER - 0.25
 
 // ---------- renderer, scene, light ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -327,6 +332,16 @@ class Actor {
         }
       }
     for (const f of blockers) [x, z] = f(x, z, this)
+    // a creature never steps (or is knocked) out of its medium: slide along the shore, else stay put
+    const fits = this.fits
+    this.stuck = 0
+    if (fits && !fits(height(x, z))) {
+      this.stuck = 1
+      this.vel.set(0, 0)
+      if (fits(height(x, this.pos.z))) z = this.pos.z
+      else if (fits(height(this.pos.x, z))) x = this.pos.x
+      else (x = this.pos.x), (z = this.pos.z)
+    }
     this.pos.x = x
     this.pos.z = z
     this.vel.multiplyScalar(Math.max(0, 1 - dt * 6))
@@ -335,14 +350,17 @@ class Actor {
     this.time += dt
     if (this.once) this.once[1] += dt
     const k = this.seat ? 0 : Math.min(1, this.speed / run)
-    const layers = [
-      ['idle', this.time, 1 - k],
-      ['walk', this.time * Math.max(0.6, k), k],
-    ]
+    const layers = this.swim && this.m.clips.swim
+      ? [['swim', this.time * (0.6 + k * 0.6), 1]]
+      : [
+          ['idle', this.time, 1 - k],
+          ['walk', this.time * Math.max(0.6, k), k],
+        ]
     if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
-    this.pos.y = this.floor ?? Math.max(WATER - 0.35, height(this.pos.x, this.pos.z))
+    // a swimmer floats at the surface, sunk by `swim`; everyone else stands on the ground
+    this.pos.y = this.floor ?? (this.swim ? WATER - this.swim : Math.max(WATER - 0.35, height(this.pos.x, this.pos.z)))
     this.g.rotation.y = this.dir
     this.flash = Math.max(0, this.flash - dt * 4)
     this.m.mat.emissive.setRGB(this.flash * 0.7 + this.burn * 0.12, this.flash * 0.3 + this.burn * 0.04, this.flash * 0.3)
@@ -358,7 +376,7 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
 
 // ---------- minimap: turns with the camera, fog of war over ground you haven't been near ----------
@@ -475,13 +493,14 @@ player.hp = player.maxHp = 30
 player.pos.copy(home)
 player.item = 0
 player.kills = 0
+player.air = 1
 let item
 function equip(i) {
   player.item = (i + ITEMS.length) % ITEMS.length
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   torchLight.intensity = item.burn ? 30 : 0
-  if (village?.in || player.seat) village.stow(1)
+  if (village?.in || player.seat || player.swim) village.stow(1)
   hud()
 }
 const torchLight = new THREE.PointLight('#ff9a40', 0, 12, 1.5)
@@ -732,21 +751,32 @@ function spawn(f) {
     foes.splice(foes.indexOf(f), 1)
     if (foes.length >= crowd()) return
   }
-  let x, z
-  do {
+  // pick a spot first, then a kind that lives there: eels in deep water (a few at most), the region's mix on dry
+  // land; shallows and the village are skipped
+  let x, z, h, kind
+  const eels = foes.filter((e) => e.kind == 'eel').length
+  for (let tries = 0; !kind && tries < 99; tries++) {
     const a = R() * 7
     const d = 18 + R() * 30
     x = player.pos.x + Math.cos(a) * d
     z = player.pos.z + Math.sin(a) * d
-  } while ((height(x, z) < WATER + 0.3 && R() < 0.95) || inTown(x, z, 4))
-  const mix = FOES[region(x, z)]
-  const kind = mix[(R() * mix.length) | 0]
+    h = height(x, z)
+    if (inTown(x, z, 4)) continue
+    if (h < SWIM - 0.5) kind = eels < 4 ? 'eel' : null
+    else if (h > WATER + 0.3) {
+      const mix = FOES[region(x, z)]
+      kind = mix[(R() * mix.length) | 0]
+    }
+  }
+  if (!kind) return
   const e = new Actor(kind, seedNext++)
   e.pos.set(x, 0, z)
+  e.fits = HABITAT[kind] || onLand
+  if (kind == 'eel') e.swim = 0.1
   const s = e.m.root.scale.x
-  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4 }[kind] * (0.6 + s * 0.6))
-  e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5 }[kind]
-  e.dmg = { slime: 1, goblin: 2, spider: 2, bat: 1 }[kind]
+  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6))
+  e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5, eel: 4.8 }[kind]
+  e.dmg = { slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind]
   e.reach = 1.2 + s * 0.4
   e.wander = 0
   e.cool = 1
@@ -1066,6 +1096,17 @@ function burst(p, color, n = 8) {
     bits.push(b)
   }
 }
+// ripples: a flat ring on the water that widens and fades
+const ripples = []
+const ringGeo = new THREE.RingGeometry(0.8, 1, 20).rotateX(-90 * DEG)
+function ripple(p, size = 1) {
+  const r = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#e8f4ff', transparent: true, depthWrite: false }))
+  r.position.set(p.x, WATER + 0.02, p.z)
+  r.size = size
+  r.life = 1
+  scene.add(r)
+  ripples.push(r)
+}
 
 // ---------- gold: a kill spills coins that bounce, sit spinning, and drift to the player when close ----------
 // A kill pays its kind's "gold" var (models.json) x its size x a seeded roll x up to 1.6 at night x its region.
@@ -1107,7 +1148,8 @@ function pickups(dt) {
     const dx = p.x - q.x
     const dy = p.y + 0.8 - q.y
     const dz = p.z - q.z
-    const d = Math.hypot(dx, dy, dz)
+    const wet = q.y < WATER
+    const d = player.swim && wet ? Math.hypot(dx, dz) || 0.01 : Math.hypot(dx, dy, dz) // a swimmer dives for sunk coins at any depth
     c.age += dt
     if (player.hp > 0 && d < 3.5 && c.age > 0.5) {
       // magnet: faster the closer it gets
@@ -1123,10 +1165,12 @@ function pickups(dt) {
         c.age = 99
       }
     } else {
-      // fall and bounce, then rest on the ground
-      const floor = Math.max(WATER, height(q.x, q.z)) + 0.22
-      c.v.y -= 15 * dt
+      // fall and bounce, then rest on the ground; in water, sink slowly to the bed
+      const floor = height(q.x, q.z) + 0.22
+      if (wet) c.v.multiplyScalar(1 - Math.min(1, 4 * dt)).y = Math.max(c.v.y - 4 * dt, -1.2)
+      else c.v.y -= 15 * dt
       q.addScaledVector(c.v, dt)
+      if (!wet && q.y < WATER && floor < WATER) ripple(q, 0.35)
       if (q.y < floor) {
         q.y = floor
         c.v.set(c.v.x * 0.5, Math.abs(c.v.y) > 1.5 ? -c.v.y * 0.4 : 0, c.v.z * 0.5)
@@ -1167,6 +1211,26 @@ function beep(f, d = 0.1, type = 'square', vol = 0.06, slide = 0.5) {
     o.connect(g).connect(audio.out)
     o.start()
     o.stop(ac.currentTime + d)
+  } catch {}
+}
+// a splash: half a second of fading noise through a falling low-pass
+function splash(vol = 0.3) {
+  const ac = audio.ac
+  if (!ac || audio.muted) return
+  try {
+    const n = (ac.sampleRate * 0.5) | 0
+    const buf = ac.createBuffer(1, n, ac.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 3
+    const s = ac.createBufferSource()
+    const f = ac.createBiquadFilter()
+    const g = ac.createGain()
+    s.buffer = buf
+    f.frequency.setValueAtTime(2500, ac.currentTime)
+    f.frequency.exponentialRampToValueAtTime(300, ac.currentTime + 0.5)
+    g.gain.value = vol
+    s.connect(f).connect(g).connect(audio.out)
+    s.start()
   } catch {}
 }
 
@@ -1210,7 +1274,7 @@ addEventListener('touchend', (e) => {
 // ---------- combat ----------
 function attack() {
   if (player.seat) return buck()
-  if (player.busy || player.hp <= 0 || village?.in) return
+  if (player.busy || player.hp <= 0 || village?.in || player.swim) return
   player.play(item.anim)
   player.struck = false
   beep(180, 0.15, 'sawtooth', 0.04, 0.4)
@@ -1266,7 +1330,7 @@ function frame() {
     const s = Math.sin(camYaw)
     const dx = ix * c + iz * s
     const dz = -ix * s + iz * c
-    const slow = player.busy ? 0.5 : 1
+    const slow = (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
     player.move(dx * run * slow * dt, dz * run * slow * dt, dt)
     player.dir = Math.atan2(dx, dz)
     player.speed = run * Math.min(1, il) * slow
@@ -1274,6 +1338,26 @@ function frame() {
     player.move(0, 0, dt)
     player.speed = 0
   }
+  // swimming: deep water sinks the warrior to his shoulders, stows the weapon and costs breath
+  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.seat
+  if (deep != !!player.swim) {
+    player.swim = deep ? 1.25 : 0
+    player.once = null // no swing carries into (or out of) the water
+    village.stow(deep)
+    splash(deep ? 0.35 : 0.15)
+    ripple(player.pos, 1.6)
+    if (deep) burst({ x: player.pos.x, y: WATER - 0.4, z: player.pos.z }, '#cfe8ff', 14)
+    hud()
+  }
+  if (player.swim && player.speed && (player.wake = (player.wake || 0) + dt) > 0.45) (player.wake = 0), ripple(player.pos, 0.8)
+  // breath: 25 s of swimming, refilled in 4 s on land; out of breath costs 1 hp every 2 s
+  player.air = Math.min(1, Math.max(0, player.air + (player.swim ? -dt / 25 : dt / 4)))
+  if (player.swim && !player.air && alive && (player.choke = (player.choke || 0) + dt) > 2) {
+    player.choke = 0
+    hurt(player, 1, player.pos, 0)
+  }
+  $('air').style.width = player.air * 100 + '%'
+  $('airbar').style.opacity = player.air < 1 ? 1 : 0
   // the blow lands partway through the swing
   if (player.once && player.once[0] == item.anim && !player.struck && player.once[1] > player.m.clips[item.anim].d * 0.45) {
     player.struck = true
@@ -1295,11 +1379,12 @@ function frame() {
   player.safe -= dt
   if (!alive && (player.dead += dt) > 3) {
     player.hp = player.maxHp
+    player.air = 1
     player.once = null
     player.pos.copy(home)
     hud()
   }
-  if (alive && player.hp < player.maxHp) {
+  if (alive && player.hp < player.maxHp && !player.swim) {
     player.regen = (player.regen || 0) + dt
     if (player.regen > 2) {
       player.regen = 0
@@ -1338,9 +1423,32 @@ function frame() {
       spawn(e)
       continue
     }
-    if (alive && d < 12 && !village.in && !(e.burn > 0 && e.kind != 'slime')) {
-      // chase, then attack when close
-      if (d > e.reach) {
+    // habitat: eels only go for someone in the water; bats tire after 4 s over water and fly back to the last shore;
+    // a land creature whose way to the player is water paces the shore, then loses interest for a while
+    const wet = height(player.pos.x, player.pos.z) < WATER
+    if (e.kind == 'bat') {
+      if (height(e.pos.x, e.pos.z) < WATER) e.wet = (e.wet || 0) + dt
+      else (e.wet = 0), (e.shore = [e.pos.x, e.pos.z])
+    }
+    e.bored = (e.bored || 0) - dt
+    const barred = d > 0.5 && !e.fits(height(e.pos.x + (dx / d) * 0.8, e.pos.z + (dz / d) * 0.8))
+    if (e.wet > 4 && e.shore) {
+      tx = e.shore[0] - e.pos.x
+      tz = e.shore[1] - e.pos.z
+      const l = Math.hypot(tx, tz) || 1
+      e.dir = Math.atan2(tx, tz)
+      tx /= l
+      tz /= l
+      sp = e.run * 0.7
+    } else if (alive && d < 12 && !village.in && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
+      if (barred && d > e.reach) {
+        // pace up and down the shore, glaring
+        const p = Math.sin(e.time * 1.7) * 0.6
+        tx = (dz / d) * p
+        tz = (-dx / d) * p
+        sp = e.run * 0.5
+        if ((e.balk = (e.balk || 0) + dt) > 3 + R() * 2) (e.balk = 0), (e.bored = 5 + R() * 4), (e.wander = 0)
+      } else if (d > e.reach) {
         tx = dx / d
         tz = dz / d
         sp = e.run
@@ -1356,6 +1464,7 @@ function frame() {
       if (e.wander < 0) {
         e.wander = 2 + R() * 3
         e.wa = R() < 0.4 ? null : R() * 7
+        if (e.bored > 0) e.wa = Math.atan2(-dx, -dz) + R() - 0.5 // wander off, away from the water's edge
       }
       if (e.burn > 0) e.wa = Math.atan2(-dx, -dz)
       if (e.wa != null) {
@@ -1379,9 +1488,14 @@ function frame() {
       }
     e.move(tx * sp * dt, tz * sp * dt, dt)
     e.speed = sp
+    if (e.stuck) e.wander = 0 // walked into the wrong medium: pick another way next frame
+    if (e.swim) {
+      e.burn = 0 // water puts out a burning eel
+      if (sp && R() < dt * 1.5) ripple(e.pos, 0.6)
+    }
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
+      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
     }
     e.update(dt, e.run)
   }
@@ -1395,6 +1509,16 @@ function frame() {
     if (b.life <= 0) {
       scene.remove(b)
       bits.splice(bits.indexOf(b), 1)
+    }
+  }
+  for (const r of [...ripples]) {
+    r.life -= dt
+    r.scale.setScalar(r.size * (1.6 - r.life))
+    r.material.opacity = r.life * 0.7
+    if (r.life <= 0) {
+      scene.remove(r)
+      r.material.dispose()
+      ripples.splice(ripples.indexOf(r), 1)
     }
   }
 
@@ -1437,6 +1561,6 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, terrain, height, region, grow, drop } } // for play-testing from the console
+window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, region, grow, drop } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.coins = coins

@@ -622,6 +622,56 @@ same 150-tile LRU cache as cells are revealed, behind the same fog of war, so me
 Cost: about 3.5 KB raw in `src/game.js` (52,280 → 55,763 bytes on top of the gold main, fords, knolls and baked hillshade included). Not
 measured with surprisal; at ~90% that's roughly 0.3 KB shipped.
 
+## Swimming and habitats
+
+| | |
+|---|---|
+| ![Swimming off the shore: goblins, slimes and a spider stop at the waterline](docs/swim-shore.jpg) | ![Two eels chasing the swimming warrior at night](docs/swim-eels.jpg) |
+
+Where the ground drops more than a unit below the water (`SWIM = WATER - 1`), the warrior **swims**. He sinks to
+his shoulders at the surface, moves at 55% speed and plays the warrior's looping `swim` clip: body pitched forward,
+alternating arm strokes that bend at the elbow, a flutter kick with the knees nearly straight. Clip channels add to
+the rest pose, so each channel first cancels the fighting stance (bent knees, raised forearms, turned hip) and then
+adds the stroke. His **weapon is stowed** on his back (the
+village's stow, reused), so a lit torch goes out, and he **can't attack**. Going in throws up a splash of droplets, a
+ripple ring and a filtered-noise splash sound. While he swims he leaves a wake of ripples. Shallower water is
+wading: he stands on the bottom, keeps his weapon and can fight. A rider never swims, because mounts already refuse
+water deeper than a wade.
+
+**Breath:** a thin blue bar under the health bar appears while you swim. It lasts 25 s and refills in 4 s on land.
+With no breath left you lose 1 hp every 2 s, and health doesn't regenerate while you swim. I kept it gentle on
+purpose. Its job is to stop you from treating the lake as a safe room, not to punish you. It's not fun to drown
+while crossing a lake to explore, and 25 s covers most crossings.
+
+**Habitats** are a per-kind test on the ground height (`HABITAT`, default `onLand`), applied in `Actor.move`. A move,
+an AI step, separation from other monsters or **knockback** that would end in the wrong medium slides along the
+shore or stays put. No code path pushes a creature in.
+
+- **Goblins, slimes and spiders** stop at the waterline, ankle-deep at most. When the way to a swimming player is
+  water, they pace up and down the shore facing him. After 3 to 5 s they lose interest and wander off for 5 to 9 s.
+- **Bats** fly over water, but only a short way. After 4 s over water they turn back to the last shore they crossed.
+- **Eels** (`eel` in `models.json`) are new: a seeded water serpent built from a head and a six-segment chain with
+  fins. Their `idle` and `walk` (swim) clips are a travelling wave made from phase-shifted sine keys, one channel per
+  segment through `repeat`, with the back at the surface. Their `attack` lunges the head out of the water. They
+  spawn only where the water is deep (more than 1.5 below the surface), four at most at a time, and they never enter
+  water shallower than a swimmer's. They chase and bite only someone who is in the water, so climbing out is the way
+  to escape. Water puts out a burning eel. They have health bars like other monsters, but you can only hit one from
+  the shallows, because a swimmer can't attack. An eel bite does 1 damage.
+- **Spawning** picks a spot first, then a kind that lives there: eels in deep water, the region's land mix on dry
+  ground, and nothing in the shallows or the village. This covers respawns, despawn-and-replace and night crowds,
+  which all go through `spawn()`.
+
+**Gold in water:** coins that land in water sink slowly (about 1 unit/s) and settle on the bed instead of floating.
+They stay collectable: for a swimmer the pickup radius ignores depth, so swimming over sunk coins pulls them up from
+any depth. Eels pay 3 gold (a `gold` var like the other monsters), though you can only kill one from the shallows.
+
+The camera stays at its usual height over the swimmer, about 6 units above the surface. The lake bed shows through
+the 75%-opaque water, eel shadows included.
+
+Cost: about 14.8 KB raw. Game code is +5.6 KB and HTML/CSS +0.16 KB. Models are +9 KB of pretty JSON: the eel is
+about 5.2 KB and the swim clip about 2.2 KB, plus indentation. Not measured with surprisal; at ~90% that's roughly
+1.5 KB shipped.
+
 ## Size
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal
