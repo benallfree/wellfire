@@ -1528,6 +1528,103 @@
           }
         ]
       },
+      "lift": {
+        "duration": 1,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "hip",
+            "channel": "ry",
+            "keys": [
+              12
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "ry",
+            "keys": [
+              8
+            ]
+          },
+          {
+            "bone": "chest",
+            "channel": "rx",
+            "keys": [
+              -10
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -18
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rx",
+            "keys": [
+              -147
+            ]
+          },
+          {
+            "bone": "armR",
+            "channel": "rz",
+            "keys": [
+              27
+            ]
+          },
+          {
+            "bone": "foreR",
+            "channel": "rx",
+            "keys": [
+              65
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rx",
+            "keys": [
+              -75
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              -152
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              -30
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              85
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "ry",
+            "keys": [
+              10
+            ]
+          },
+          {
+            "bone": "handR",
+            "channel": "rz",
+            "keys": [
+              -10
+            ]
+          }
+        ]
+      },
       "row": {
         "duration": 1.6,
         "loop": true,

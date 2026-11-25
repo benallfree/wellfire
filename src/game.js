@@ -505,6 +505,7 @@ class Actor {
           ['walk', this.time * Math.max(0.6, k), k],
         ]
     if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
+    if (this.lift) layers.push(['lift', 0, 1]) // an item held over his head
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
     // a swimmer floats at the surface, sunk by `swim`; everyone else stands on the ground, wading in up to the waist
@@ -574,7 +575,7 @@ function slot(i) {
 function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
   keep('warriorBag', bag)
-  ITEMS[player.item] == k && !bag[k] ? equip(0) : tray()
+  ITEMS[player.item] == k && !bag[k] ? equip(arm) : tray()
   ;($('tray').children[belt.indexOf(k)] || $('tray').lastChild).animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
 }
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
@@ -757,10 +758,11 @@ let item
 // spent one (take it again) costs a wood. Water douses it. In the boat the lit torch stands in the bow post.
 const FUEL = 150
 let lit = 0
+let arm = 0 // the weapon last in hand: it goes on his back while he holds an item (wood, flint) up in both hands
 let fuel = FUEL
 let boat
 function torch() {
-  hold(lib, player.m, 'handL', player.boat ? null : 'shield')
+  hold(lib, player.m, 'handL', player.boat || player.lift ? null : 'shield')
   boat && hold(lib, boat, 'post', player.boat && lit ? 'torch' : null)
   for (const b in player.m.props) if (player.m.props[b].bones.flame) player.m.props[b].bones.flame.visible = b != 'back' && lit > 0
   hud()
@@ -779,10 +781,13 @@ function light() {
 function equip(i, take) {
   player.item = (i + ITEMS.length) % ITEMS.length
   if (ITEMS[player.item] in bag && !bag[ITEMS[player.item]]) player.item = 0 // none left to hold
-  if (ITEMS[player.item] != 'torch') lit = 0
-  const p = hold(lib, player.m, 'handR', ITEMS[player.item])
-  item = p.vars
+  const k = ITEMS[player.item]
+  if (k != 'torch') lit = 0
+  player.lift = k in MATS
+  if (!player.lift) arm = player.item
+  item = hold(lib, player.m, 'handR', k).vars
   if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
+  else village?.sling(player.lift && ITEMS[arm])
   torch()
   tray()
   take && light()
@@ -1265,8 +1270,8 @@ var village
   player.m.bones.chest.add(back)
   player.m.bones.back = turn
   const v3 = new THREE.Vector3()
-  function stow(on) {
-    const p = hold(lib, player.m, 'back', on ? ITEMS[player.item] : null)
+  function sling(k) {
+    const p = hold(lib, player.m, 'back', k)
     if (p) {
       // find the prop's far end in its own space, then turn that end to +z
       turn.quaternion.identity()
@@ -1281,7 +1286,10 @@ var village
       })
       turn.quaternion.setFromUnitVectors(far.normalize(), v3.set(0, 0, p.vars.burn ? -1 : 1))
     }
-    if (on) hold(lib, player.m, 'handR', null), torch()
+  }
+  function stow(on) {
+    sling(on && ITEMS[player.item])
+    if (on) hold(lib, player.m, 'handR', null), (player.lift = 0), torch()
     else equip(player.item)
   }
 
@@ -1308,6 +1316,7 @@ var village
   village = {
     built,
     stow,
+    sling,
     in: false,
     name: '',
     enter(h) {

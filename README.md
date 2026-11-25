@@ -16,7 +16,8 @@ need a network connection.)
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
 Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-6 pick a tray
 slot, 7 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
-with it at a well sets it in the beacon · B build a boat at the water · R ride, board and leave the boat,
+with it at a well sets it in the beacon · wood and flint are held up over his head in both hands (shield and
+weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · B build a boat at the water · R ride, board and leave the boat,
 or take a beacon's mirror (then turn and W/S tilt) · C switches to the old free camera (WASD moves
 relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
@@ -170,6 +171,10 @@ never move more than 5° or 2 cm. The wrist angles in the attack keys were solve
 where the move needs it at each key. `chop` has six keys so its downswing passes through the game's hit moment (45% of
 the clip). Edit the poses there and run `node tools/warrior.mjs`; edit his parts in `models.json` directly. Other
 models are untouched, and `common` (hit and death on the root) still serves the monsters.
+
+`lift` (laid over idle and walk) holds an item level over his head in both hands: arms straight up and a little in,
+torso squared, the right wrist turned so the log lies across. The game hides the shield and slings the last weapon on
+his back (the village stow, reused) while wood or flint is in hand.
 
 Raw cost: the warrior's block grew from ~9.5 KB to ~29.6 KB of pretty JSON (+20.1 KB; ~3.8 → ~10.1 KB as compact JSON),
 almost all of it one-shot keyframes. Not measured under surprisal.

@@ -186,6 +186,13 @@ clips.ride = {
   keys: [P({ ...base, 'leg*.rx': -80, 'leg*.rz': 18, 'shin*.rx': 85, 'foot*.rx': -5, 'foot*.rz': -18, 'hip.ry': 0, 'chest.ry': -5, 'head.ry': 5 })],
 }
 
+// lift: an item (wood, flint) held level over the head in both hands, laid over idle/walk (the shield is put away)
+clips.lift = {
+  duration: 1,
+  loop: true,
+  keys: [P({ ...base, 'hip.ry': 0, 'chest.ry': 0, 'chest.rx': 0, 'head.ry': 0, 'arm*.rx': -172, 'arm*.rz': -15, 'fore*.rx': -10, 'handR.rx': 0, 'handR.ry': 10, 'handR.rz': -10 })],
+}
+
 // row: in the boat (played alone, not over idle), turned to face the stern and sat on the thwart, legs braced.
 // Key 0 is the finish and the rest: hands drawn to the ribs, elbows past the torso. Then the recovery (hands low and
 // away, so the blades lift), the catch (full reach, leaning in, hands rising so the blades drop) and the drive.
