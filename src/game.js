@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { DEG, rng, library, make, hold, pose, bake } from './compiler.js'
+import { score, jukebox } from './music.js'
 
 // The model library is JSON shipped in the page (see models.json).
 const lib = library(document.getElementById('models').textContent)
@@ -300,11 +301,22 @@ function burst(p, color, n = 8) {
   }
 }
 
-// ---------- sound: a few synthesized blips ----------
-let ac
+// ---------- sound: music compiled from the score text, plus a few synthesized blips ----------
+const audio = jukebox(score($('score').textContent))
+function muteButton() {
+  $('mute').className = audio.muted ? 'off' : ''
+}
+muteButton()
+// browsers only allow sound after a user gesture
+for (const ev of ['keydown', 'pointerdown', 'touchstart']) addEventListener(ev, audio.start)
+$('mute').onclick = () => {
+  audio.mute()
+  muteButton()
+}
 function beep(f, d = 0.1, type = 'square', vol = 0.06, slide = 0.5) {
+  const ac = audio.ac
+  if (!ac || audio.muted) return
   try {
-    ac ||= new AudioContext()
     const o = ac.createOscillator()
     const g = ac.createGain()
     o.type = type
@@ -312,7 +324,7 @@ function beep(f, d = 0.1, type = 'square', vol = 0.06, slide = 0.5) {
     o.frequency.exponentialRampToValueAtTime(f * slide, ac.currentTime + d)
     g.gain.setValueAtTime(vol, ac.currentTime)
     g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + d)
-    o.connect(g).connect(ac.destination)
+    o.connect(g).connect(audio.out)
     o.start()
     o.stop(ac.currentTime + d)
   } catch {}
@@ -327,6 +339,7 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1)
   if (e.code.startsWith('Digit')) equip(+e.code[5] - 1)
   if (e.code == 'Tab') e.preventDefault()
+  if (e.code == 'KeyM') $('mute').onclick()
 })
 addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
@@ -334,6 +347,7 @@ addEventListener('touchstart', (e) => {
   for (const t of e.changedTouches) {
     if (t.target.id == 'swap') equip(player.item + 1)
     else if (t.target.id == 'hit') attack()
+    else if (t.target.id == 'mute') continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
   $('pad').style.display = 'block'
@@ -384,6 +398,7 @@ function hurt(e, dmg, from, push) {
 
 // ---------- main loop ----------
 const clock = new THREE.Clock()
+const near = { slime: 0, goblin: 0, spider: 0, bat: 0 } // how present each monster kind is, for the music
 const fwd = new THREE.Vector3()
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
@@ -547,6 +562,12 @@ function frame() {
   sun.intensity = 2.4 * day
   hemi.intensity = 0.5 + day * 0.8
 
+  // music: each monster kind within 14 units brings in its own part (fast in, slow out); night darkens the rest
+  const close = {}
+  for (const e of foes) if (e.hp > 0 && alive && Math.hypot(e.pos.x - player.pos.x, e.pos.z - player.pos.z) < 14) close[e.kind] = 1
+  for (const k in near) near[k] += ((close[k] || 0) - near[k]) * Math.min(1, dt * (close[k] ? 2 : 0.5))
+  audio.mood(day, near)
+
   // camera: a high three-quarter view that trails the player
   const target = player.pos
   fwd.set(Math.sin(camYaw) * 7, 7.5, Math.cos(camYaw) * 7)
@@ -562,4 +583,4 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, equip, attack, clock } // for play-testing from the console
+window.game = { player, foes, equip, attack, clock, audio } // for play-testing from the console

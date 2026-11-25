@@ -11,16 +11,22 @@ body{margin:0;overflow:hidden;font:15px system-ui,sans-serif;color:#fff;user-sel
 #hp{height:100%;background:#e33;width:100%}
 #help{position:fixed;left:16px;bottom:16px;opacity:.8;text-shadow:0 1px 2px #000}
 #pad{display:none}
+#mute{position:fixed;right:16px;top:16px;width:44px;height:44px;border-radius:50%;background:#0004;border:2px solid #fff8;font-size:22px;line-height:40px;text-align:center;cursor:pointer}
+#mute.off{opacity:.4;text-decoration:line-through}
 #pad b{position:fixed;bottom:30px;width:70px;height:70px;border-radius:50%;background:#fff3;border:2px solid #fff8;text-align:center;line-height:70px;font-size:13px}
 </style>
 </head>
 <body>
 <div id="ui"><div id="bar"><div id="hp"></div></div><div id="info"></div></div>
-<div id="help">WASD move · Space attack · F or 1-3 swap item · Q/E turn camera</div>
+<div id="help">WASD move · Space attack · F or 1-3 swap item · Q/E turn camera · M mute</div>
+<b id="mute">♪</b>
 <div id="pad"><b id="hit" style="right:30px">HIT</b><b id="swap" style="right:120px">SWAP</b></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="application/json" id="models">
 <!--MODELS-->
+</script>
+<script type="text/plain" id="score">
+<!--SCORE-->
 </script>
 <script type="module">
 <!--CODE-->

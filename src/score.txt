@@ -1,0 +1,58 @@
+# The warrior's song. One token per step (an eighth note), "|" marks bars. See README.md "Music".
+tempo 104 2 4                    # beats per minute, steps per beat, beats per bar
+day A A B A                      # sections played while the sun is up
+night N N M N                    # ...and after dark
+
+# ~voice  wave      octave volume attack release [filter Hz] [calm | a monster kind]
+~lead     square    5   .04   .01   .12   2200
+~bell     triangle  5   .07   .005  .5
+~arp      triangle  4   .06   .005  .1    calm
+~pad      sawtooth  3   .025  .35   .7    900
+~bass     sawtooth  2   .07   .01   .12   700
+~kick     kick      0   .28   .002  .25
+~hat      noise     0   .05   .001  .04   7000
+~boing    sine      4   .17   .005  .12                slime
+~wardrum  kick      0   .22   .002  .2                 goblin
+~snare    noise     0   .14   .001  .13   1500         goblin
+~riff     sawtooth  3   .05   .01   .06   1400         goblin
+~crawl    square    5   .055  .002  .04   3000         spider
+~tick     noise     0   .08   .001  .015  9000         spider
+~flutter  sine      5   .1    .002  .05                bat
+
+# Monster parts join every section. Each fades in while that kind of monster is near and out when it's gone,
+# so a mixed pack stacks its parts.
+=*
+boing   1,4 . . 1,4 . . 3,5 .                  # slimes bounce
+wardrum x . . x x . . .                        # goblins march to war drums
+snare   . . x . . . x . | . . x . . . x x
+riff    1 1 3 1 1 3 4 3
+crawl   1,2 3,2 4,3 2,1                        # spiders skitter in sixteenths
+tick    x,x x,x x,x x,x
+flutter 4,5 4,5 . . 5,6 5,6 . .                # bats flutter up high
+
+# Day: C major, bright and walking.
+=A
+chords C G Am F
+lead  e . g . c6 - b . | b - g - d - . . | c . e . a - g . | a - g - f - . .
+arp   1 2 3 4 5 4 3 2
+pad   * - - - - - - -
+bass  1 . . 1 3 . 1 .
+hat   . x . x . x . x,x
+kick  x . . . x . . .
+
+=B A
+chords F G Em Am
+lead  f . a . c6 - a . | b . d6 . g6 - d6 . | e6 - d6 - b - g - | a - - - - - . .
+
+# Night: A minor, slow and sparse, with a heartbeat.
+=N
+chords Am Am F E
+bell  e - - - . . a . | c6 - - - b - a - | a - - - . . f . | g# - - - - - . .
+arp   1 . 3 . 2 . 3 .
+pad   * - - - - - - -
+bass  1 - - - - - 3 -
+kick  x . x . . . . .
+
+=M N
+chords Dm Am E Am
+bell  f - - - e - d - | e - - - c - a4 - | b4 - - - g# - b - | a - - - - - . .

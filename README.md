@@ -13,7 +13,7 @@ npm install && npm start
 Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serves it; three.js comes from a CDN, so you
 need a network connection.)
 
-**Controls:** WASD or arrows move · Space or J attack · F, Tab or 1-3 swap the item in hand · Q/E turn the camera.
+**Controls:** WASD or arrows move · Space or J attack · F, Tab or 1-3 swap the item in hand · Q/E turn the camera · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere to move, plus HIT and SWAP buttons.
 
 | | |
@@ -38,6 +38,8 @@ compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-ds
 ```
 src/models.json  all models, skeletons and animation clips, as pretty-printed JSON (~42 KB raw, ~1 KB packed)
 src/compiler.js  the compiler + rig runtime: JSON -> three.js bones, merged meshes, clips (~8.4 KB)
+src/score.txt    the music, as text (~2.4 KB)
+src/music.js     the score compiler + WebAudio sequencer (~8 KB)
 src/game.js      world, actors, combat, AI, camera, input, HUD (~17 KB)
 src/index.html   page shell: HUD markup, import map for three.js
 tools/build.mjs  inlines everything into one file: dist/index.html (the shipped artifact)
@@ -46,10 +48,10 @@ tools/formats.mjs  JSON vs. the old text DSL and other formats under surprisal (
 tools/viewer.html  dev-only model viewer: /tools/viewer.html?m=goblin&seeds=1,2,3&clip=walk
 ```
 
-The game is **one HTML file**. The build inlines `models.json` as a `<script type="application/json">` block and
-concatenates `compiler.js` and `game.js` into one module script. At load time the page parses the models, compiles what it needs, and
-starts. There is no binary asset anywhere: no textures, no meshes, no audio files (sounds are synthesized oscillator
-blips).
+The game is **one HTML file**. The build inlines `models.json` as a `<script type="application/json">` block and `score.txt` as a
+`<script type="text/plain">` block, and concatenates `compiler.js`, `music.js` and `game.js` into one module script. At load time the page parses the models, compiles what it needs, and
+starts. There is no binary asset anywhere: no textures, no meshes, no audio files (the music is compiled from
+`score.txt` and synthesized with WebAudio; effects are oscillator blips).
 
 **three.js** is r170 (`three@0.170.0`), loaded from jsDelivr through a pinned import map. It does not count toward the
 budget. The game leans on it heavily on purpose: `BoxGeometry`, `SphereGeometry`, `CylinderGeometry`,
@@ -157,6 +159,76 @@ back, flash, and burst into little cubes. The sword is quick, the axe is slow an
 does little damage but sets monsters alight; burning monsters flee and take damage over time. Dead monsters shrink away
 and respawn somewhere around you; you regenerate slowly, and if you fall you get back up at the start.
 
+## Music
+
+The background music is text too: [src/score.txt](src/score.txt), compiled at load by
+[src/music.js](src/music.js) and played by a small WebAudio sequencer. Up to fourteen voices sound at once (lead or bell,
+arpeggio, pad chords, bass, kick, hi-hat, and a part for each kind of monster), all synthesized: oscillators, a noise buffer,
+filters and gain envelopes, no samples.
+
+Prior art I weighed: **ZzFXM** and **Soundbox** (the js13k standards) store patterns as arrays of numbers, compact for
+zip but close to binary, which is what surprisal can't predict. **Tracker patterns** read well as a grid but spell out
+every note. **ABC notation** is readable text but its full grammar (lengths, ties, keys, repeats) is a lot of parser.
+I took the tracker's grid (one token per step, voices lined up) and ABC's note letters, and added one idea from lead
+sheets: a **chord track**. Bass and arpeggio lines are written as chord tones (`1` root, `2` third, `3` fifth, `4` root an
+octave up, ...), so one short line plays over any progression, and a new section only needs new chords and a melody.
+
+```text
+tempo 104 2 4                       # bpm, steps per beat, beats per bar (so a step is an eighth note)
+day A A B A                         # the section order by day...
+night N N M N                       # ...and after dark
+~bass  triangle 2 .15 .01 .12       # voice: wave octave volume attack release [filter Hz] [calm|monster]
+=A                                  # a section
+chords C G Am F                     # one chord per bar; "C,G" splits a bar
+lead   e . g . c6 - b . | b - g - d - . . | ...
+bass   1 . . 1 3 . 1 .              # chord tones; a line shorter than the section repeats
+pad    * - - - - - - -              # * is the whole chord
+hat    . x . x . x . x,x            # drums: x hit, o accent; "x,x" splits a step in two
+=B A                                # section B starts as a copy of A, then replaces chords and lead
+=*                                  # lines here join every section (the monster parts)
+```
+
+| token | meaning |
+|---|---|
+| `c` `f#` `bb` `a4` | a note; the digit is the octave, otherwise the voice's octave |
+| `1`..`9` | a tone of the current chord, counted up from the root in the voice's octave |
+| `*` | the whole current chord |
+| `x` `o` | a drum hit, `o` louder (any token hits on a `noise` or `kick` voice) |
+| `-` | hold the previous note one more step |
+| `.` | rest |
+| `a,b` | split one step (or one bar, on the chord line) evenly between tokens |
+| `\|` | bar line, ignored |
+
+Waves are the oscillator types (`sine`, `square`, `sawtooth`, `triangle`) plus `noise` (high-passed at the filter
+frequency) and `kick` (a sine dropping from 150 to 40 Hz). Chords are a root, optional `#`/`b`, optional `m`, optional `7`.
+
+**Compiler and player.** `score()` parses the text and compiles every section into per-step event lists with notes
+already resolved to frequencies and lengths, so the runtime never parses. `sequencer()` is the classic lookahead
+scheduler: every 50 ms it schedules the steps that start in the next 250 ms on the audio clock, so timing stays
+sample-accurate and sections loop without a seam. The same function renders into an `OfflineAudioContext`, which is how
+I checked levels and seams without listening.
+
+**It follows the game.** When the light drops, the player switches to the night order at the next bar line (the same
+bar of the new section) and a master low-pass filter darkens the mix. The tempo never changes: the music reacts by
+changing which parts play, not how fast.
+
+**Every monster kind has its own part.** A voice tagged with a monster kind fades in while
+one of that kind is within 14 units and fades out (more slowly) once none is, so you can hear what's coming before you
+see it, and a mixed pack stacks its parts:
+
+| monster | part |
+|---|---|
+| slime | `boing`: bouncing sine octave leaps |
+| goblin | `wardrum`, `snare`, `riff`: a marching war-drum beat under a sawtooth riff |
+| spider | `crawl`, `tick`: a skittering 16th-note square arpeggio over clicking legs |
+| bat | `flutter`: a high sine trill |
+
+The parts are written in chord tones, so they fit every day and night section. Voices tagged `calm` (the arpeggio) duck
+out while any monster is near. The parts sit in the mid and high range on purpose: a first version used one shared
+fight layer that was mostly bass, which laptop speakers barely play, so it went unheard. Audio starts on the first key, click or touch (browsers require a gesture); muting suspends the AudioContext, so the scheduler pauses too,
+and the choice is remembered. The music module, score and hooks add about 12 KB raw to the build, roughly 1.2 KB at
+the ~90% surprisal rule of thumb.
+
 ## Size
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal
@@ -209,7 +281,7 @@ hour the first time; the cache makes reruns cheap.
 - **Rigid parts on bones beat skinning here.** No weights to store, mirroring halves most models, and animation is a
   few keyframes per channel. The look is consistent with the low-poly style.
 - **What I left out:** CSG and SDF modeling (too much code or too slow to mesh at load time), skinned meshes, a real
-  audio track, textures, and a bigger enemy roster or quests. Given the headroom, more content (bosses, a village,
-  more items, a music sequencer written as text) is the obvious next step, not further squeezing.
+  textures, and a bigger enemy roster or quests. Given the headroom, more content (bosses, a village,
+  more items, more songs) is the obvious next step, not further squeezing.
 - **Dev notes:** `/tools/viewer.html` (dev only, not shipped) shows any model, seed, clip or held item, e.g.
   `?m=goblin&seeds=1,2,3&clip=walk`. The page exposes `window.game` for play-testing from the console.
