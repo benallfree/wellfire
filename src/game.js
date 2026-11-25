@@ -563,8 +563,8 @@ function slot(i) {
     pick = i
     return tray()
   }
-  if (k == 'torch' && ((well && !beacon[well.k]) || !bag.torch)) setTorch()
-  else if (ITEMS.includes(k)) equip(ITEMS.indexOf(k))
+  if (k == 'torch' && !bag.torch) craft()
+  if (ITEMS.includes(k)) equip(ITEMS.indexOf(k))
 }
 function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
@@ -1665,7 +1665,7 @@ function boating(dt) {
 
 // ---------- beacons: the goal. Set a torch in five villages' wells and aim each beam at the star ----------
 // The star hangs at one fixed direction, as if infinitely far, so the same aim is right from every village. At a
-// well, slot 3 sets your torch in the beacon (a new torch takes a wood and a flint). R takes the mirror: turning swings
+// well, Space with the torch in hand sets it in the beacon (a new torch takes a wood and a flint). R takes the mirror: turning swings
 // the beam, W/S tilt it, and the camera looks along it. The beam warms from white to gold as it nears the star and
 // locks within LOCK radians. Beams are drawn from anywhere: a far one is moved toward the camera and shrunk by the same
 // factor, which leaves its picture unchanged but keeps it inside the camera's range (it is also fattened, to be seen). Parallel beams all meet at their
@@ -1784,7 +1784,7 @@ function shine(dt) {
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
   if (T && T != well) {
     const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? '3: set your torch in the beacon' : 'A beacon needs a torch: a wood and a flint, then 3')
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (6)')
   }
   well = T || null
   if (!well) aim = null
@@ -1915,6 +1915,7 @@ addEventListener('touchend', (e) => {
 // ---------- combat ----------
 function attack() {
   if (player.seat) return buck()
+  if (well && !beacon[well.k] && ITEMS[player.item] == 'torch') return setTorch()
   if (player.busy || player.hp <= 0 || village?.in || player.swim || player.boat) return
   player.play(item.anim)
   player.struck = false
