@@ -619,7 +619,7 @@ same 150-tile LRU cache as cells are revealed, behind the same fog of war, so me
   the browser pane was hidden and paused rendering; the checks ran in an iframe with a timer standing in for
   `requestAnimationFrame`.
 
-Cost: about 3.5 KB raw in `src/game.js` (49,078 → 52,561 bytes on top of the mounts main, fords, knolls and baked hillshade included). Not
+Cost: about 3.5 KB raw in `src/game.js` (52,280 → 55,763 bytes on top of the gold main, fords, knolls and baked hillshade included). Not
 measured with surprisal; at ~90% that's roughly 0.3 KB shipped.
 
 ## Size
