@@ -529,7 +529,7 @@ function hud() {
 }
 // the tray (models.json "tray"): six slots, keys 1-6 or a tap, each item taken in hand (Space drops wood or flint);
 // the boat slot launches one. Slot 7 (key 7) opens crafting: recipes (tap one; only in a village; a recipe's
-// inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them. The game
+// inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
 const belt = kept('warriorSlots', lib.tray.slots)
@@ -560,10 +560,10 @@ function tray() {
     '<br>tap two slots to swap'
 }
 const pack = () => (($('inv').hidden ^= 1), (pick = -1), tray())
-function slot(i) {
+function slot(i, tap) {
   const k = belt[i]
   if (!(i in belt)) return i == belt.length && pack()
-  if (!$('inv').hidden) {
+  if (tap && !$('inv').hidden) {
     if (pick >= 0) [belt[i], belt[pick]] = [belt[pick], belt[i]], keep('warriorSlots', belt), (i = -1)
     pick = i
     return tray()
@@ -581,7 +581,7 @@ function gain(k, n) {
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
 $('tray').onpointerdown = (e) => {
   const b = e.target.closest('b')
-  if (b) slot(+b.dataset.s)
+  if (b) slot(+b.dataset.s, 1)
 }
 $('inv').onpointerdown = (e) => {
   const b = e.target.closest('b')
