@@ -526,10 +526,12 @@ function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
-// the tray: the weapons, then every kind of goods (wood now; potions or loot later add a GOODS entry and a use).
-// Number keys or a tap pick a slot: a weapon is equipped, goods are used. The bag is kept in localStorage.
-const ICON = { sword: '🗡️', axe: '🪓', torch: '🔥', wood: '🪵', flint: '🪨' }
-const GOODS = { wood: () => launch(), flint: () => craft() }
+// the tray (models.json "tray"): five slots of usable items, keys 1-5 or a tap; a held item is equipped. Slot 6 (key 6)
+// opens the pack: materials, recipes to craft (tap one), and tapping two slots swaps them. The game pauses while it's open.
+// The bag (counts) and the slot layout are kept in localStorage.
+const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
+const belt = kept('warriorSlots', lib.tray.slots)
+let pick = -1
 const bag = kept('warriorBag', {})
 bag.wood ||= 0
 bag.flint ||= 0
@@ -538,26 +540,46 @@ bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
 const GOAL = 5
 const beacon = kept('warriorBeacons', {})
 const done = () => Object.values(beacon).filter((b) => b[2]).length
+const has = (r) => Object.keys(r).every((m) => bag[m] >= r[m])
 function tray() {
-  $('tray').innerHTML = [...ITEMS, ...Object.keys(GOODS)]
-    .map((k, i) => `<b data-s=${i} class=${i == player.item ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k]}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
-    .join('')
+  $('tray').innerHTML =
+    [...belt, 'pack']
+      .map((k, i) => `<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
+      .join('')
+  $('inv').innerHTML =
+    Object.keys(MATS).map((m) => `${ICON[m]} ${bag[m]}`).join(' · ') +
+    '<br>' +
+    Object.entries(RECIPES)
+      .map(([k, r]) => `<b data-r=${k} class=${has(r) ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
+      .join('') +
+    '<br>tap two slots to swap'
 }
+const pack = () => (($('inv').hidden ^= 1), (pick = -1), tray())
 function slot(i) {
-  if (ITEMS[i] == 'torch' && ((well && !beacon[well.k]) || !bag.torch)) setTorch()
-  else if (i < ITEMS.length) equip(i)
-  else GOODS[Object.keys(GOODS)[i - ITEMS.length]]?.()
+  const k = belt[i]
+  if (!(i in belt)) return i == 5 && pack()
+  if (!$('inv').hidden) {
+    if (pick >= 0) [belt[i], belt[pick]] = [belt[pick], belt[i]], keep('warriorSlots', belt), (i = -1)
+    pick = i
+    return tray()
+  }
+  if (k == 'torch' && ((well && !beacon[well.k]) || !bag.torch)) setTorch()
+  else if (ITEMS.includes(k)) equip(ITEMS.indexOf(k))
 }
 function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
   keep('warriorBag', bag)
   tray()
-  $('tray').children[ITEMS.length + Object.keys(GOODS).indexOf(k)].animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
+  ;($('tray').children[belt.indexOf(k)] || $('tray').lastChild).animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
 }
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
 $('tray').onpointerdown = (e) => {
   const b = e.target.closest('b')
   if (b) slot(+b.dataset.s)
+}
+$('inv').onpointerdown = (e) => {
+  const b = e.target.closest('b')
+  if (b) craft(b.dataset.r)
 }
 
 // ---------- minimap: turns with the camera, fog of war over ground you haven't been near ----------
@@ -1662,13 +1684,16 @@ let show = 0 // seconds into the light show
 const siteAt = (k) => site(...k.split(',').map(Number))
 const top = (T) => new THREE.Vector3(T.x, T.y + 3.5, T.z) // the mirror, over the well's roof
 const dir = (b) => ray.setFromSphericalCoords(1, b[1], b[0])
-function craft() {
-  if (!bag.wood || !bag.flint) return say('A torch takes a wood and a flint: strike a glinting rock with the axe')
-  gain('wood', -1)
-  gain('flint', -1)
-  gain('torch', 1)
-  fuel = FUEL
-  say('You made a torch')
+function craft(k = 'torch') {
+  const r = RECIPES[k]
+  const e = Object.entries(r)
+  if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(bag[m] >= n))[0]]}`)
+  for (const [m, n] of e) gain(m, -n)
+  gain(k, 1)
+  if (!belt.includes(k)) belt[belt.indexOf('')] = k
+  keep('warriorSlots', belt)
+  if (k == 'torch') fuel = FUEL
+  say(`You made a ${k}`)
 }
 function setTorch() {
   if (!bag.torch) return craft()
@@ -1845,6 +1870,7 @@ const keys = {}
 let camYaw = 45 * DEG
 addEventListener('keydown', (e) => {
   keys[e.code] = 1
+  if (!$('inv').hidden && !e.code.startsWith('Digit')) return e.code == 'Escape' && pack()
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1)
   if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
@@ -1867,7 +1893,7 @@ addEventListener('touchstart', (e) => {
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
     else if (t.target.id == 'lit') light()
-    else if (t.target.id == 'mute' || t.target.closest('#tray,#nav,#big')) continue
+    else if (t.target.id == 'mute' || t.target.closest('#tray,#nav,#big,#inv')) continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
   $('pad').style.display = 'block'
@@ -1943,6 +1969,7 @@ const fwd = new THREE.Vector3()
 let inRoom = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
+  if (!$('inv').hidden) return requestAnimationFrame(frame)
   if (!$('big').hidden) {
     const W = ($('big').width = innerWidth)
     const H = ($('big').height = innerHeight)

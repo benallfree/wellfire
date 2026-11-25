@@ -7653,5 +7653,32 @@
         ]
       }
     }
+  },
+  "tray": {
+    "icons": {
+      "sword": "🗡️",
+      "axe": "🪓",
+      "torch": "🔥",
+      "wood": "🪵",
+      "flint": "🪨",
+      "pack": "🎒"
+    },
+    "slots": [
+      "sword",
+      "axe",
+      "torch",
+      "",
+      ""
+    ],
+    "materials": {
+      "wood": "fell a tree with the axe",
+      "flint": "strike a glinting rock with the axe"
+    },
+    "recipes": {
+      "torch": {
+        "wood": 1,
+        "flint": 1
+      }
+    }
   }
 }
