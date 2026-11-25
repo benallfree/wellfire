@@ -1459,6 +1459,75 @@
           }
         ]
       },
+      "ride": {
+        "duration": 1,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "hip",
+            "channel": "ry",
+            "keys": [
+              12
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "ry",
+            "keys": [
+              -13
+            ]
+          },
+          {
+            "bone": "legL",
+            "channel": "rx",
+            "keys": [
+              -43
+            ]
+          },
+          {
+            "bone": "shin*",
+            "channel": "rx",
+            "keys": [
+              36
+            ]
+          },
+          {
+            "bone": "footL",
+            "channel": "rx",
+            "keys": [
+              7
+            ]
+          },
+          {
+            "bone": "legR",
+            "channel": "rx",
+            "keys": [
+              -69
+            ]
+          },
+          {
+            "bone": "footR",
+            "channel": "rx",
+            "keys": [
+              34
+            ]
+          },
+          {
+            "bone": "leg*",
+            "channel": "rz",
+            "keys": [
+              12
+            ]
+          },
+          {
+            "bone": "foot*",
+            "channel": "rz",
+            "keys": [
+              -12
+            ]
+          }
+        ]
+      },
       "hit": {
         "duration": 0.3,
         "loop": false,

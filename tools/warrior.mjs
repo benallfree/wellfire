@@ -178,6 +178,14 @@ clips.jab = {
   ],
 }
 
+// ride: seated on a mount (laid over idle, replacing common's ride): thighs forward and spread, knees bent, feet
+// level, hips square to the saddle; the guard stays up
+clips.ride = {
+  duration: 1,
+  loop: true,
+  keys: [P({ ...base, 'leg*.rx': -80, 'leg*.rz': 18, 'shin*.rx': 85, 'foot*.rx': -5, 'foot*.rz': -18, 'hip.ry': 0, 'chest.ry': -5, 'head.ry': 5 })],
+}
+
 // hit: knocked back, the head snaps, the arms fly open, knees buckle and recover
 clips.hit = {
   duration: 0.3,

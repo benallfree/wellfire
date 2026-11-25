@@ -153,7 +153,8 @@ to face forward, torso turned a little. Because the two sides of a stance differ
 breath (chest and guard), `walk` bends the knees through the stride with a heel strike and a toe off, swings the elbows
 and counter-rotates hips and shoulders, and the one-shots (`swing`, `chop`, `jab`, `hit`, `death`) are deltas laid on top
 of idle/walk, winding up and following through with shoulder, elbow, wrist and torso twist while the hips drop and
-shift over planted feet.
+shift over planted feet. He has his own `ride` (thighs forward and spread, knees bent, hips square) in place of `common`'s,
+whose deltas were written for the old straight-legged rest pose.
 
 Those bones and clips are not hand-typed: [tools/warrior.mjs](tools/warrior.mjs) (dev only) writes them into
 `models.json` from absolute poses. It solves each leg with planar two-bone IK from a hip offset and a foot target, so
@@ -164,7 +165,7 @@ where the move needs it at each key. `chop` has six keys so its downswing passes
 the clip). Edit the poses there and run `node tools/warrior.mjs`; edit his parts in `models.json` directly. Other
 models are untouched, and `common` (hit and death on the root) still serves the monsters.
 
-Raw cost: the warrior's block grew from ~9.5 KB to ~28.4 KB of pretty JSON (+18.9 KB; ~3.8 → ~9.7 KB as compact JSON),
+Raw cost: the warrior's block grew from ~9.5 KB to ~29.6 KB of pretty JSON (+20.1 KB; ~3.8 → ~10.1 KB as compact JSON),
 almost all of it one-shot keyframes. Not measured under surprisal.
 
 | stance (sword, axe, torch) | walk |
