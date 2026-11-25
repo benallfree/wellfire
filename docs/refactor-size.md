@@ -62,13 +62,12 @@ Surprisal charges for what the language model can't predict. That explains every
 So the hypothesis in the brief holds strongly: readable, idiomatic code compresses better than golfed code under
 surprisal. Don't minify, mangle or golf, and don't refactor for size.
 
-## What changed on this branch
+## What landed
 
-1. **R1** and **R8**: the data tables moved to models.json (pretty JSON, named keys, a `world` entry with one object
-   per region). Net size effect is about zero. They are kept because the tables are easier to edit there, but
-   dropping them would cost nothing either.
-2. **R2–R7 not kept.** They are on `claude/gamejs-refactor-helpers-measured` (with their revert) for reference.
-3. **Build-time comment stripping.** `tools/strip.mjs` removes `//` and `/* */` comments from `compiler.js`,
+Only the build-time comment strip. None of the source refactors above landed: R2–R7 cost bytes, and R1 and R8 net to
+about zero once the JSON they add is counted, so `game.js` and `models.json` are unchanged.
+
+**Build-time comment stripping.** `tools/strip.mjs` removes `//` and `/* */` comments from `compiler.js`,
    `music.js` and `game.js` on the way into `dist/index.html`. It understands strings, template literals (with
    `${}` nesting) and regex literals. A line that held only a comment goes; a trailing comment is cut with the spaces
    before it; nothing else changes. Checked with acorn: each file's AST is identical before and after, with 0
@@ -77,18 +76,18 @@ surprisal. Don't minify, mangle or golf, and don't refactor for size.
 
 Played in the browser on the stripped build: walk, sword hits, ride a steed and its attack, enter and leave a house,
 chop a tree for +3 wood, light the torch, swim (breath drains), back ashore, launch, board and row the boat. No
-console errors. Village, region, monsters and mounts match `main` for the same seed.
+console errors.
 
 ## Not measured
 
 Size runs were stopped on Ben's instruction before these finished, so they are **not measured**:
 
-- **The full build.** Neither `main` c29bd93 nor this branch's `dist/index.html` has a surprisal -1 number. That
+- **The full build.** Neither `main` c29bd93 nor the stripped `dist/index.html` has a surprisal -1 number. That
   means the check that game.js-alone deltas track full-build deltas was never done either.
-- **The final branch's game.js**, raw and comment-stripped (whether the leftover data moves stack with stripping).
+- **game.js with R1 + R8**, raw and comment-stripped (whether the data moves stack with stripping).
 - **Terser** with compress, with compress and mangle, and the two beautified variants. Only the no-compress,
   no-mangle one-line variant (row T) was measured.
-- **`models.json` without the dropped `arc` var.** The +105 above includes it, about 50 raw bytes.
+- **`models.json` with R1 + R8 alone.** The +105 above also includes the dropped `arc` var, about 50 raw bytes.
 
 **Estimate only:** game.js stripping saves about 2,430. Comments in music.js and compiler.js are another 5.4 KB raw,
 about 800 more at the same rate. So the full build should lose about **3,200 bytes**, from roughly 13,850 on current
