@@ -156,7 +156,8 @@ Third-person, high three-quarter perspective camera that trails the player (Q/E 
 of meadows, forests, rocky hills and lakes, with an exploration minimap, and a 3-minute day/night cycle (the torch earns
 its place at night). Twelve to twenty-odd monsters at a time wander, chase within 12 units, wind up and strike; you get knocked back and flash, they get knocked
 back, flash, and burst into little cubes. The sword is quick, the axe is slow and heavy with big knockback, the torch
-does little damage but sets monsters alight; burning monsters flee and take damage over time. Dead monsters shrink away
+does little damage but sets monsters alight; burning monsters flee and take damage over time. Steeds and drakes can be
+found and ridden (see Mounts). Dead monsters shrink away
 and respawn somewhere around you; you regenerate slowly, and if you fall you get back up at the start.
 
 ## Music
@@ -420,6 +421,66 @@ you come back into view, so leaving and returning shows exactly the ground you e
 
 Cost: about 8.2 KB raw (game code +7.9 KB, HTML/CSS +0.3 KB), including the disposal fix and the region tables. Not
 measured with surprisal; at ~90% that's roughly 0.8 KB shipped.
+
+## Mounts
+
+![Riding a steed: the sword hangs on the warrior's back, the camera pulled back](docs/mount-riding.jpg)
+
+Two original rideable creatures live in `models.json`. Both are ordinary models with bones, rigid parts and keyframe
+clips, a `saddle` socket bone, and their gameplay numbers in `vars`. Each one varies by seed: size, coat or scale
+colours, mane, blanket and name, plus extras that roll a chance (a steed's brow horn and white socks, a drake's stubby
+wings).
+
+| | steed | drake |
+|---|---|---|
+| shape | four-legged, long neck, mane, saddle and stirrups | small two-legged dragon: long tail, horns, spines, embers glowing in its throat and tail tip |
+| run / turn | fast: 10.5–12.5 units/s, 3.4–4 rad/s | slow: 6.5–8 units/s, 2.4–3 rad/s |
+| attack | **rear and trample**: rears up, paws, comes down on whatever is in front (4 damage, reach 2.8, wide arc, big knockback, ~1 s cooldown) | **fire breath**: pulls its head back, then a short cone of flame (1 damage + the torch's 4 s burn, reach 4.2–5, narrow arc, ~1.4 s cooldown) using the torch's `f60`/`fd4` glow colours and light |
+| health / grip | 30–38 / 8 | 40–52 / 12 |
+
+Clips: `idle`, `walk` (a gallop or a stride; Actor blends it by speed), `attack` and `hit` are per model. `death` is the
+shared `common` one (rolls onto its side). The rider's sitting pose is a `ride` clip in `common`. It only sets
+`leg*`/`foot*`/`arm*`/`chest` rotations, so it ports to any rig that keeps those names (the warrior's bones are untouched),
+and goblins use it too.
+
+**Finding one.** Each streamed chunk rolls once, from its own seed, for a wild mount: about one chunk in 17, on dry ground
+outside the village. Meadows and lakes get steeds, forests and rocky hills get drakes. About one goblin in five spawns
+riding one. Hit the goblin and it falls off, and the mount bolts and is then free to take.
+
+**Riding.** Walk up to a free mount: the HUD shows `R · ride <name> the <kind>` (on touch, the RIDE button). Press R to
+climb on. The warrior's hip sits on the saddle socket in the ride pose, his weapon goes on his back (the village stow),
+and the HUD shows the mount's name and health bar. The stick or WASD turns the mount toward the direction you hold, at
+its own turn rate, and it runs along its facing with a little momentum, slowing in tight turns. Space or HIT triggers
+the mount's attack, with damage, reach, arc, knockback, cooldown and hit timing (`at`, a fraction of the clip) all from
+its vars. R again climbs off and leaves it standing.
+
+![A steed rearing to trample a goblin](docs/mount-steed-rear.jpg)
+![A drake's fire breath setting slimes alight](docs/mount-drake-breath.jpg)
+
+**Rules**
+
+- **Villages: no.** Mounts are turned away at the fence like monsters, so you get off outside and walk in (weapons are
+  stowed there anyway).
+- **Water: wading only.** A mount won't step where the ground is more than 0.2 below the water line. This leaves room
+  for a swimming rule later.
+- **Camera:** 1.35 times further back while riding, so a fast mount has room to see ahead.
+- **Who gets hit:** monsters chase the rider, but their blows land on the mount, which shields you. Damage taken in
+  quick succession (it decays by 1 a second) that reaches the mount's `grip`, or the mount dying, throws you off. You
+  land beside it and it bolts for 3 s, then wanders and can be mounted again. Monsters ignore riderless mounts. You can
+  hit a riderless mount yourself (it bolts) and kill it, which doesn't count as a kill.
+- **Persistence:** a wild mount leaves when the chunk under it unloads, and its chunk rolls it again when rebuilt (same
+  seed, same mount). The last mount you rode (`tamed`) never despawns and stays where you left it, even kilometres
+  away. A chunk whose mount you took or killed never rolls another. A goblin's mount leaves with its goblin.
+
+![A goblin charging on a drake](docs/mount-goblin-rider.jpg)
+
+For play-testing: `game.addMount('steed' | 'drake', seed, x, z)`, `game.seat(actor, mount)`, `game.mountUp()` and
+`game.mounts`.
+
+Cost: about 35.5 KB raw. Most of it is the two models in pretty JSON: `models.json` +26.1 KB, a lot of which is
+indentation and repeated keys. The rest is game code +9.1 KB and HTML/CSS +0.3 KB. Not measured with surprisal; at ~90%
+that's roughly 3.5 KB shipped, the largest single feature so far. Trimming parts (socks, horn, spines, stirrups) would
+be the first cut if space gets tight.
 
 ## Size
 

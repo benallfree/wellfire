@@ -298,11 +298,12 @@ class Actor {
   update(dt, run) {
     this.time += dt
     if (this.once) this.once[1] += dt
-    const k = Math.min(1, this.speed / run)
+    const k = this.seat ? 0 : Math.min(1, this.speed / run)
     const layers = [
       ['idle', this.time, 1 - k],
       ['walk', this.time * Math.max(0.6, k), k],
     ]
+    if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
     if (this.once) layers.push([this.once[0], this.once[1], 1])
     pose(this.m, layers)
     this.pos.y = this.floor ?? Math.max(WATER - 0.35, height(this.pos.x, this.pos.z))
@@ -436,12 +437,243 @@ function equip(i) {
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   torchLight.intensity = item.burn ? 30 : 0
-  if (village?.in) village.stow(1)
+  if (village?.in || player.seat) village.stow(1)
   hud()
 }
 const torchLight = new THREE.PointLight('#ff9a40', 0, 12, 1.5)
 scene.add(torchLight)
 equip(0)
+
+// ---------- mounts: steeds and drakes found in the world, ridden in place of the weapon ----------
+// Rules: mounts keep out of villages (the fence turns them away like monsters) and out of water deeper than a wade.
+// Monsters chase the rider but their blows land on the mount; enough damage in quick succession (the mount's `grip`)
+// throws the rider off. Wild mounts are seeded per chunk and leave when the chunk under them unloads, coming back
+// when it is rebuilt; the last mount you rode (`tamed`) stays where you left it. A taken or killed mount's chunk
+// never rolls another. Some goblins ride: hit one and it falls off, leaving the mount free to take.
+const mounts = []
+const MOUNTS = ['steed', 'drake', 'drake', 'steed'] // which kind roams each region
+const rolled = new Set() // chunks already rolled for a mount
+const gone = new Set() // chunks whose mount was taken or killed
+let tamed
+const seatAt = new THREE.Vector3()
+const fireMats = ['#f60', '#fd4'].map((color) => new THREE.MeshBasicMaterial({ color })) // the torch flame's colours
+const fireGeo = new THREE.BoxGeometry(0.28, 0.28, 0.28)
+function addMount(kind, seed, x, z) {
+  const m = new Actor(kind, seed)
+  m.pos.set(x, 0, z)
+  m.hp = m.maxHp = m.was = Math.round(m.m.vars.hp)
+  m.dir = R() * 7
+  m.wander = m.flee = m.cool = m.jolt = 0
+  mounts.push(m)
+  return m
+}
+function dropMount(m) {
+  if (m.rider) unseat(m.rider)
+  scene.remove(m.g)
+  m.m.root.traverse((o) => o.geometry?.dispose())
+  m.m.mat.dispose()
+  mounts.splice(mounts.indexOf(m), 1)
+  rolled.delete(m.home)
+}
+function seat(r, m) {
+  r.seat = m
+  m.rider = r
+  r.was = r.hp
+  if (r == player) {
+    village.stow(1)
+    if (tamed != m) gone.add(m.home)
+    tamed = m
+    m.flee = m.jolt = 0
+  } else {
+    r.base = r.run
+    r.run = m.m.vars.run * 0.7
+    r.reach += 1 // the mount's head is in the way
+  }
+}
+// take the rider off; `from` (a threat's position) makes it a fall, and the mount bolts away from it
+function unseat(r, from) {
+  const m = r.seat
+  r.seat = m.rider = r.floor = null
+  const a = m.dir + Math.PI / 2
+  r.pos.x = m.pos.x + Math.sin(a) * 1.3
+  r.pos.z = m.pos.z + Math.cos(a) * 1.3
+  if (r == player) village.stow(0)
+  else (r.run = r.base), (r.reach -= 1)
+  m.wander = 4
+  m.wa = null
+  if (from) {
+    r.play('hit')
+    r.vel.set(Math.sin(a) * 6, Math.cos(a) * 6)
+    m.flee = 3
+    m.from = [from.x, from.z]
+  }
+}
+const nearMount = () => mounts.find((m) => !m.rider && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
+function mountUp() {
+  if (player.seat) return unseat(player)
+  const m = player.hp > 0 && !village.in && nearMount()
+  if (m) seat(player, m)
+  hud()
+}
+// the attack button while riding: the mount's own attack, with damage, reach and cooldown from its model vars
+function buck() {
+  const m = player.seat
+  if (m.busy || m.cool > 0) return
+  m.play('attack')
+  m.cool = m.m.vars.cool
+  m.striking = true
+  beep(m.m.vars.burn ? 90 : 150, 0.3, 'sawtooth', 0.05, 0.5)
+}
+// riding: turn toward the stick at the mount's turn rate, run along its facing, with a little momentum
+function steer(dt, ix, iz, il) {
+  const m = player.seat
+  const v = m.m.vars
+  let sp = 0
+  if (il > 0.1) {
+    const c = Math.cos(camYaw)
+    const s = Math.sin(camYaw)
+    let a = Math.atan2(ix * c + iz * s, -ix * s + iz * c) - m.dir
+    a = Math.atan2(Math.sin(a), Math.cos(a))
+    m.dir += Math.max(-v.turn * dt, Math.min(v.turn * dt, a))
+    sp = v.run * Math.min(1, il) * Math.max(0.3, 1 - Math.abs(a) / 2.5) * (m.busy ? 0.4 : 1)
+  }
+  m.speed += (sp - m.speed) * Math.min(1, dt * 3)
+  m.move(Math.sin(m.dir) * m.speed * dt, Math.cos(m.dir) * m.speed * dt, dt)
+  player.speed = 0
+}
+// a drake's breath: a short cone of flame bits from the mouth, lit by the torch light
+function breathe(m) {
+  m.m.bones.mouth.getWorldPosition(seatAt)
+  for (let i = 0; i < 24; i++) {
+    const b = new THREE.Mesh(fireGeo, fireMats[i & 1])
+    const a = m.dir + (R() - 0.5) * m.m.vars.arc * 1.6
+    const s = 6 + R() * 5
+    b.position.copy(seatAt)
+    b.v = new THREE.Vector3(Math.sin(a) * s, 2 + R() * 2, Math.cos(a) * s)
+    b.life = 0.65
+    scene.add(b)
+    bits.push(b)
+  }
+  torchLight.position.copy(seatAt)
+  torchLight.intensity = 25
+}
+blockers.push((x, z, w) => (mounts.includes(w) && height(x, z) < WATER - 0.2 ? [w.pos.x, w.pos.z] : [x, z])) // no swimming mounts
+function herd(dt) {
+  // roll each newly built chunk once for a wild mount (about one chunk in 17)
+  for (const [key, ch] of chunks)
+    if (!rolled.has(key)) {
+      rolled.add(key)
+      const r = rng((hash(ch.cx, ch.cz, SEED + 9) * 4294967296) | 0)
+      if (gone.has(key) || r() > 0.06) continue
+      for (let i = 0; i < 5; i++) {
+        const x = (ch.cx + r()) * CH
+        const z = (ch.cz + r()) * CH
+        if (height(x, z) > WATER + 0.5 && !inTown(x, z, 6)) {
+          addMount(MOUNTS[region(x, z)], (r() * 1e6) | 0, x, z).home = key
+          break
+        }
+      }
+    }
+  for (const m of [...mounts]) {
+    const v = m.m.vars
+    const r = m.rider
+    const lost = m.was - m.hp
+    m.was = m.hp
+    m.cool -= dt
+    if (r == player) {
+      m.jolt = Math.max(0, m.jolt + lost - dt) // damage taken recently
+      if (m.jolt >= v.grip || m.hp <= 0) unseat(player, player.pos) // thrown
+    } else if (r) {
+      if (!foes.includes(r)) {
+        dropMount(m) // its goblin wandered off and despawned
+        continue
+      }
+      if (r.hp < r.was) unseat(r, player.pos) // knocked off
+    } else if (lost > 0) {
+      m.flee = 3
+      m.from = [player.pos.x, player.pos.z]
+    }
+    if (m.hp <= 0) {
+      m.dead += dt
+      m.update(dt, v.run)
+      m.g.scale.setScalar(Math.max(0.01, Math.min(1, 2.4 - m.dead)))
+      if (m.dead > 3) {
+        gone.add(m.home)
+        if (tamed == m) tamed = null
+        dropMount(m)
+      }
+      continue
+    }
+    if (m != tamed && !m.rider && !chunks.has(Math.floor(m.pos.x / CH) + ',' + Math.floor(m.pos.z / CH))) {
+      dropMount(m)
+      continue
+    }
+    if (m.rider == player) {
+      // steered in steer(); the blow lands partway through the attack clip
+      if (m.striking && m.once?.[0] == 'attack' && m.once[1] > m.m.clips.attack.d * v.at) {
+        m.striking = false
+        if (v.burn) breathe(m)
+        for (const e of foes) {
+          const dx = e.pos.x - m.pos.x
+          const dz = e.pos.z - m.pos.z
+          let a = Math.atan2(dx, dz) - m.dir
+          a = Math.atan2(Math.sin(a), Math.cos(a))
+          if (e.hp > 0 && Math.hypot(dx, dz) < v.reach + e.m.root.scale.x * 0.4 && Math.abs(a) < v.arc) {
+            hurt(e, v.dmg, m.pos, v.push)
+            if (v.burn) e.burn = v.burn
+          }
+        }
+      }
+    } else if (m.rider) {
+      const g = m.rider // a goblin steers; the mount carries it
+      m.pos.x = g.pos.x
+      m.pos.z = g.pos.z
+      m.dir = g.dir
+      m.speed = (g.speed / g.run) * v.run
+    } else {
+      // riderless: bolt from a threat, else graze and amble
+      let sp = 0
+      let a = m.dir
+      if (m.flee > 0) {
+        m.flee -= dt
+        a = Math.atan2(m.pos.x - m.from[0], m.pos.z - m.from[1])
+        sp = v.run * 0.8
+      } else if ((m.wander -= dt) < 0) {
+        m.wander = 3 + R() * 4
+        m.wa = R() < 0.5 ? null : R() * 7
+      } else if (m.wa != null) {
+        a = m.wa
+        sp = v.run * 0.15
+      }
+      a = Math.atan2(Math.sin(a - m.dir), Math.cos(a - m.dir))
+      m.dir += Math.max(-v.turn * dt, Math.min(v.turn * dt, a))
+      m.speed = sp
+      m.move(Math.sin(m.dir) * sp * dt, Math.cos(m.dir) * sp * dt, dt)
+    }
+    m.update(dt, v.run)
+    if (m.rider) {
+      // the rider's hip sits on the saddle socket
+      const s = m.rider
+      m.g.updateMatrixWorld(true)
+      m.m.bones.saddle.getWorldPosition(seatAt)
+      s.floor = seatAt.y - s.m.bones.hip.position.y * s.m.root.scale.y
+      if (s == player) {
+        s.pos.x = seatAt.x
+        s.pos.z = seatAt.z
+        s.dir = m.dir
+      }
+    }
+  }
+  if (player.seat) torchLight.intensity *= 1 - Math.min(1, dt * 6) // the breath's flash fades
+  // HUD: the mount's name and health while riding, or a prompt beside a free one
+  const t = player.seat || (player.hp > 0 && !village.in && nearMount())
+  $('rider').hidden = !t
+  if (t) {
+    $('mbar').hidden = !player.seat
+    $('mhp').style.width = (Math.max(0, t.hp) / t.maxHp) * 100 + '%'
+    $('mname').textContent = player.seat ? `${t.m.vars.name} the ${t.m.vars.kind} · R to get off` : `R · ride ${t.m.vars.name} the ${t.m.vars.kind}`
+  }
+}
 
 // ---------- monsters ----------
 const foes = []
@@ -475,6 +707,7 @@ function spawn(f) {
   e.wander = 0
   e.cool = 1
   foes.push(e)
+  if (kind == 'goblin' && R() < 0.2) seat(e, addMount(MOUNTS[region(x, z)], seedNext++, x, z)) // a goblin rider
 }
 for (let i = 0; i < 14; i++) spawn()
 
@@ -608,7 +841,7 @@ var village
 
   // colliders: houses (outside), the well, the fence, room walls and furniture (inside), townsfolk, and monsters kept out
   blockers.push((x, z, who) => {
-    if (foes.includes(who)) {
+    if (foes.includes(who) || mounts.includes(who)) {
       const dx = x - T.x
       const dz = z - T.z
       const d = Math.hypot(dx, dz) || 1
@@ -829,6 +1062,7 @@ addEventListener('keydown', (e) => {
   if (e.code.startsWith('Digit')) equip(+e.code[5] - 1)
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
+  if (e.code == 'KeyR') mountUp()
 })
 addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
@@ -836,6 +1070,7 @@ addEventListener('touchstart', (e) => {
   for (const t of e.changedTouches) {
     if (t.target.id == 'swap') equip(player.item + 1)
     else if (t.target.id == 'hit') attack()
+    else if (t.target.id == 'mnt') mountUp()
     else if (t.target.id == 'mute') continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
@@ -856,6 +1091,7 @@ addEventListener('touchend', (e) => {
 
 // ---------- combat ----------
 function attack() {
+  if (player.seat) return buck()
   if (player.busy || player.hp <= 0 || village?.in) return
   player.play(item.anim)
   player.struck = false
@@ -874,12 +1110,12 @@ function hurt(e, dmg, from, push) {
   if (e.hp <= 0) {
     e.play('death')
     e.dead = 0
-    if (e != player) {
+    if (foes.includes(e)) {
       player.kills++
       beep(330, 0.3, 'square', 0.05, 0.3)
     } else beep(110, 0.8, 'sawtooth', 0.08, 0.3)
   } else {
-    if (!(e == player && e.busy)) e.play('hit') // a hit doesn't cancel the player's swing
+    if (!((e == player || e == player.seat) && e.busy)) e.play('hit') // a hit doesn't cancel the player's swing or mount's attack
     beep(e == player ? 140 : 520, 0.12, 'square', 0.05, 0.5)
   }
   hud()
@@ -900,7 +1136,8 @@ function frame() {
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
   const run = 6
-  if (il > 0.1 && alive) {
+  if (player.seat) steer(dt, ix, iz, il)
+  else if (il > 0.1 && alive) {
     ix /= Math.max(1, il)
     iz /= Math.max(1, il)
     const c = Math.cos(camYaw)
@@ -918,7 +1155,7 @@ function frame() {
   // the blow lands partway through the swing
   if (player.once && player.once[0] == item.anim && !player.struck && player.once[1] > player.m.clips[item.anim].d * 0.45) {
     player.struck = true
-    for (const e of foes) {
+    for (const e of [...foes, ...mounts.filter((m) => !m.rider)]) {
       if (e.hp <= 0) continue
       const dx = e.pos.x - player.pos.x
       const dz = e.pos.z - player.pos.z
@@ -931,6 +1168,7 @@ function frame() {
       }
     }
   }
+  herd(dt)
   player.update(dt, run)
   player.safe -= dt
   if (!alive && (player.dead += dt) > 3) {
@@ -1021,7 +1259,7 @@ function frame() {
     e.speed = sp
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive) hurt(player, e.dmg, e.pos, 5)
+      if (d < e.reach + 0.6 && alive) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
     }
     e.update(dt, e.run)
   }
@@ -1057,9 +1295,10 @@ function frame() {
   for (const k in near) near[k] += ((close[k] || 0) - near[k]) * Math.min(1, dt * (close[k] ? 2 : 0.5))
   audio.mood(day, near)
 
-  // camera: a high three-quarter view that trails the player
+  // camera: a high three-quarter view that trails the player, pulled back while riding
   const target = player.pos
-  fwd.set(Math.sin(camYaw) * 7, 7.5, Math.cos(camYaw) * 7)
+  const back = player.seat ? 1.35 : 1
+  fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back)
   camera.position.lerp(fwd.add(target), clock.elapsedTime < 0.2 ? 1 : Math.min(1, dt * 5))
   camera.lookAt(target.x, target.y + 1, target.z)
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
@@ -1075,4 +1314,4 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, height, region, grow, drop } } // for play-testing from the console
+window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, height, region, grow, drop } } // for play-testing from the console
