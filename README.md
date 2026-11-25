@@ -177,7 +177,7 @@ The file follows the models' format choice ([docs/json-vs-dsl.md](docs/json-vs-d
 named keys, because under surprisal the keys are nearly free and tell the model what each number is. The note patterns
 stay strings: a pattern is the notation itself, the tokens are letters rather than numbers, and one string per part keeps
 the bars readable. (An earlier version was a line-based text format with the same patterns; the JSON compiles to
-identical notes. Neither was measured under surprisal.) Abridged:
+identical notes and packs smaller: 392 → 265 bytes for the score alone at surprisal -1, despite being 60% bigger raw.) Abridged:
 
 ```json
 {
@@ -255,8 +255,8 @@ see it, and a mixed pack stacks its parts:
 The parts are written in chord tones, so they fit every day and night section. Voices tagged `calm` (the arpeggio) duck
 out while any monster is near. The parts sit in the mid and high range on purpose: a first version used one shared
 fight layer that was mostly bass, which laptop speakers barely play, so it went unheard. Audio starts on the first key, click or touch (browsers require a gesture); muting suspends the AudioContext, so the scheduler pauses too,
-and the choice is remembered. The music module, score and hooks add about 13 KB raw to the build, roughly 1.3 KB at
-the ~90% surprisal rule of thumb (assumed, not measured).
+and the choice is remembered. The music module, score and hooks add 12,985 bytes raw to the build and **1,044 bytes at
+surprisal -1** (the whole game goes from 3,068 to 4,112 bytes). With the old text score the music cost 1,204.
 
 ## Size
 
