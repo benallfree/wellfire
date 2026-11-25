@@ -513,6 +513,46 @@ indentation and repeated keys. The rest is game code +9.1 KB and HTML/CSS +0.3 K
 that's roughly 3.5 KB shipped, the largest single feature so far. Trimming parts (socks, horn, spines, stirrups) would
 be the first cut if space gets tight.
 
+## Gold
+
+| | |
+|---|---|
+| ![Coins spilling from slimes and a goblin by day, one being pulled to the player](docs/gold-day.jpg) | ![Coins spinning on the ground at dusk, lit by the torch](docs/gold-dusk.jpg) |
+
+Every kill spills a few gold coins. What it pays is data plus a seeded roll:
+
+- **Base by kind:** a `gold` var on each monster in `models.json` (slime 2, bat 2, spider 4, goblin 5), scaled by the
+  creature's size the same way its hit points are.
+- **Variance:** ×0.7 to ×1.3, from `hash(monster seed, kill count)`, so it's seeded per kill.
+- **Night:** up to ×1.6 at full dark, on top of the bigger night crowds.
+- **Region:** `PAY` next to `FOES`/`CROWD` in `game.js`: meadow ×1, forest ×1.2, rocky hills ×1.4, lakes ×1.1 (the
+  tougher mixes pay more).
+
+The total is split over up to six coins (the `coin` model in `models.json`: two flat cylinders, baked once and shared).
+They burst out and bounce, then sit spinning with a soft pulsing glow. Within 3.5 units they're pulled to you, faster
+the closer they get, and pay out with a two-tone "ching" and a gold sparkle. A coin blinks after 40 s and is gone at
+45 s, or as soon as the chunk under it unloads. The HUD shows a coin icon and your purse next to the kills, popping on
+each pickup.
+
+The purse is kept in `localStorage` (`warriorGold`, every access in try/catch), so it survives a reload. **Falling costs
+a tenth of your purse** (rounded down; the counter flashes red). It's enough that dying matters, and mild because you
+also lose your ground and walk back from the start. `game.gold` reads or sets it from the console, and `game.coins`
+lists the live coins.
+
+**Spending it later** (not built; villages are still changing):
+
+- **Merchant** in the village square: buy the axe and the torch instead of starting with all three, plus upgrades
+  (sharper, longer reach, longer burn). It fits the existing item `vars` (`dmg`, `reach`, `burn`) as a price list.
+- **Potions:** a quick heal for a few coins, carried as a stack and drunk with a key. It's the natural sink for night
+  runs.
+- **Inn:** pay to sleep, which heals fully and skips to morning (moves the day clock), and maybe sets the respawn point
+  to that village.
+- **Healer:** pay to have your wounds healed at once instead of waiting for the slow regen.
+- Prices could scale with distance from the start, matching the richer, tougher regions further out.
+
+Cost: about 4.2 KB raw (game code +3.2 KB, models +0.8 KB of pretty JSON, HTML/CSS +0.3 KB). Not measured with
+surprisal; at ~90% that's roughly 0.4 KB shipped.
+
 ## Size
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal

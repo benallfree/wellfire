@@ -315,7 +315,12 @@ class Actor {
 
 // ---------- HUD ----------
 const $ = (id) => document.getElementById(id)
+let gold = 0 // kept in localStorage across reloads
+try {
+  gold = +localStorage.warriorGold || 0
+} catch {}
 function hud() {
+  $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
@@ -1023,6 +1028,80 @@ function burst(p, color, n = 8) {
   }
 }
 
+// ---------- gold: a kill spills coins that bounce, sit spinning, and drift to the player when close ----------
+// A kill pays its kind's "gold" var (models.json) x its size x a seeded roll x up to 1.6 at night x its region.
+const PAY = [1, 1.2, 1.4, 1.1] // per region: meadow, forest, rocky hills, lakes
+const coins = []
+const coinGeo = bake(make(lib, 'coin', 1))
+const coinMat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#5a3c00' })
+function loot(e) {
+  const roll = hash(e.seed, player.kills, SEED + 5)
+  const g = Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)]))
+  const n = Math.min(g, 6)
+  for (let i = 0; i < n; i++) {
+    const c = new THREE.Mesh(coinGeo, coinMat)
+    const a = R() * 7
+    const s = 1.5 + R() * 2.5
+    c.castShadow = true
+    c.position.set(e.pos.x, e.pos.y + 0.6, e.pos.z)
+    c.rotation.y = a
+    c.v = new THREE.Vector3(Math.cos(a) * s, 4 + R() * 3, Math.sin(a) * s)
+    c.worth = Math.floor(g / n) + (i < g % n)
+    c.age = 0
+    scene.add(c)
+    coins.push(c)
+  }
+}
+function earn(n) {
+  gold = Math.max(0, gold + n)
+  try {
+    localStorage.warriorGold = gold
+  } catch {}
+  hud()
+  $('gold').animate([{ transform: 'scale(1.6)', color: n < 0 ? '#f55' : '#fff' }, { transform: 'scale(1)' }], n < 0 ? 900 : 250)
+}
+function pickups(dt) {
+  const p = player.pos
+  coinMat.emissive.setRGB(0.35, 0.24, 0).multiplyScalar(0.7 + Math.sin(clock.elapsedTime * 4) * 0.3) // a soft glow pulse
+  for (const c of [...coins]) {
+    const q = c.position
+    const dx = p.x - q.x
+    const dy = p.y + 0.8 - q.y
+    const dz = p.z - q.z
+    const d = Math.hypot(dx, dy, dz)
+    c.age += dt
+    if (player.hp > 0 && d < 3.5 && c.age > 0.5) {
+      // magnet: faster the closer it gets
+      const sp = Math.min(d, (5 + (3.5 - d) * 5) * dt) / d
+      q.x += dx * sp
+      q.y += dy * sp
+      q.z += dz * sp
+      if (d < 0.6) {
+        earn(c.worth)
+        beep(1568, 0.06, 'square', 0.03, 1) // ching
+        setTimeout(() => beep(2093, 0.3, 'triangle', 0.05, 0.98), 60)
+        burst(q.clone().setY(q.y - 0.6), '#fd4', 5)
+        c.age = 99
+      }
+    } else {
+      // fall and bounce, then rest on the ground
+      const floor = Math.max(WATER, height(q.x, q.z)) + 0.22
+      c.v.y -= 15 * dt
+      q.addScaledVector(c.v, dt)
+      if (q.y < floor) {
+        q.y = floor
+        c.v.set(c.v.x * 0.5, Math.abs(c.v.y) > 1.5 ? -c.v.y * 0.4 : 0, c.v.z * 0.5)
+      }
+    }
+    c.rotation.y += dt * 3
+    c.visible = c.age < 40 || (c.age * 8) & 1 // blink before it goes
+    if (c.age > 45 || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) {
+      scene.remove(c)
+      coins.splice(coins.indexOf(c), 1)
+    }
+  }
+}
+
 // ---------- sound: music compiled from the score text, plus a few synthesized blips ----------
 const audio = jukebox(score($('score').textContent))
 function muteButton() {
@@ -1112,8 +1191,12 @@ function hurt(e, dmg, from, push) {
     e.dead = 0
     if (foes.includes(e)) {
       player.kills++
+      loot(e)
       beep(330, 0.3, 'square', 0.05, 0.3)
-    } else beep(110, 0.8, 'sawtooth', 0.08, 0.3)
+    } else {
+      beep(110, 0.8, 'sawtooth', 0.08, 0.3)
+      if (e == player) earn(-Math.floor(gold * 0.1)) // falling costs a tenth of your purse (a mount's fall doesn't)
+    }
   } else {
     if (!((e == player || e == player.seat) && e.busy)) e.play('hit') // a hit doesn't cancel the player's swing or mount's attack
     beep(e == player ? 140 : 520, 0.12, 'square', 0.05, 0.5)
@@ -1264,6 +1347,7 @@ function frame() {
     e.update(dt, e.run)
   }
 
+  pickups(dt)
   for (const b of [...bits]) {
     b.life -= dt
     b.v.y -= 15 * dt
@@ -1315,3 +1399,5 @@ hud()
 frame()
 
 window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, height, region, grow, drop } } // for play-testing from the console
+Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
+window.game.coins = coins
