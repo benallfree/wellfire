@@ -567,7 +567,10 @@ const MAP = 160 // canvas pixels
 const UPP = 2 // world units per map pixel
 const CELL = 8 // reveal cell, in units
 const SIGHT = 36 // reveal radius, in units
-const seen = new Set()
+const seen = new Set(kept('warriorSeen', '').split(' ')) // kept as one space-separated string of cell keys
+let saved = seen.size
+const saveSeen = () => (keep('warriorSeen', [...seen].join(' ')), (saved = seen.size))
+addEventListener('pagehide', saveSeen)
 const tiles = new Map()
 const trail = []
 const mapc = $('map').getContext('2d')
@@ -695,6 +698,7 @@ function minimap() {
         const t = tiles.get(Math.floor((i * CELL) / CH) + ',' + Math.floor((j * CELL) / CH))
         if (t) paint(t, i, j)
       }
+    seen.size > saved + 99 && saveSeen()
     const last = trail[trail.length - 1]
     if (!last || Math.hypot(last[0] - x, last[1] - z) > 6) trail.push([x, z]) > 300 && trail.shift()
   }
