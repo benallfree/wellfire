@@ -193,7 +193,12 @@ end screen.** Reasons:
 **Fallback if bytes are tight: buy the crown (option 2), ~55 compressed with the end screen.** It is cheap and ties
 gold, night pay and the death penalty together, but it gives no reason to explore.
 
-## Next step
+## Status
 
-Ben picks an option (and the twist, and N). Then: build it on this branch, measure with surprisal -1, commit, and
-wait for approval before merging.
+Ben picked the star-beacons variant. It is built on this branch: see "The goal: beacons for the star" in the README.
+Changes from the plan made while building it:
+
+- **Aiming camera.** The chase camera pitches about 22° down, so the sky is barely on screen. Holding the mirror, the
+  camera looks along the beam, and a `✦` on the minimap rim shows the star's way.
+- **The show.** During the light show the camera turns up to the star.
+- **Flint rocks.** About one rock in eight glints, not one in fifteen.

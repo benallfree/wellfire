@@ -339,6 +339,10 @@ for (const k in felled) {
   for (const i in felled[k]) if (Date.now() - felled[k][i] > REGROW) delete felled[k][i]
   if (!Object.keys(felled[k]).length) delete felled[k]
 }
+// flint: about one rock in eight glints. Struck with the axe it gives a flint, and the glint (kept in `felled` as
+// "f" + index) comes back after REGROW like a tree.
+const glint = new THREE.OctahedronGeometry(0.16)
+const glintMat = new THREE.MeshBasicMaterial({ color: '#bdf' })
 function grow(cx, cz) {
   const R = rng((hash(cx, cz, SEED + 4) * 4294967296) | 0)
   const key = cx + ',' + cz
@@ -362,6 +366,7 @@ function grow(cx, cz) {
   scene.add(mesh)
   const inst = kit.map(() => [])
   const trees = [] // colliders: [x, z, radius]
+  const flints = [] // [x, z, glint mesh]
   const o = new THREE.Object3D()
   for (let i = 0; i < 70; i++) {
     const x = x0 + R() * CH
@@ -382,8 +387,15 @@ function grow(cx, cz) {
     const m = o.matrix.clone()
     inst[k * 4 + v].push(m)
     if (KINDS[k][1]) trees.push(k < 2 ? [x, z, KINDS[k][1] * s, i, k * 4 + v, m, key] : [x, z, KINDS[k][1] * s]) // pines and oaks can be felled (see wood)
+    if (k == 2 && turn < 0.9 && !(Date.now() - (felled[key]?.['f' + i] || 0) < REGROW)) {
+      const g = new THREE.Mesh(glint, glintMat)
+      g.position.set(x, h + 0.5 + s * 0.5, z)
+      g.i = i
+      mesh.add(g) // goes when the chunk's ground does
+      flints.push(g)
+    }
   }
-  chunks.set(key, { cx, cz, mesh, inst, trees })
+  chunks.set(key, { cx, cz, mesh, inst, trees, flints, key })
   dirty = true
 }
 function drop(key) {
@@ -510,20 +522,28 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray: the weapons, then every kind of goods (wood now; potions or loot later add a GOODS entry and a use).
 // Number keys or a tap pick a slot: a weapon is equipped, goods are used. The bag is kept in localStorage.
-const ICON = { sword: '🗡️', axe: '🪓', torch: '🔥', wood: '🪵' }
-const GOODS = { wood: () => launch() }
-const bag = kept('warriorBag', { wood: 0 })
+const ICON = { sword: '🗡️', axe: '🪓', torch: '🔥', wood: '🪵', flint: '🪨' }
+const GOODS = { wood: () => launch(), flint: () => craft() }
+const bag = kept('warriorBag', {})
+bag.wood ||= 0
+bag.flint ||= 0
+bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
+// beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star]
+const GOAL = 5
+const beacon = kept('warriorBeacons', {})
+const done = () => Object.values(beacon).filter((b) => b[2]).length
 function tray() {
   $('tray').innerHTML = [...ITEMS, ...Object.keys(GOODS)]
-    .map((k, i) => `<b data-s=${i} class=${i == player.item ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k]}<i>${i + 1}</i>${k in GOODS ? `<u>${bag[k] || 0}</u>` : ''}</b>`)
+    .map((k, i) => `<b data-s=${i} class=${i == player.item ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k]}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
     .join('')
 }
 function slot(i) {
-  if (i < ITEMS.length) equip(i)
+  if (ITEMS[i] == 'torch' && ((well && !beacon[well.k]) || !bag.torch)) setTorch()
+  else if (i < ITEMS.length) equip(i)
   else GOODS[Object.keys(GOODS)[i - ITEMS.length]]?.()
 }
 function gain(k, n) {
@@ -629,9 +649,9 @@ function minimap() {
   flat.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
   // villages whose centre you've seen: a ring on the map, the name upright beside it
   const towns = sites(x, z, 2).filter((t) => seen.has(Math.floor(t.x / CELL) + ',' + Math.floor(t.z / CELL)))
-  flat.strokeStyle = '#6b4a2a'
   flat.lineWidth = 2
   for (const t of towns) {
+    flat.strokeStyle = beacon[t.k] ? (beacon[t.k][2] ? '#fd4' : '#f80') : '#6b4a2a' // lit orange, on the star gold
     flat.beginPath()
     flat.arc(sx(t.x), sz(t.z), t.r / UPP, 0, 7)
     flat.stroke()
@@ -661,6 +681,9 @@ function minimap() {
     mapc.fillText(t.name, MAP / 2 + dx * c - dz * s, MAP / 2 + dx * s + dz * c - t.r / UPP - 3)
   }
   mapc.fillText('N', MAP / 2 + Math.sin(camYaw) * 68, MAP / 2 - Math.cos(camYaw) * 68 + 4) // north, on the rim
+  const sl = Math.hypot(STAR.x, STAR.z) / 68
+  mapc.fillStyle = '#fd4'
+  mapc.fillText('✦', MAP / 2 + (STAR.x * c - STAR.z * s) / sl, MAP / 2 + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
   $('pos').textContent = `${REGIONS[region(x, z)]} · ${x | 0}, ${z | 0} · ${Math.hypot(x - home.x, z - home.z) | 0} m from start`
 }
 
@@ -686,6 +709,7 @@ function torch() {
 }
 function light() {
   if (player.swim || player.hp <= 0) return
+  if (!bag.torch) return craft()
   if (!lit && fuel <= 0) {
     if (!bag.wood) return say('Your torch is spent: relighting it takes a wood')
     gain('wood', -1)
@@ -697,6 +721,7 @@ function light() {
 }
 function equip(i) {
   player.item = (i + ITEMS.length) % ITEMS.length
+  if (ITEMS[player.item] == 'torch' && !bag.torch) player.item = 0 // no torch left to hold
   const p = hold(lib, player.m, 'handR', ITEMS[player.item])
   item = p.vars
   if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
@@ -773,6 +798,8 @@ function unseat(r, from) {
 }
 const nearMount = () => mounts.find((m) => !m.rider && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
 function mountUp() {
+  if (aim) return (aim = null)
+  if (well && beacon[well.k] && !beacon[well.k][2]) return (aim = well)
   if (player.boat) return ashore()
   if (player.seat) return unseat(player)
   if (nearBoat()) return board()
@@ -1580,6 +1607,144 @@ function boating(dt) {
   }
 }
 
+// ---------- beacons: the goal. Set a torch in five villages' wells and aim each beam at the star ----------
+// The star hangs at one fixed direction, as if infinitely far, so the same aim is right from every village. At a
+// well, slot 3 sets your torch in the beacon (a new torch takes a wood and a flint). R takes the mirror: turning swings
+// the beam, W/S tilt it, and the camera looks along it. The beam warms from white to gold as it nears the star and
+// locks within LOCK radians. Beams are drawn from anywhere: a far one is moved toward the camera and shrunk by the same
+// factor, which leaves its picture unchanged but keeps it inside the camera's range (it is also fattened, to be seen). Parallel beams all meet at their
+// vanishing point, the star. The fifth lock starts the light show and the end screen.
+const LOCK = 0.05
+const STAR = new THREE.Vector3().setFromSphericalCoords(1, (50 + hash(3, 4, SEED + 9) * 25) * DEG, hash(5, 6, SEED + 9) * 7)
+const star = new THREE.Mesh(new THREE.OctahedronGeometry(1), new THREE.MeshBasicMaterial({ color: '#fff6c0', fog: false }))
+scene.add(star)
+const beamGeo = new THREE.CylinderGeometry(1.5, 0.45, 1, 8, 1, true).translate(0, 0.5, 0)
+const UP = new THREE.Vector3(0, 1, 0)
+const ray = new THREE.Vector3()
+const beams = new Map() // site key -> { T, mesh, m }: m is the fire and mirror, built only near
+let aim = null // the site whose mirror you hold
+let well = null // the site whose well you stand at
+let show = 0 // seconds into the light show
+const siteAt = (k) => site(...k.split(',').map(Number))
+const top = (T) => new THREE.Vector3(T.x, T.y + 3.5, T.z) // the mirror, over the well's roof
+const dir = (b) => ray.setFromSphericalCoords(1, b[1], b[0])
+function craft() {
+  if (!bag.wood || !bag.flint) return say('A torch takes a wood and a flint: strike a glinting rock with the axe')
+  gain('wood', -1)
+  gain('flint', -1)
+  gain('torch', 1)
+  fuel = FUEL
+  say('You made a torch')
+}
+function setTorch() {
+  if (!bag.torch) return craft()
+  beacon[well.k] = [player.dir, 1.2, 0]
+  keep('warriorBeacons', beacon)
+  lit = 0
+  fuel = FUEL
+  gain('torch', -1)
+  equip(player.item)
+  beep(200, 0.5, 'sawtooth', 0.05, 3)
+  say(`${well.name}'s beacon burns · R: aim its mirror at the star`)
+}
+// strike a glinting rock in front with the axe
+function knap() {
+  for (const ch of chunks.values())
+    for (const g of ch.flints) {
+      const dx = g.position.x - player.pos.x
+      const dz = g.position.z - player.pos.z
+      if (g.visible && Math.hypot(dx, dz) < item.reach + 1 && Math.cos(Math.atan2(dx, dz) - player.dir) > 0.4) {
+        g.visible = false
+        ;(felled[ch.key] ||= {})['f' + g.i] = Date.now()
+        keep('warriorFelled', felled)
+        gain('flint', 1)
+        burst(g.position, '#bdf', 10)
+        beep(1400, 0.08, 'square', 0.05, 0.6)
+      }
+    }
+}
+// holding the mirror: turn and tilt the beam
+function aiming(dt, ix, iz) {
+  const b = beacon[aim.k]
+  b[0] -= ix * dt * 0.6 + drag * 0.3
+  b[1] = Math.min(1.5, Math.max(0.1, b[1] + iz * dt * 0.4))
+  player.dir = b[0] // the warrior, and so the minimap, face the way the beam points
+  player.move(0, 0, dt)
+  player.speed = 0
+  if (dir(b).angleTo(STAR) > LOCK) return
+  b[2] = 1
+  keep('warriorBeacons', beacon)
+  const n = done()
+  for (let i = 0; i < (n < GOAL ? 4 : 8); i++) setTimeout(() => beep(523 * 1.26 ** (i % 4) * (i > 3 ? 2 : 1), 0.6, 'triangle', 0.06, 1), i * 130)
+  burst(top(aim), '#fd4', 24)
+  say(`${aim.name}'s beam meets the star · ✦ ${n}/${GOAL}`)
+  if (n == GOAL) show = 0.01
+  aim = null
+  hud()
+}
+function shine(dt) {
+  const p = player.pos
+  const c = camera.position
+  const t = clock.elapsedTime
+  if (aim || show) {
+    // the camera stands behind the mirror and looks along the beam; in the show, it looks up at the star
+    const o = aim ? top(aim) : p.clone().setY(p.y + 3)
+    aim ? dir(beacon[aim.k]) : ray.copy(STAR)
+    camera.position.lerp(o.clone().addScaledVector(ray, -6).setY(o.y + 1), Math.min(1, dt * 4))
+    camera.lookAt(o.addScaledVector(ray, 60))
+  }
+  star.position.copy(c).addScaledVector(STAR, 150)
+  star.scale.setScalar((2.5 + (1 - day) * 1) * (1 + Math.min(show, 3)) * (1 + Math.sin(t * 5) * 0.1))
+  star.rotation.y = t
+  glintMat.color.setHSL(0.58, 0.6, 0.65 + Math.sin(t * 6) * 0.25)
+  for (const k in beacon) {
+    let o = beams.get(k)
+    if (!o) beams.set(k, (o = { T: siteAt(k), mesh: new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, fog: false })) })), scene.add(o.mesh)
+    const { T, mesh } = o
+    const b = beacon[k]
+    const base = top(T)
+    const d = base.distanceTo(c)
+    const s = Math.min(1, 12 / d)
+    const w = s * Math.max(1, d / 80) * (1 + Math.min(show, 2) * 0.4 * (1 + Math.sin(t * 8))) // far beams fattened to stay visible
+    mesh.position.copy(c).lerp(base, s)
+    mesh.scale.set(w, 400, w) // (long enough to run out past the camera's range at any distance)
+    mesh.quaternion.setFromUnitVectors(UP, dir(b))
+    const heat = b[2] ? 1 : (1 - ray.angleTo(STAR) / Math.PI) ** 6
+    mesh.material.color.setHSL(show ? (t * 0.4 + d * 0.002) % 1 : 0.13, heat, 0.85 - heat * 0.3)
+    mesh.material.opacity = b[2] ? 0.7 : 0.45
+    if (d < 150 && !o.m) scene.add((o.m = make(lib, 'beacon')).root)
+    if (d > 170 && o.m) scene.remove(o.m.root), o.m.root.traverse((g) => g.geometry?.dispose()), o.m.mat.dispose(), (o.m = null)
+    if (o.m) {
+      pose(o.m, [['idle', t, 1]]) // (resets the root too)
+      o.m.root.position.set(T.x, T.y + 2.45, T.z)
+      o.m.root.updateMatrixWorld()
+      o.m.bones.mirror.lookAt(base.add(ray.multiplyScalar(-1)).add(UP).add(UP)) // tipped halfway between the fire and the beam
+    }
+  }
+  // the well you stand at, and what it wants
+  const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
+  if (T && T != well) {
+    const b = beacon[T.k]
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? '3: set your torch in the beacon' : 'A beacon needs a torch: a wood and a flint, then 3')
+  }
+  well = T || null
+  if (!well) aim = null
+  if (show) {
+    show += dt
+    sky.setHSL((t * 0.1) % 1, 0.7, 0.2 + day * 0.3)
+    scene.fog.color.copy(sky)
+    if (R() < dt * 14) burst(ray.copy(STAR).multiplyScalar(16).add(c).add({ x: R() * 16 - 8, y: R() * 8 - 4, z: R() * 16 - 8 }), new THREE.Color().setHSL(R(), 1, 0.6), 14) // fireworks round the star
+    if (show > 4 && show - dt <= 4) {
+      const e = document.createElement('div')
+      e.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;text-align:center;font-size:20px;line-height:2;background:#0007;text-shadow:0 2px 4px #000'
+      e.innerHTML = `<b style="font-size:40px;color:#fd4">✦ The beacons meet the star ✦</b>${Object.keys(beacon).filter((k) => beacon[k][2]).map((k) => siteAt(k).name).join(' · ')}<br>${gold} gold · ${player.kills} kills · ${Math.hypot(p.x - home.x, p.z - home.z) | 0} m from where you began<small style="opacity:.7">tap to wander on</small>`
+      e.onpointerdown = () => e.remove()
+      document.body.append(e)
+    }
+    if (show > 14) show = 0
+  }
+}
+
 // ---------- sound: music compiled from the score text, plus a few synthesized blips ----------
 const audio = jukebox(score($('score').textContent))
 function muteButton() {
@@ -1741,7 +1906,8 @@ function frame() {
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
   const run = 6
-  if (player.boat) row(dt, ix, iz)
+  if (aim) aiming(dt, ix, iz)
+  else if (player.boat) row(dt, ix, iz)
   else if (player.seat) {
     steer(dt, ix, iz, il)
     player.dir = player.seat.dir
@@ -1807,7 +1973,7 @@ function frame() {
         if (fire) e.burn = item.burn
       }
     }
-    if (item.chop) chop()
+    if (item.chop) chop(), knap()
   }
   herd(dt)
   boating(dt)
@@ -2006,11 +2172,15 @@ function frame() {
     fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
     fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
-  camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
-  if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
-  else camera.lookAt(target.x, target.y + 1, target.z)
+  if (!aim && !show) {
+    // (holding a beacon's mirror, or in the light show, shine() runs the camera)
+    camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
+    if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
+    else camera.lookAt(target.x, target.y + 1, target.z)
+  }
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
   sun.target.position.copy(target)
+  shine(dt)
 
   stream(target.x, target.z)
   minimap()
@@ -2021,8 +2191,9 @@ function frame() {
 }
 hud()
 frame()
+if (!done()) say(`Set torches in ${GOAL} villages' beacons and aim them at the star ✦`)
 
 window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, depth, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.coins = coins
-Object.assign(window.game, { bag, felled, falling, launch, board, ashore, boat: () => boat })
+Object.assign(window.game, { bag, felled, falling, launch, board, ashore, boat: () => boat, beacon, STAR, craft, aim: () => aim, well: () => well })

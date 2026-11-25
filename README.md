@@ -14,8 +14,9 @@ Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serve
 need a network connection.)
 
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
-Space or J attack (the axe also chops trees) · F or Tab swap the item in hand · 1-4 pick a tray slot · B build a
-boat at the water · R ride, or board and leave the boat · C switches to the old free camera (WASD moves
+Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-5 pick a tray
+slot (3 at a well sets your torch in its beacon) · B build a boat at the water · R ride, board and leave the boat,
+or take a beacon's mirror (then turn and W/S tilt) · C switches to the old free camera (WASD moves
 relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
 [Chase camera](#chase-camera).
@@ -862,6 +863,43 @@ neither needs a torch. The minimap and HUD are unchanged and stay readable.
 
 Cost: about +2.9 KB raw (`game.js` +2,369 bytes, about 0.9 KB of it comments; `compiler.js` +456; `index.html` +64;
 `models.json` +2 bytes minified, eight colours gaining a `!`). Estimate only: surprisal wasn't run here.
+
+## The goal: beacons for the star
+
+The game has an ending now. One bright star hangs at a fixed, seeded direction in the sky (about 15-40° up), as if
+infinitely far away, so the right aim is the same from every village. Set your torch in the beacon on five villages'
+wells, turn each mirror until its beam meets the star, and the five beams start a light show and the end screen. The
+design discussion and the other options weighed are in [docs/goal-ideas.md](docs/goal-ideas.md).
+
+- **Setting a beacon.** At a well (within 3.5 units), slot 3 sets your torch in it. The torch is gone from the tray
+  (the torch slot now has a count; the first one is free), a fire bowl and a mirror (the `beacon` model) appear on
+  the well's roof, and a pale beam rises. Tips at the well say what it needs.
+- **Aiming.** R takes the mirror (R again, or walking off, lets go). The camera stands behind the mirror and looks
+  along the beam. Turning (A/D, drag) swings it round, W/S tilt it, and the warrior and the minimap turn with it. A
+  `✦` on the minimap rim always shows the star's way. The beam warms from white to gold as it nears the star and
+  locks within 3° (0.05 rad) with a chime and a burst. A locked beacon stays locked.
+- **A new torch.** About one rock in eight has a glinting crystal over it. Swing the axe at it for a flint (the glint
+  comes back after the same 30 minutes as a felled tree, kept in `warriorFelled` as `"f" + index`). With a wood and a
+  flint, slot 3 (or tapping the flint) makes a torch. T with no torch says the recipe.
+- **Beams from anywhere.** Every beam is drawn wherever you are, not only near its village. A far beam is moved
+  toward the camera and shrunk by the same factor (12 / distance), which leaves its picture unchanged but keeps it
+  inside the camera's 200-unit range. It is drawn long enough to run out past that range and fattened with distance
+  so it stays visible. Because the beams are parallel, they all meet at their vanishing point, the star: the locked
+  beams are guides that your new beam has to join. At night they are the brightest things in the world.
+- **Progress.** `✦ n/5` in the info line, and village rings on the minimap turn orange when lit and gold when on the
+  star.
+- **The light show.** The fifth lock turns the camera up to the star. The beams pulse and cycle colours, the star
+  swells, the sky flushes through hues, and sparks burst round the star. After 4 s the end screen lists the five
+  villages in the order you set them, your gold, kills and distance from the start. A tap dismisses it and the world
+  goes on.
+- **Saved.** `localStorage.warriorBeacons` holds `{ siteKey: [azimuth, angle from straight up, locked] }`. Torches and
+  flint are in the bag.
+
+Cost: about +10 KB raw. `game.js` is +9,082 bytes (83,956 to 93,038), about 1.4 KB of it whole-line comments.
+`models.json` gains the `beacon` model (969 bytes minified), and `index.html` +4. That is far more than the 1.7 KB raw
+estimated in the design note: the far-beam drawing, the aiming and show cameras, the end screen, the prompts and the
+crafting all grew. At the tray-and-boat rate (about 11 raw bytes per shipped byte) it is roughly +0.8-0.9 KB shipped.
+That's an estimate: surprisal wasn't run.
 
 ## Size
 

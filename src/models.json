@@ -7322,5 +7322,162 @@
         ]
       }
     }
+  },
+  "beacon": {
+    "bones": [
+      {
+        "name": "flame",
+        "parent": "root",
+        "position": [
+          0,
+          0.2,
+          0
+        ]
+      },
+      {
+        "name": "mirror",
+        "parent": "root",
+        "position": [
+          0,
+          1,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "555",
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "size": [
+          0.32,
+          0.22,
+          0.18
+        ],
+        "segments": 8
+      },
+      {
+        "shape": "ball",
+        "bone": "flame",
+        "color": "f60!",
+        "position": [
+          0,
+          0.15,
+          0
+        ],
+        "size": [
+          0.22,
+          0.38,
+          0.22
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "flame",
+        "color": "fd4!",
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "size": [
+          0.13,
+          0.26,
+          0.13
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "6b4423",
+        "position": [
+          0.4,
+          0.55,
+          0
+        ],
+        "size": [
+          0.06,
+          0.9,
+          0.06
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "mirror",
+        "color": "a07a30",
+        "position": [
+          0,
+          0,
+          -0.02
+        ],
+        "size": [
+          0.4,
+          0.03,
+          0.4
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "segments": 12
+      },
+      {
+        "shape": "cyl",
+        "bone": "mirror",
+        "color": "e8f0ff!",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.35,
+          0.04,
+          0.35
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "segments": 12
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 0.3,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "flame",
+            "channel": "s",
+            "keys": [
+              0,
+              0.25,
+              -0.1,
+              0.15
+            ]
+          },
+          {
+            "bone": "flame",
+            "channel": "rz",
+            "keys": [
+              0,
+              12,
+              -8
+            ]
+          }
+        ]
+      }
+    }
   }
 }
