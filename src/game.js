@@ -1541,7 +1541,7 @@ function row(dt, ix, iz) {
 function boating(dt) {
   if (!boat) return
   const b = boat.g
-  b.position.y = WATER - 0.12 + Math.sin(clock.elapsedTime * 2) * 0.05
+  b.position.y = WATER - 0.03 + Math.sin(clock.elapsedTime * 2) * 0.04 // the floor (top 0.1) stays above the water
   b.rotation.z = Math.sin(clock.elapsedTime * 1.3) * 0.04
   pose(boat, [['row', (boat.time += dt * Math.abs(boat.v) * 0.5), 1]])
   if (player.boat) {
