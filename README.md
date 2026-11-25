@@ -21,6 +21,7 @@ On a touch screen: drag anywhere to move, plus HIT and SWAP buttons.
 | ![Sword swing against spiders and a bat](docs/sword-vs-spiders.jpg) | ![Axe in hand, a slime, goblin and spider closing in](docs/axe.jpg) |
 | ![Torch at night against goblins with a club and a spear](docs/torch-night-goblins.jpg) | ![The seeded world](docs/world.jpg) |
 | ![Burning slimes at night, lit by the torch](docs/torch-burning.jpg) | ![Touch controls on a phone-sized screen](docs/touch.jpg) |
+| ![Health bars over a crowd of monsters at night, mid-swing](docs/health-bars.jpg) | |
 
 ## Results in one paragraph
 

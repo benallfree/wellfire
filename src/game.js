@@ -247,6 +247,44 @@ function spawn(f) {
 }
 for (let i = 0; i < 14; i++) spawn()
 
+// ---------- health bars: two flat planes over each hurt monster, facing the camera ----------
+// The bar is a child of the monster's group, so it leaves the scene with it; geometry and the
+// four materials are shared, so a kill frees nothing and leaks nothing.
+const barGeo = new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0) // grows rightwards from x = 0
+const barMat = (c) => new THREE.MeshBasicMaterial({ color: c, fog: false, depthTest: false, transparent: true })
+const barBack = barMat('#111')
+const barFills = ['#e33', '#eb3', '#4d4'].map(barMat)
+const barQ = new THREE.Quaternion()
+function bars(dt) {
+  for (const e of foes) {
+    let b = e.bar
+    if (!b) {
+      if (e.hp >= e.maxHp) continue // hidden until the first hit
+      e.g.updateWorldMatrix(false, true)
+      const top = new THREE.Box3().setFromObject(e.m.root).max.y - e.pos.y
+      const w = 0.5 + e.m.root.scale.x * 0.4
+      b = e.bar = new THREE.Group()
+      b.position.y = top + 0.35
+      b.add(new THREE.Mesh(barGeo, barBack), (b.fill = new THREE.Mesh(barGeo, barFills[2])))
+      b.children[0].scale.set(w + 0.08, 0.16, 1)
+      b.children[0].position.x = -w / 2 - 0.04
+      b.fill.position.x = -w / 2
+      b.fill.scale.set(w, 0.09, 1)
+      b.children[0].renderOrder = 998
+      b.fill.renderOrder = 999
+      b.w = w
+      b.v = 1
+      e.g.add(b)
+    }
+    const f = Math.max(0, e.hp) / e.maxHp
+    b.v += (f - b.v) * Math.min(1, dt * 8) // ease the fill down
+    b.visible = e.hp > 0
+    b.fill.scale.x = Math.max(0.001, b.v * b.w)
+    b.fill.material = barFills[f > 0.6 ? 2 : f > 0.3 ? 1 : 0]
+    b.quaternion.copy(barQ.copy(e.g.quaternion).invert()).multiply(camera.quaternion) // billboard
+  }
+}
+
 // ---------- particles: little cubes for hits ----------
 const bits = []
 const bitGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12)
@@ -517,6 +555,7 @@ function frame() {
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
   sun.target.position.copy(target)
 
+  bars(dt)
   renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }
