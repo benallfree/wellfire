@@ -114,17 +114,152 @@ function terrain(x, z) {
   const bed = WATER - 1.5 + smooth(0.6, 0.7, noise(x * 0.02, z * 0.02, SEED + 23)) * 1.4 // fords: shallow enough to ride
   return bed + (h - bed) * river
 }
-function height(x, z) {
-  return flatten(x, z, terrain(x, z))
-}
 // height difference across 2 units in x and in z: the slope (and, for the minimap, which way the ground faces)
 const slope = (x, z) => [height(x + 1, z) - height(x - 1, z), height(x, z + 1) - height(x, z - 1)]
-// Ground colour at a point, shared by the terrain mesh and the minimap: sand by water, then grass, dirt on slopes,
-// rock on steep or high ground, snow on peaks. Noise wobbles each boundary so none is a straight contour line.
 const mix = new THREE.Color()
+
+// start on dry land near the origin
+const home = new THREE.Vector3()
+for (let a = 0; terrain(home.x, home.z) < 2; a += 0.5) home.set(Math.cos(a) * a * 0.3, 0, Math.sin(a) * a * 0.3)
+
+// ---------- settlements and roads: two more pure layers over the terrain (see docs/world-layers.md) ----------
+// Villages sit on a coarse grid of G-unit cells, at most one per cell; roads join villages in neighbouring cells.
+// Every answer is a pure function of the cell, cached in maps that are simply cleared when they grow large.
+const G = 280
+const RW = 2 // road half-width
+const SYL = ['Oak', 'Ash', 'Mill', 'Brook', 'Thorn', 'Elm', 'Stone', 'Fox', 'Wil', 'Red', 'wick', 'by', 'ford', 'ham', 'stead', 'well', 'ton', 'dale', 'mere', 'field']
+const memo = (f, max = 3000, m = new Map()) => (...a) => {
+  const k = a.join()
+  if (!m.has(k)) {
+    if (m.size > max) m.clear()
+    m.set(k, f(...a))
+  }
+  return m.get(k)
+}
+// cell (0, 0) is centred on the start; cells are keyed through h2() because hash(x, z) == hash(-x, -z) for odd x, z
+const gx = (x) => Math.round((x - home.x) / G)
+const gz = (z) => Math.round((z - home.z) / G)
+const h2 = (i, j, s) => hash(i * 2, j * 2 + 1, s)
+// The village in cell (gi, gj), or null. Cell (0, 0) always has one, 27-37 units from the start.
+const site = memo((gi, gj) => {
+  const R = rng((h2(gi, gj, SEED + 5) * 4294967296) | 0)
+  const first = !gi && !gj
+  const r = 12 + R() * 6
+  const name = SYL[(R() * 10) | 0] + SYL[10 + ((R() * 10) | 0)]
+  const seed = (R() * 1e6) | 0
+  if (!first && R() > 0.6) return null
+  let best
+  for (let i = 0; i < (first ? 60 : 4); i++) {
+    const a = R() * 7
+    const d = 27 + R() * 10
+    const x = home.x + (first ? Math.cos(a) * d : (gi + (R() - 0.5) * 0.6) * G)
+    const z = home.z + (first ? Math.sin(a) * d : (gj + (R() - 0.5) * 0.6) * G)
+    let lo = 1e9
+    let hi = -1e9
+    for (let j = 0; j < 8; j++) {
+      const y = terrain(x + Math.cos(j) * r, z + Math.sin(j) * r)
+      lo = Math.min(lo, y)
+      hi = Math.max(hi, y)
+    }
+    const score = hi - lo + (lo < WATER + 1 ? 99 : 0) // flattest dry ring wins
+    if (!best || score < best[2]) best = [x, z, score]
+    if (!first && score < 6) break
+  }
+  if (best[2] >= 6 && !first) return null
+  const [x, z] = best
+  return { k: gi + ',' + gj, gi, gj, x, z, y: terrain(x, z), r, name, seed }
+})
+function sites(x, z, n = 1) {
+  const out = []
+  for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) out.push(site(gx(x) + i, gz(z) + j))
+  return out.filter(Boolean)
+}
+const inTown = (x, z, pad = 0) => sites(x, z).find((t) => Math.hypot(x - t.x, z - t.z) < t.r + pad)
+// A road from A's fence to B's: a vertex every ~16 units, bent sideways by seeded noise (straight at both gates).
+// Each vertex is [x, z, grade]: the village floor at the ends, dry ground or a causeway between.
+function path(A, B, ra, rb, s) {
+  const dx = B.x - A.x
+  const dz = B.z - A.z
+  const L = Math.hypot(dx, dz)
+  const len = L - ra - rb
+  const n = Math.ceil(len / 16)
+  const p = []
+  for (let i = 0; i <= n; i++) {
+    const t = i / n
+    const o = (noise(t * 2.5, 0, s) - 0.5) * Math.min(60, len * 0.3) * Math.sin(Math.PI * t)
+    const x = A.x + (dx * (ra + len * t) - dz * o) / L
+    const z = A.z + (dz * (ra + len * t) + dx * o) / L
+    p.push([x, z, i == 0 ? A.y : i == n ? B.y : Math.max(WATER + 0.6, terrain(x, z))])
+  }
+  return p
+}
+// The roads cell (gi, gj) owns: to villages east, south-west, south and south-east of it, kept when no third
+// village is nearer to both ends (a relative-neighbourhood graph: short links, no crossings) and the way is mostly dry.
+const links = memo((gi, gj) => {
+  const A = site(gi, gj)
+  const out = []
+  if (!A) return out
+  if (!gi && !gj) {
+    const H = { x: home.x, z: home.z, y: terrain(home.x, home.z) }
+    out.push({ a: 'home', b: A.k, p: path(H, A, 0, A.r - 2, SEED) }) // a spur from the start to the first village
+  }
+  for (const [di, dj] of [[1, 0], [-1, 1], [0, 1], [1, 1]]) {
+    const B = site(gi + di, gj + dj)
+    if (!B) continue
+    const L = Math.hypot(B.x - A.x, B.z - A.z)
+    const far = (C) => Math.hypot(C.x - A.x, C.z - A.z) < L && Math.hypot(C.x - B.x, C.z - B.z) < L
+    if (sites((A.x + B.x) / 2, (A.z + B.z) / 2, 2).some((C) => C.k != A.k && C.k != B.k && far(C))) continue
+    const p = path(A, B, A.r - 2, B.r - 2, (h2(gi, gj, SEED + 6 + di * 3 + dj) * 1e9) | 0)
+    if (p.filter(([x, z]) => terrain(x, z) < WATER + 0.3).length * 4 < p.length) out.push({ a: A.k, b: B.k, p })
+  }
+  return out
+})
+// What can shape the ground in chunk (cx, cz): villages within reach and road segments within a road's blend.
+const shape = memo((cx, cz) => {
+  const x0 = cx * CH
+  const z0 = cz * CH
+  const m = RW + 5
+  const hit = (lx, hx, lz, hz) => lx < x0 + CH + m && hx > x0 - m && lz < z0 + CH + m && hz > z0 - m
+  const towns = sites(x0, z0).filter((t) => hit(t.x - t.r - 4, t.x + t.r + 4, t.z - t.r - 4, t.z + t.r + 4))
+  const segs = []
+  for (let i = -2; i <= 2; i++)
+    for (let j = -2; j <= 2; j++)
+      for (const { p } of links(gx(x0) + i, gz(z0) + j))
+        for (let k = 1; k < p.length; k++) {
+          const [ax, az, ay] = p[k - 1]
+          const [bx, bz, by] = p[k]
+          if (hit(Math.min(ax, bx), Math.max(ax, bx), Math.min(az, bz), Math.max(az, bz))) segs.push([ax, az, ay, bx, bz, by])
+        }
+  return { towns, segs }
+}, 600)
+let lx, lz, lv // the last chunk asked about: neighbouring points mostly share it
+const at = (x, z) => ((x = Math.floor(x / CH)), (z = Math.floor(z / CH)), x === lx && z === lz ? lv : ((lx = x), (lz = z), (lv = shape(x, z))))
+// [distance to the nearest road's centre line, the road's grade there]
+function road(x, z) {
+  let d = 1e9
+  let y = 0
+  for (const [ax, az, ay, bx, bz, by] of at(x, z).segs) {
+    const ex = bx - ax
+    const ez = bz - az
+    const t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez)))
+    const e = Math.hypot(x - ax - ex * t, z - az - ez * t)
+    if (e < d) (d = e), (y = ay + (by - ay) * t)
+  }
+  return [d, y]
+}
+// the ground: bare terrain, graded level across nearby roads, then levelled under nearby villages
+function height(x, z) {
+  const [d, y] = road(x, z)
+  let h = y + (terrain(x, z) - y) * smooth(RW, RW + 4, d)
+  for (const t of at(x, z).towns) h = t.y + (h - t.y) * smooth(t.r, t.r + 8, Math.hypot(x - t.x, z - t.z))
+  return h
+}
+// Ground colour at a point, shared by the terrain mesh and the minimap: road dirt, sand by water, then grass, dirt on
+// slopes, rock on steep or high ground, snow on peaks. Noise wobbles each boundary so none is a straight contour line.
 function ground(c, x, z, h = height(x, z), [gx, gz] = slope(x, z)) {
   const n = noise(x * 0.3, z * 0.3, SEED + 3) * 0.08
   const s = Math.hypot(gx, gz) / 2 + n // rise per unit
+  if (road(x, z)[0] < RW) return c.setRGB(0.52 + n, 0.4 + n, 0.25) // road strips: dirt
   if (h < WATER + 0.4 + n * 4) return c.set('#d8c890')
   c.setRGB(0.32 + n, 0.57 + n, 0.23) // meadow grass, shading into dark forest grass and dry highland grass
   c.lerp(mix.setRGB(0.22 + n, 0.45 + n, 0.18), smooth(0.43, 0.5, wet(x, z)))
@@ -133,44 +268,6 @@ function ground(c, x, z, h = height(x, z), [gx, gz] = slope(x, z)) {
   c.lerp(mix.setRGB(0.27 + n, 0.26 + n, 0.25 + n), Math.max(smooth(0.65, 0.9, s), smooth(18, 23, h + n * 40))) // rock
   return c.lerp(mix.setRGB(0.8, 0.83, 0.88), smooth(29, 31, h + n * 50) * (1 - smooth(0.9, 1.3, s))) // snow
 }
-
-// ---------- villages: pick a dry, gentle site near the start and level the ground there ----------
-// A village is a circular zone: no weapons inside, and monsters stay out.
-let town = null
-function flatten(x, z, h) {
-  if (!town) return h
-  const d = Math.hypot(x - town.x, z - town.z)
-  const k = Math.min(1, Math.max(0, (d - town.r) / 8))
-  return town.y + (h - town.y) * k * k * (3 - 2 * k)
-}
-const inTown = (x, z, pad = 0) => Math.hypot(x - town.x, z - town.z) < town.r + pad
-{
-  const VR = rng(7)
-  let best
-  let hx = 0
-  let hz = 0
-  for (let a = 0; height(hx, hz) < 2; a += 0.5) (hx = Math.cos(a) * a * 0.3), (hz = Math.sin(a) * a * 0.3) // the start point
-  for (let i = 0; i < 60; i++) {
-    const a = VR() * 7
-    const d = 27 + VR() * 10
-    const x = hx + Math.cos(a) * d
-    const z = hz + Math.sin(a) * d
-    let lo = 1e9
-    let hi = -1e9
-    for (let j = 0; j < 8; j++) {
-      const y = height(x + Math.cos(j) * 12, z + Math.sin(j) * 12)
-      lo = Math.min(lo, y)
-      hi = Math.max(hi, y)
-    }
-    const score = hi - lo + (lo < WATER + 1 ? 99 : 0) // flattest dry ring wins
-    if (!best || score < best[2]) best = [x, z, score]
-  }
-  town = { x: best[0], z: best[1], y: height(best[0], best[1]), r: 15, hx, hz }
-}
-
-// start on dry land near the origin
-const home = new THREE.Vector3()
-home.set(town.hx, 0, town.hz) // found before the village levelled its ground (see villages: site)
 
 // Scenery: each kind compiled from the model JSON in four seeded variants. One InstancedMesh per variant is shared
 // by every live chunk and refilled from their instance lists whenever a chunk comes or goes.
@@ -239,7 +336,7 @@ function grow(cx, cz) {
     const s = 0.8 + R() * 0.5
     const turn = R() * 7
     const h = height(x, z)
-    if (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3)) continue
+    if (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3) || road(x, z)[0] < RW + 1.5) continue
     let k = 0
     for (let sum = 0, f = FLORA[region(x, z)]; k < 4 && pick >= (sum += f[k]); k++);
     if (k > 3 || (h > 17 && k != 2)) continue // above the tree line only boulders
@@ -405,6 +502,8 @@ function paint(t, i, j) {
       // lit from the north-west; water darkens with depth
       if (h < WATER) tc.setRGB(0.23, 0.48, 0.72).multiplyScalar(1 - Math.min(0.45, (WATER - h) * 0.05))
       else ground(tc, x, z, h, g).multiplyScalar(Math.min(1.35, Math.max(0.5, 0.9 + h * 0.005 + (g[0] + g[1]) * 0.4)) * (region(x, z) == 1 ? 0.75 : 1)) // forest: darker
+      if (h >= WATER && road(x, z)[0] < RW + 1) tc.set('#e0b070') // roads stand out on the map
+      if (h >= WATER && inTown(x, z)) tc.set('#d8c49a')
       t.ctx.fillStyle = '#' + tc.getHexString(THREE.LinearSRGBColorSpace) // no sRGB lift: keeps the map's contrast
       t.ctx.fillRect((x - 1 - t.cx * CH) / UPP, (z - 1 - t.cz * CH) / UPP, 1, 1)
     }
@@ -466,6 +565,15 @@ function minimap() {
   for (const [a, b] of trail) flat.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
   flat.fillStyle = '#fd4'
   flat.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
+  // villages whose centre you've seen: a ring on the map, the name upright beside it
+  const towns = sites(x, z, 2).filter((t) => seen.has(Math.floor(t.x / CELL) + ',' + Math.floor(t.z / CELL)))
+  flat.strokeStyle = '#6b4a2a'
+  flat.lineWidth = 2
+  for (const t of towns) {
+    flat.beginPath()
+    flat.arc(sx(t.x), sz(t.z), t.r / UPP, 0, 7)
+    flat.stroke()
+  }
   // up on the map is the way the camera looks (the way W walks)
   mapc.save()
   mapc.translate(MAP / 2, MAP / 2)
@@ -483,6 +591,13 @@ function minimap() {
   mapc.fillStyle = '#fff'
   mapc.font = 'bold 11px system-ui'
   mapc.textAlign = 'center'
+  const c = Math.cos(camYaw)
+  const s = Math.sin(camYaw)
+  for (const t of towns) {
+    const dx = (t.x - x) / UPP
+    const dz = (t.z - z) / UPP
+    mapc.fillText(t.name, MAP / 2 + dx * c - dz * s, MAP / 2 + dx * s + dz * c - t.r / UPP - 3)
+  }
   mapc.fillText('N', MAP / 2 + Math.sin(camYaw) * 68, MAP / 2 - Math.cos(camYaw) * 68 + 4) // north, on the rim
   $('pos').textContent = `${REGIONS[region(x, z)]} · ${x | 0}, ${z | 0} · ${Math.hypot(x - home.x, z - home.z) | 0} m from start`
 }
@@ -824,20 +939,13 @@ function bars(dt) {
 }
 
 // ---------- villages: houses round a square, townsfolk, doors into rooms ----------
-// Rooms sit deep under the village (the ground hides them). A door fades to black and moves you down into the
+// Each site from the settlement layer is built when the player comes within 150 units and disposed of past 200.
+// Rooms sit deep under their village (the ground hides them). A door fades to black and moves you down into the
 // room, where a fixed camera looks in over a low front wall (a cutaway). Walking back out of the door reverses it.
 var village
 {
-  const T = town
-  const VR = rng(42)
   const TAU = Math.PI * 2
-  const add = (name, seed, x, y, z, ry = 0) => {
-    const m = make(lib, name, seed)
-    m.root.position.set(x, y, z)
-    m.root.rotation.y = ry
-    scene.add(m.root)
-    return m
-  }
+  const built = new Map() // site key -> built village, only the few near the player
   // push (x, z) out of a box of half-size hw x hd centred on (cx, cz), turned by ry
   const box = (x, z, cx, cz, hw, hd, ry = 0) => {
     const c = Math.cos(ry)
@@ -849,78 +957,116 @@ var village
     else lz = Math.sign(lz) * hd
     return [cx + lx * c + lz * s, cz - lx * s + lz * c]
   }
-  const syl = ['Oak', 'Ash', 'Mill', 'Brook', 'Thorn', 'Elm', 'wick', 'by', 'ford', 'ham', 'stead', 'well']
-  const name = syl[(VR() * 6) | 0] + syl[6 + ((VR() * 6) | 0)]
 
-  add('plaza', 1, T.x, T.y, T.z).root.scale.set(5.5, 1, 5.5)
-  add('well', 1, T.x, T.y, T.z)
-  const gate = Math.atan2(home.z - T.z, home.x - T.x) // the main gate faces the start point
-  const path = (a, len) => {
-    const m = add('path', 1, T.x, T.y - 0.01, T.z, Math.PI / 2 - a)
-    m.root.scale.z = len
-  }
-  path(gate, T.r + 4)
-  path(gate + Math.PI, T.r + 4)
-
-  // houses, evenly round the square with the gate between two of them, doors facing the well
-  const houses = []
-  const n = 5 + ((VR() * 2) | 0)
-  for (let i = 0; i < n; i++) {
-    const a = gate + ((i + 0.5 + (VR() - 0.5) * 0.3) * TAU) / n
-    const r = 9 + VR() * 1.5
-    const x = T.x + Math.cos(a) * r
-    const z = T.z + Math.sin(a) * r
-    const ry = Math.atan2(T.x - x, T.z - z)
-    const m = add('house', i + 1, x, T.y, z, ry)
-    const { w, d } = m.vars
-    const sx = Math.sin(ry)
-    const sz = Math.cos(ry)
-    path(a + Math.PI, r - d / 2)
-    const room = add('room', i + 1, x, T.y - 40 - i * 15, z)
-    m.mat.transparent = true
-    houses.push({ m, x, z, ry, w, d, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d })
-  }
-
-  // fence ring with two gates
-  {
-    const m = make(lib, 'fence', 1)
-    const count = Math.floor((TAU * T.r) / 2.1)
-    const mesh = new THREE.InstancedMesh(bake(m), m.mat, count)
-    mesh.castShadow = true
-    const o = new THREE.Object3D()
-    let k = 0
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * TAU
-      if (Math.abs(Math.sin((a - gate) / 2)) < 0.07 || Math.abs(Math.cos((a - gate) / 2)) < 0.07) continue
-      o.position.set(T.x + Math.cos(a) * T.r, T.y, T.z + Math.sin(a) * T.r)
-      o.rotation.y = -a - Math.PI / 2
-      o.updateMatrix()
-      mesh.setMatrixAt(k++, o.matrix)
+  function build(T) {
+    const VR = rng(T.seed)
+    const parts = [] // compiled models to dispose of
+    const add = (name, seed, x, y, z, ry = 0) => {
+      const m = make(lib, name, seed)
+      m.root.position.set(x, y, z)
+      m.root.rotation.y = ry
+      scene.add(m.root)
+      parts.push(m)
+      return m
     }
-    mesh.count = k
-    scene.add(mesh)
+    // a gate wherever a road leaves (one seeded gate if none does)
+    const gates = []
+    for (let i = -1; i <= 1; i++)
+      for (let j = -1; j <= 1; j++)
+        for (const { a, b, p } of links(T.gi + i, T.gj + j)) {
+          const q = a == T.k ? p[0] : b == T.k ? p[p.length - 1] : null
+          if (q) gates.push(Math.atan2(q[1] - T.z, q[0] - T.x))
+        }
+    if (!gates.length) gates.push(VR() * TAU)
+    const gap = (a, w = 0.07) => gates.some((g) => Math.abs(Math.sin((a - g) / 2)) < w)
+
+    add('plaza', 1, T.x, T.y, T.z).root.scale.set(T.r * 0.37, 1, T.r * 0.37)
+    add('well', 1, T.x, T.y, T.z)
+    const path = (a, len) => (add('path', 1, T.x, T.y - 0.01, T.z, Math.PI / 2 - a).root.scale.z = len)
+    for (const g of gates) path(g, T.r) // the road takes over at the gate
+
+    // houses evenly round the square, leaving the gates' paths clear, doors facing the well
+    const houses = []
+    const n = 5 + (((T.r - 12) / 2) | 0)
+    for (let i = 0; i < n; i++) {
+      const a = gates[0] + ((i + 0.5 + (VR() - 0.5) * 0.3) * TAU) / n
+      const r = T.r * 0.6 + VR() * 1.5
+      if (gap(a, 0.22)) continue
+      const x = T.x + Math.cos(a) * r
+      const z = T.z + Math.sin(a) * r
+      const ry = Math.atan2(T.x - x, T.z - z)
+      const m = add('house', T.seed + i, x, T.y, z, ry)
+      const { w, d } = m.vars
+      const sx = Math.sin(ry)
+      const sz = Math.cos(ry)
+      path(a + Math.PI, r - d / 2)
+      const room = add('room', T.seed + i, x, T.y - 40 - i * 15, z)
+      m.mat.transparent = true
+      houses.push({ m, x, z, ry, w, d, ty: T.y, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d })
+    }
+
+    // fence ring, open at the gates
+    {
+      const m = make(lib, 'fence', 1)
+      const count = Math.floor((TAU * T.r) / 2.1)
+      const mesh = new THREE.InstancedMesh(bake(m), m.mat, count)
+      mesh.castShadow = true
+      const o = new THREE.Object3D()
+      let k = 0
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * TAU
+        if (gap(a)) continue
+        o.position.set(T.x + Math.cos(a) * T.r, T.y, T.z + Math.sin(a) * T.r)
+        o.rotation.y = -a - Math.PI / 2
+        o.updateMatrix()
+        mesh.setMatrixAt(k++, o.matrix)
+      }
+      mesh.count = k
+      scene.add(mesh)
+      parts.push({ root: mesh, mat: m.mat })
+    }
+
+    // townsfolk: the warrior's skeleton in seeded clothes, strolling between doors and the well
+    const spots = [...houses.map((h) => [h.out[0] + Math.cos(h.ry) * 1.6, h.out[1] - Math.sin(h.ry) * 1.6]), ...[0, 1, 2, 3].map((i) => [T.x + Math.cos(i * 1.6) * 2.2, T.z + Math.sin(i * 1.6) * 2.2])]
+    const v = { T, parts, houses, gap, spots, VR, folk: [] }
+    for (let i = 0; i < houses.length + 2; i++) {
+      const f = new Actor('villager', T.seed + i)
+      const [x, z] = spots[i % spots.length]
+      f.pos.set(x, 0, z)
+      f.goal = spots[(VR() * spots.length) | 0]
+      f.wait = VR() * 3
+      f.town = v
+      v.folk.push(f)
+      parts.push(f.m)
+    }
+    return v
+  }
+  function raze(v) {
+    for (const m of v.parts) {
+      m.root.removeFromParent()
+      m.root.traverse((o) => o.geometry?.dispose())
+      m.mat.dispose()
+    }
+    for (const f of v.folk) scene.remove(f.g)
   }
 
-  // townsfolk: the warrior's skeleton in seeded clothes, strolling between doors and the well
-  const spots = [...houses.map((h) => [h.out[0] + Math.cos(h.ry) * 1.6, h.out[1] - Math.sin(h.ry) * 1.6]), ...[0, 1, 2, 3].map((i) => [T.x + Math.cos(i * 1.6) * 2.2, T.z + Math.sin(i * 1.6) * 2.2])]
-  const folk = []
-  for (let i = 0; i < 7; i++) {
-    const f = new Actor('villager', 200 + i)
-    const [x, z] = spots[i % spots.length]
-    f.pos.set(x, 0, z)
-    f.goal = spots[(VR() * spots.length) | 0]
-    f.wait = VR() * 3
-    folk.push(f)
+  // colliders: monsters and mounts kept out of every village; houses, the well, the fence and townsfolk; room walls and furniture
+  function fend(v, x, z, who) {
+    const T = v.T
+    let d = Math.hypot(x - T.x, z - T.z) || 1
+    if (d > T.r + 6 && who.town != v) return [x, z]
+    if (foes.includes(who) || mounts.includes(who)) return d < T.r + 1 ? [T.x + ((x - T.x) / d) * (T.r + 1), T.z + ((z - T.z) / d) * (T.r + 1)] : [x, z]
+    for (const o of v.houses) [x, z] = box(x, z, o.x, o.z, o.w / 2 + 0.4, o.d / 2 + 0.4, o.ry)
+    if (who == player) for (const f of v.folk) [x, z] = box(x, z, f.pos.x, f.pos.z, 0.45, 0.45)
+    const dx = x - T.x
+    const dz = z - T.z
+    d = Math.hypot(dx, dz) || 1
+    let r = Math.max(d, 1.5) // the well
+    if (who.town == v) r = Math.min(r, T.r - 1) // townsfolk stay in
+    else if (who == player && !v.gap(Math.atan2(dz, dx)) && Math.abs(d - T.r) < 0.45) r = d < T.r ? T.r - 0.45 : T.r + 0.45 // the fence
+    return r == d ? [x, z] : [T.x + (dx / d) * r, T.z + (dz / d) * r]
   }
-
-  // colliders: houses (outside), the well, the fence, room walls and furniture (inside), townsfolk, and monsters kept out
   blockers.push((x, z, who) => {
-    if (foes.includes(who) || mounts.includes(who)) {
-      const dx = x - T.x
-      const dz = z - T.z
-      const d = Math.hypot(dx, dz) || 1
-      return d < T.r + 1 ? [T.x + (dx / d) * (T.r + 1), T.z + (dz / d) * (T.r + 1)] : [x, z]
-    }
     const h = who.room
     if (h) {
       const gap = Math.abs(x - h.x) < 0.8
@@ -930,20 +1076,11 @@ var village
       ;[x, z] = box(x, z, h.x + h.rw / 2 - 1.6, h.z + 0.2, 1.1, 1.3) // table and stools
       return box(x, z, h.x + h.rw / 2 - 0.35, h.z - h.rd / 2 + 0.8, 0.6, 0.9) // shelf
     }
-    for (const o of houses) [x, z] = box(x, z, o.x, o.z, o.w / 2 + 0.4, o.d / 2 + 0.4, o.ry)
-    if (who == player) for (const f of folk) [x, z] = box(x, z, f.pos.x, f.pos.z, 0.45, 0.45)
-    const dx = x - T.x
-    const dz = z - T.z
-    const d = Math.hypot(dx, dz) || 1
-    const a = Math.atan2(dz, dx)
-    const gap = Math.abs(Math.sin((a - gate) / 2)) < 0.07 || Math.abs(Math.cos((a - gate) / 2)) < 0.07
-    let r = Math.max(d, 1.5) // the well
-    if (who != player) r = Math.min(r, T.r - 1) // townsfolk stay in
-    else if (!gap && Math.abs(d - T.r) < 0.45) r = d < T.r ? T.r - 0.45 : T.r + 0.45 // the fence
-    return r == d ? [x, z] : [T.x + (dx / d) * r, T.z + (dz / d) * r]
+    for (const v of built.values()) [x, z] = fend(v, x, z, who)
+    return [x, z]
   })
 
-  // the weapon hangs on the warrior's back inside the village, its longest end down (a torch's flame up)
+  // the weapon hangs on the warrior's back inside a village, its longest end down (a torch's flame up)
   const back = new THREE.Object3D()
   const turn = new THREE.Object3D() // aims whichever prop is stowed
   back.position.set(-0.05, 0.62, -0.27)
@@ -951,7 +1088,7 @@ var village
   back.add(turn)
   player.m.bones.chest.add(back)
   player.m.bones.back = turn
-  const v = new THREE.Vector3()
+  const v3 = new THREE.Vector3()
   function stow(on) {
     const p = hold(lib, player.m, 'back', on ? ITEMS[player.item] : null)
     if (p) {
@@ -964,9 +1101,9 @@ var village
         if (!o.isMesh) return
         const a = o.geometry.attributes.position
         const M = inv.clone().multiply(o.matrixWorld)
-        for (let i = 0; i < a.count; i++) if (v.fromBufferAttribute(a, i).applyMatrix4(M).length() > far.length()) far.copy(v)
+        for (let i = 0; i < a.count; i++) if (v3.fromBufferAttribute(a, i).applyMatrix4(M).length() > far.length()) far.copy(v3)
       })
-      turn.quaternion.setFromUnitVectors(far.normalize(), v.set(0, 0, p.vars.burn ? -1 : 1))
+      turn.quaternion.setFromUnitVectors(far.normalize(), v3.set(0, 0, p.vars.burn ? -1 : 1))
     }
     if (on) hold(lib, player.m, 'handR', null)
     else equip(player.item)
@@ -994,11 +1131,10 @@ var village
   let yaw = 0 // the outdoor camera angle, kept while indoors
 
   village = {
-    name,
-    houses,
-    folk,
+    built,
     stow,
     in: false,
+    name: '',
     enter(h) {
       fade(() => {
         player.room = h
@@ -1015,20 +1151,25 @@ var village
       fade(() => {
         player.room = player.floor = null
         camYaw = yaw
-        player.pos.set(h.out[0], T.y, h.out[1])
+        player.pos.set(h.out[0], h.ty, h.out[1])
         player.vel.set(0, 0)
         player.dir = h.ry
-        camera.position.set(h.out[0] + Math.sin(camYaw) * 7, T.y + 7.5, h.out[1] + Math.cos(camYaw) * 7)
+        camera.position.set(h.out[0] + Math.sin(camYaw) * 7, h.ty + 7.5, h.out[1] + Math.cos(camYaw) * 7)
       })
     },
     update(dt) {
       const p = player.pos
+      // stream: build at most one village a frame, dispose of far ones
+      const T = sites(p.x, p.z).find((t) => !built.has(t.k) && Math.hypot(t.x - p.x, t.z - p.z) < 150)
+      if (T) built.set(T.k, build(T))
+      for (const [k, v] of built) if (Math.hypot(v.T.x - p.x, v.T.z - p.z) > 200) raze(v), built.delete(k)
+      const here = [...built.values()].find((v) => Math.hypot(p.x - v.T.x, p.z - v.T.z) < v.T.r)
       const was = this.in
-      this.in = player.hp > 0 && inTown(p.x, p.z)
-      if (this.in != was) {
-        stow(this.in)
-        hud()
-      }
+      const named = this.name
+      this.in = player.hp > 0 && !!here
+      this.name = here?.T.name
+      if (this.in != was) stow(this.in)
+      if (this.in != was || this.name != named) hud()
       const h = player.room
       if (h) {
         if (p.z > h.z + h.rd / 2 - 0.3) this.leave()
@@ -1043,7 +1184,7 @@ var village
       } else {
         glow.intensity = 0
         scene.background = sky
-        for (const o of houses) {
+        for (const o of here?.houses || []) {
           // pressed against the front wall, within the door's width
           const c = Math.cos(o.ry)
           const s = Math.sin(o.ry)
@@ -1056,28 +1197,30 @@ var village
         const az = camera.position.z
         const bx = p.x - ax
         const bz = p.z - az
-        for (const o of houses) {
-          const t = Math.min(1, Math.max(0, ((o.x - ax) * bx + (o.z - az) * bz) / (bx * bx + bz * bz)))
-          const hide = t < 0.98 && Math.hypot(ax + bx * t - o.x, az + bz * t - o.z) < Math.max(o.w, o.d) / 2 + 0.6
-          o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
-        }
+        for (const v of built.values())
+          for (const o of v.houses) {
+            const t = Math.min(1, Math.max(0, ((o.x - ax) * bx + (o.z - az) * bz) / (bx * bx + bz * bz)))
+            const hide = t < 0.98 && Math.hypot(ax + bx * t - o.x, az + bz * t - o.z) < Math.max(o.w, o.d) / 2 + 0.6
+            o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
+          }
       }
-      for (const f of folk) {
-        const dx = f.goal[0] - f.pos.x
-        const dz = f.goal[1] - f.pos.z
-        const d = Math.hypot(dx, dz)
-        f.speed = 0
-        if ((f.wait -= dt) > 0) f.move(0, 0, dt)
-        else if (d < 0.6) {
-          f.wait = 2 + VR() * 5
-          f.goal = spots[(VR() * spots.length) | 0]
-        } else {
-          f.speed = 1.6
-          f.dir = Math.atan2(dx, dz)
-          f.move((dx / d) * 1.6 * dt, (dz / d) * 1.6 * dt, dt)
+      for (const v of built.values())
+        for (const f of v.folk) {
+          const dx = f.goal[0] - f.pos.x
+          const dz = f.goal[1] - f.pos.z
+          const d = Math.hypot(dx, dz)
+          f.speed = 0
+          if ((f.wait -= dt) > 0) f.move(0, 0, dt)
+          else if (d < 0.6) {
+            f.wait = 2 + v.VR() * 5
+            f.goal = v.spots[(v.VR() * v.spots.length) | 0]
+          } else {
+            f.speed = 1.6
+            f.dir = Math.atan2(dx, dz)
+            f.move((dx / d) * 1.6 * dt, (dz / d) * 1.6 * dt, dt)
+          }
+          f.update(dt, 1.6)
         }
-        f.update(dt, 1.6)
-      }
     },
   }
 }
@@ -1561,6 +1704,6 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, region, grow, drop } } // for play-testing from the console
+window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.coins = coins

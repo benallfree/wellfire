@@ -328,8 +328,10 @@ surprisal -1** (the whole game goes from 3,068 to 4,112 bytes). With the old tex
 
 ![Brookford from the square](docs/village.jpg)
 
-A seeded village sits about 30 units from the start: five or six houses round a square with a well, dirt paths to each
-door, and a fence ring with two gates. Seven townspeople stroll between the doors and the well and stop to idle. Walk
+Villages are part of the seeded world (see [Villages and roads](#villages-and-roads-in-the-seeded-world) below): one
+always sits about 30 units from the start, and more turn up every few hundred units, joined by roads. Each has five
+to eight houses round a square with a well, dirt paths to each door, and a fence ring with a gate wherever a road
+leaves. Townspeople stroll between the doors and the well and stop to idle. Walk
 in and the warrior hangs the weapon on his back (each item is aimed by its own shape: its longest end points down,
 a torch's flame up); attacking is disabled and the HUD shows the village's name. Walk out
 and the weapon is back in hand. Monsters don't spawn inside, stop chasing once you're in, and are pushed back at the
@@ -409,11 +411,7 @@ every visit and every page load, and nothing generated needs storing. It's one s
   you, and the minimap's chunk pictures are a 150-entry cache. Player changes to the world (felled trees, opened chests)
   would go in a similar keyed set and be applied in `grow()` after generating.
 
-**Adding points of interest.** A village pass would ask the same seed per chunk:
-`const poi = hash(cx, cz, SEED + 5) < 0.01 ? 'village' : null` gives a stable, sparse answer for any chunk, and
-`grow()` (or a `feature(cx, cz)` beside it) would build it and keep scenery off it, the way it already skips `inTown()`.
-The one village today is placed near the start by its own seed and levels the ground through `flatten()` inside
-`height()`, so the terrain, colliders and minimap all agree with it.
+**Points of interest** are now layers over the terrain: see the next section.
 
 **Checked in the browser** (via `window.game`, which now also exposes `scene`, `renderer` and `world`):
 
@@ -426,6 +424,59 @@ The one village today is placed near the start by its own seed and levels the gr
   prop it replaces, so item swaps and village stows no longer leak (12 swaps and 5 village trips: +0 geometries).
 - Frame time while walking at 40 units/s: median 8.3 ms, worst 9.4 ms (120 Hz display); chunk building never showed
   up as a hitch.
+
+## Villages and roads in the seeded world
+
+![The road network for SEED 1337, about 2.4 km across, start in yellow](docs/world-network.jpg)
+
+Villages and the roads between them are two more pure layers over the terrain, so the same seed gives the same
+settlements and routes wherever you walk, and nothing about them is stored. The design and the options weighed are in
+[docs/world-layers.md](docs/world-layers.md). In short:
+
+- **Settlements** sit on a grid of 280-unit cells centred on the start. `site(gi, gj)` gives each cell a seeded
+  ~60% chance of a village, tries up to four jittered spots in the middle of the cell, and keeps the first that is dry
+  and gentle (tested on `terrain()`, the terrain before villages and roads). It also fixes the radius (12–18), house
+  count, name and seed. Cell (0, 0) always has a village 27–37 units from the start.
+- **Roads** join villages in neighbouring cells when no third village is nearer to both (a relative-neighbourhood
+  graph: short links, no crossings). `links(gi, gj)` returns the roads a cell owns, always built from the same end,
+  so a road comes out the same whichever chunk asks. A road is a polyline from fence to fence, bent by seeded noise
+  (straight at both gates). Roads more than a quarter under water are dropped; shorter crossings become causeways.
+  The start has a short spur to the first village.
+- **One height function.** `height()` is `terrain()`, graded level across the nearest road (blending back over 4 units),
+  then levelled under nearby villages (over 8 units). It's pure, so chunk seams still match exactly. Each 40-unit
+  chunk area caches the villages and road segments that can reach it, so `height()` stays a map lookup and a short
+  loop. `ground()` tints road strips dirt, and scenery stays off roads and villages.
+- **Streaming.** A village is built (houses, rooms, fence, well, townsfolk) when you come within 150 units and
+  disposed of past 200. One collider walks the built villages: monsters are kept out of every village, the weapon is
+  stowed in any of them, and spawning avoids every site, built or not.
+- **Minimap.** Roads show as you reveal the ground they cross, and a village gets a ring and its name once you've
+  seen its centre. The revealed-cell set is still the only remembered state.
+
+| a road into Wildale's gate | the minimap after walking two roads |
+|---|---|
+| ![a dirt road leading to a fence gate](docs/road-gate.jpg) | ![minimap with roads and a village ring](docs/minimap-roads.png) |
+
+![In Oakdale's square](docs/seeded-village.jpg)
+
+**Checked in the browser** (via `window.game`; the browser pane was hidden, so the loop ran on `setTimeout`):
+
+- **Seams:** zero difference on all 2,652 shared edge vertices of the live chunks, including chunks a road crosses.
+- **Regeneration:** a chunk on the Oakdale–Wildale road and the built village of Wildale (house positions and sizes,
+  name, townsfolk count) are identical before and after a tour of six other villages and a teleport 25 km away.
+- **Following a road:** walking the 270-unit Oakdale–Wildale road vertex by vertex keeps the player on the road's
+  centre line (distance 0) and on its grade. Village names, weapon stowing, a door into a non-start village and back
+  out all work. Monsters stayed at least 2.7 units outside the fence.
+- **Memory:** three round trips between Wildale and a point 6 km away: 201–251 geometries near the village, 108–115
+  away, 1 village built then 0. Site, road and chunk-context caches are capped and rebuilt from the seed on demand.
+- **Cost of `height()`:** about 3 µs a call on scattered points against 1 µs for bare terrain. On a chunk's vertex
+  grid it's under 0.2 µs either way.
+
+Cost: game code +7.6 KB raw (39.9 → 47.5 KB, much of it comments), so roughly 0.8 KB shipped at ~90%. No model changes.
+
+Known gaps: names come from 100 syllable pairs, so they repeat (21 repeats among 76 villages within 1.7 km). Some
+villages have no road because their neighbours are missing or the way is wet. `hash()` in the world code returns the
+same value for `(x, z)` and `(-x, -z)` when both are odd, so the settlement layer keys cells through `h2()`; chunk
+scenery still has that mirror symmetry.
 
 ## Exploration minimap
 
