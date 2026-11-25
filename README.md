@@ -569,7 +569,10 @@ self-contained base terrain, and anything that levels ground (the village today,
   ridged noise (`1 - |2n - 1|`, squared): sharp crests up to about 40 units, with valleys between them.
 - **Lake basins.** Where `wet` is high (the lakes region) the ground sinks up to 9 units below the hills.
 - **Rivers.** Where a very slow, separately warped noise field crosses 0.5, a narrow band is carved below the water
-  line, so rivers wind for kilometres through lowlands (never across mountains) and join lakes.
+  line, so rivers wind for kilometres through lowlands (never across mountains) and join lakes. Mounts won't wade
+  deeper than 0.2 below the surface, so the river bed rises to just under it at **fords**, where a slow noise is
+  high: about a quarter of river length, every 50–100 units along a river. A steed stops at a deep stretch and
+  crosses at a ford (checked in the browser).
 - **The start.** Within about 150 units of the origin, lakes, rivers and mountains fade out, so the spawn spiral always
   finds dry, gentle ground (the start lands on a 0.08 slope, and the village ring is levelled flat at y = 3.6).
 
@@ -602,13 +605,15 @@ same 150-tile LRU cache as cells are revealed, behind the same fog of war, so me
   is unchanged.
 - Seams: 0 height difference along 52 shared chunk edges. All 1,553 live scenery instances and every actor sit exactly
   on `height()` (or on the water floor).
+- Rebased onto the mounts and new-skeleton main: a steed ridden 308 units over a range (y 11 → 32 at the crest → 15)
+  stays exactly on the ground with the rider seated, and the minimap relief draws while riding.
 - Chunk build: 1.3 ms, up from 0.29 ms (ground colour samples the slope, four extra heights per vertex); at most two
   chunks build per frame. `height()` costs about 0.29 µs, up from 0.16 µs. Frame rate couldn't be measured, because
   the browser pane was hidden and paused rendering; the checks ran in an iframe with a timer standing in for
   `requestAnimationFrame`.
 
-Cost: about 2.9 KB raw in `src/game.js` (39,932 → 42,878 bytes). Not measured with surprisal; at ~90% that's roughly
-0.3 KB shipped.
+Cost: about 3.1 KB raw in `src/game.js` (49,078 → 52,139 bytes on top of the mounts main, fords included). Not
+measured with surprisal; at ~90% that's roughly 0.3 KB shipped.
 
 ## Size
 

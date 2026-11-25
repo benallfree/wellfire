@@ -103,7 +103,8 @@ function terrain(x, z) {
   h -= smooth(0.6, 0.7, w) * 9 * (1 - near) // lake basins
   const m = noise(x * 0.004, z * 0.004, SEED + 22) * 150 // rivers get their own, wider warp so they meander
   const river = Math.max(hi, near, smooth(0.01, 0.07, Math.abs(noise((u + m) * 0.0025, (v - m) * 0.0025, SEED + 40) - 0.5)))
-  return WATER - 1.5 + (h - WATER + 1.5) * river
+  const bed = WATER - 1.5 + smooth(0.6, 0.7, noise(x * 0.02, z * 0.02, SEED + 23)) * 1.4 // fords: shallow enough to ride
+  return bed + (h - bed) * river
 }
 function height(x, z) {
   return flatten(x, z, terrain(x, z))
