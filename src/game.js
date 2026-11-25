@@ -571,6 +571,9 @@ const seen = new Set()
 const tiles = new Map()
 const trail = []
 const mapc = $('map').getContext('2d')
+const bigc = $('big').getContext('2d')
+const bigMap = () => ($('big').hidden ^= 1)
+$('map').onpointerdown = $('big').onpointerdown = bigMap
 const FLAT = document.createElement('canvas') // world-aligned, big enough to cover the map at any turn
 FLAT.width = FLAT.height = Math.ceil(MAP * 1.42)
 const flat = FLAT.getContext('2d')
@@ -612,6 +615,70 @@ function tile(cx, cz) {
   if (tiles.size > 150) tiles.delete(tiles.keys().next().value)
   return t
 }
+// the explored ground north-up on g (W x H pixels) around the player, k map pixels per tile pixel; the minimap and the
+// big map (N) both draw with it. Returns the villages whose centre you've seen.
+function chart(g, W, H, k) {
+  const { x, z } = player.pos
+  const u = k / UPP
+  const sx = (wx) => (wx - x) * u + W / 2
+  const sz = (wz) => (wz - z) * u + H / 2
+  g.fillStyle = '#0b0f18'
+  g.fillRect(0, 0, W, H)
+  const span = Math.ceil(Math.max(W, H) / u / CH / 2) + 1
+  const cx = Math.floor(x / CH)
+  const cz = Math.floor(z / CH)
+  for (let i = cx - span; i <= cx + span; i++)
+    for (let j = cz - span; j <= cz + span; j++) {
+      const t = tile(i, j)
+      const a = Math.round(sx(i * CH))
+      const b = Math.round(sz(j * CH))
+      if (t) g.drawImage(t.cv, a, b, Math.round(sx(i * CH + CH)) - a, Math.round(sz(j * CH + CH)) - b)
+    }
+  g.fillStyle = '#fff8'
+  for (const [a, b] of trail) g.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
+  g.fillStyle = '#fd4'
+  g.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
+  const towns = sites(x, z, Math.ceil(Math.max(W, H) / u / G / 2) + 1).filter((t) => seen.has(Math.floor(t.x / CELL) + ',' + Math.floor(t.z / CELL)))
+  g.lineWidth = 2
+  for (const t of towns) {
+    g.strokeStyle = beacon[t.k] ? (beacon[t.k][2] ? '#fd4' : '#f80') : '#6b4a2a' // lit orange, on the star gold
+    g.beginPath()
+    g.arc(sx(t.x), sz(t.z), t.r * u, 0, 7)
+    g.stroke()
+  }
+  return towns
+}
+// player arrow, upright village names, north and the star's way on a rim of radius R, around (ox, oy) turned by rot
+function marks(g, ox, oy, rot, k, R, towns) {
+  const { x, z } = player.pos
+  const u = k / UPP
+  g.save()
+  g.translate(ox, oy)
+  g.rotate(rot)
+  const fx = Math.sin(player.dir)
+  const fz = Math.cos(player.dir)
+  g.fillStyle = '#f33'
+  g.beginPath()
+  g.moveTo(fx * 8, fz * 8)
+  g.lineTo(-fx * 4 + fz * 5, -fz * 4 - fx * 5)
+  g.lineTo(-fx * 4 - fz * 5, -fz * 4 + fx * 5)
+  g.fill()
+  g.restore()
+  g.fillStyle = '#fff'
+  g.font = 'bold 11px system-ui'
+  g.textAlign = 'center'
+  const c = Math.cos(rot)
+  const s = Math.sin(rot)
+  for (const t of towns) {
+    const dx = (t.x - x) * u
+    const dz = (t.z - z) * u
+    g.fillText(t.name, ox + dx * c - dz * s, oy + dx * s + dz * c - t.r * u - 3)
+  }
+  g.fillText('N', ox + s * R, oy - c * R + 4) // north, on the rim
+  const sl = Math.hypot(STAR.x, STAR.z) / R
+  g.fillStyle = '#fd4'
+  g.fillText('✦', ox + (STAR.x * c - STAR.z * s) / sl, oy + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
+}
 let lastCell
 function minimap() {
   const { x, z } = player.pos
@@ -631,61 +698,15 @@ function minimap() {
     const last = trail[trail.length - 1]
     if (!last || Math.hypot(last[0] - x, last[1] - z) > 6) trail.push([x, z]) > 300 && trail.shift()
   }
-  // compose the explored ground world-aligned on a larger canvas, then draw it turned with the camera
   const W = FLAT.width
-  const sx = (wx) => (wx - x) / UPP + W / 2 // world to flat-canvas pixels
-  const sz = (wz) => (wz - z) / UPP + W / 2
-  flat.fillStyle = '#0b0f18'
-  flat.fillRect(0, 0, W, W)
-  const span = Math.ceil((W * UPP) / CH / 2) + 1
-  const cx = Math.floor(x / CH)
-  const cz = Math.floor(z / CH)
-  for (let i = cx - span; i <= cx + span; i++)
-    for (let j = cz - span; j <= cz + span; j++) {
-      const t = tile(i, j)
-      if (t) flat.drawImage(t.cv, Math.round(sx(i * CH)), Math.round(sz(j * CH)))
-    }
-  flat.fillStyle = '#fff8'
-  for (const [a, b] of trail) flat.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
-  flat.fillStyle = '#fd4'
-  flat.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
-  // villages whose centre you've seen: a ring on the map, the name upright beside it
-  const towns = sites(x, z, 2).filter((t) => seen.has(Math.floor(t.x / CELL) + ',' + Math.floor(t.z / CELL)))
-  flat.lineWidth = 2
-  for (const t of towns) {
-    flat.strokeStyle = beacon[t.k] ? (beacon[t.k][2] ? '#fd4' : '#f80') : '#6b4a2a' // lit orange, on the star gold
-    flat.beginPath()
-    flat.arc(sx(t.x), sz(t.z), t.r / UPP, 0, 7)
-    flat.stroke()
-  }
+  const towns = chart(flat, W, W, 1)
   // up on the map is the way the camera looks (the way W walks)
   mapc.save()
   mapc.translate(MAP / 2, MAP / 2)
   mapc.rotate(camYaw)
   mapc.drawImage(FLAT, -W / 2, -W / 2)
-  const fx = Math.sin(player.dir)
-  const fz = Math.cos(player.dir)
-  mapc.fillStyle = '#f33'
-  mapc.beginPath()
-  mapc.moveTo(fx * 8, fz * 8)
-  mapc.lineTo(-fx * 4 + fz * 5, -fz * 4 - fx * 5)
-  mapc.lineTo(-fx * 4 - fz * 5, -fz * 4 + fx * 5)
-  mapc.fill()
   mapc.restore()
-  mapc.fillStyle = '#fff'
-  mapc.font = 'bold 11px system-ui'
-  mapc.textAlign = 'center'
-  const c = Math.cos(camYaw)
-  const s = Math.sin(camYaw)
-  for (const t of towns) {
-    const dx = (t.x - x) / UPP
-    const dz = (t.z - z) / UPP
-    mapc.fillText(t.name, MAP / 2 + dx * c - dz * s, MAP / 2 + dx * s + dz * c - t.r / UPP - 3)
-  }
-  mapc.fillText('N', MAP / 2 + Math.sin(camYaw) * 68, MAP / 2 - Math.cos(camYaw) * 68 + 4) // north, on the rim
-  const sl = Math.hypot(STAR.x, STAR.z) / 68
-  mapc.fillStyle = '#fd4'
-  mapc.fillText('✦', MAP / 2 + (STAR.x * c - STAR.z * s) / sl, MAP / 2 + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
+  marks(mapc, MAP / 2, MAP / 2, camYaw, 1, 68, towns)
   $('pos').textContent = `${REGIONS[region(x, z)]} · ${x | 0}, ${z | 0} · ${Math.hypot(x - home.x, z - home.z) | 0} m from start`
 }
 
@@ -1825,6 +1846,7 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyT') light()
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
+  if (e.code == 'KeyN' || (e.code == 'Escape' && !$('big').hidden)) bigMap()
   if (e.code == 'KeyR') mountUp()
   if (e.code == 'KeyC') chase = !chase // chase camera (tank controls) or the old free camera
 })
@@ -1839,7 +1861,7 @@ addEventListener('touchstart', (e) => {
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
     else if (t.target.id == 'lit') light()
-    else if (t.target.id == 'mute' || t.target.closest('#tray')) continue
+    else if (t.target.id == 'mute' || t.target.closest('#tray,#nav,#big')) continue
     else if (stick.id == null) Object.assign(stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 })
   }
   $('pad').style.display = 'block'
@@ -1915,6 +1937,16 @@ const fwd = new THREE.Vector3()
 let inRoom = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
+  if (!$('big').hidden) {
+    const W = ($('big').width = innerWidth)
+    const H = ($('big').height = innerHeight)
+    const { x, z } = player.pos
+    let e = 0
+    for (const [a, b] of [...trail, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
+    const k = Math.min(4, (0.45 * UPP) / e)
+    marks(bigc, W / 2, H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k))
+    return requestAnimationFrame(frame)
+  }
   const tank = chase && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves
   const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
   if (!tank) camYaw += q * dt * 2
