@@ -124,6 +124,50 @@ Ordered from tiniest to most ambitious. Compressed costs exclude the shared end 
 Options 4 and 6 together: the fifth beacon wakes the Drake Lord and shows the rim pointer, and his death is the
 ending. Exploring first, then a climax. It can also land in two steps: beacons now, the lord later.
 
+## Ben's variant: aim the beacons at the star. ~1,700 raw, ~170 compressed (plus ~20 end screen)
+
+Option 4 grown into a real quest, from Ben's idea.
+
+- **The star:** one bright star at a fixed, seeded spot in the sky (azimuth and elevation), always in the same place
+  however far you walk, like a real star. It is faint by day and blazing at night. It is a sprite kept at a fixed
+  direction from the camera, so it never comes closer. About 150 raw.
+- **Light a beacon:** at a village's well, with the torch equipped, press the torch's slot to set it in the well. The
+  torch is **gone from the tray** (its slot greys out) and a beam of light rises from the well. About 250 raw.
+- **Aim the mirror:** standing at the well puts you on the mirror: turning (A/D, drag) swings the beam round, W/S tips
+  it up and down. The beam warms from white to gold as it nears the star (hot and cold), and within a few degrees it
+  **locks** with a chime and a flash. About 300 raw.
+  - The star is at infinity, so the right angle is the same from every village. The first lock is the puzzle; after
+    that, the skill is the journey and the torch. A mountain in the way can still make a village awkward.
+- **A new torch needs wood + flint:** press 3 with no torch, 1 wood and 1 flint to make one. Flint is a new tray good
+  (🪨 with a count badge). Wood comes from felling trees with the axe, as now. About 250 raw with the recipe.
+- **Getting flint:** see the open questions. Either a rare drop, or a glint on some rocks that you break with the axe.
+  About 100–150 raw.
+- **Beams seen from afar:** locked beams are drawn on their own, not as part of the nearby village, and ignore fog.
+  Each finished village leaves a gold pillar on the horizon, all leaning into the same star: a landmark and a
+  progress bar in one. About 150 raw.
+- **Progress:** `✦ 2/5` in the info line. On the minimap a lit village's ring turns orange, and an aimed one turns
+  gold. About 80 raw.
+- **The light show (win):** the fifth lock makes every beam pulse, the star flares and grows, and the sky flushes
+  through colours. Bursts of the existing hit particles rain from the star and the music swells. Then the end screen
+  lists the five village names, kills, gold, distance and time. About 350 raw.
+- **Saved:** lit and aimed villages (by site key), and the torch count, through `kept`/`keep`.
+
+### Flow
+
+You start with one torch. Light and aim the first village (27–37 units away, so the first minute teaches it). Then
+four more villages, each needing a new torch: fell trees for wood, find flint, craft, travel by road, steed, drake or
+boat, light, aim. Night is when the star is easiest to see, and when the monsters are thickest.
+
+### Open questions for Ben
+
+1. **Flint:** a rare drop from one monster (for example rocky-hills goblins, about 1 in 6), or glinting rocks you
+   break with the axe (1 in about 15 of the existing rocks, so it reuses chopping and the felled/regrowth store)?
+2. **Aiming:** W/S plus turning at the mirror, as above, or the beam simply follows the camera while you stand there
+   (cheaper, but the camera has no pitch today)?
+3. **How many villages:** 5? Does the start village count?
+4. **The star:** fixed (simplest), or drifting slowly across the sky so that aimed beams need re-aiming (much
+   harder, probably not)?
+
 ## Recommendation
 
 **Light the beacons (option 4), with the "clear the gate first" twist, ~70 compressed with the twist, ~90 with the
