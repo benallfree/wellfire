@@ -133,7 +133,7 @@ There's no skinning: parts are rigid on their bones, the classic low-poly look, 
 `pose(model, layers)` resets every bone to rest and adds each clip layer's channels on top, weighted. The game blends
 `idle` and `walk` by speed and lays a one-shot (`swing`, `chop`, `jab`, `attack`, `hit`, `death`) over them. Held
 props run their own `idle` clip, which is how the torch flame flickers. Static models (trees, rocks, bushes) are baked
-to one geometry per seeded variant and drawn with `InstancedMesh`: 16 variants, 1,450 instances.
+to one geometry per seeded variant and drawn with `InstancedMesh`: 16 variants, refilled as world chunks come and go.
 
 **Props and sockets.** A socket is just a bone. The warrior's `hand*` bones carry a shield on the left (`hold handL
 shield` in the warrior's own block) and whatever the player equips on the right; swapping calls `hold()` again, which
@@ -145,16 +145,16 @@ the cut.
 
 **Deterministic creatures.** The slime, goblin, spider and bat blocks use `~` ranges, `|` picks, `chance` optional
 parts and `scale`, so every seed is a different, repeatable creature: size, color, head size, horns, hats, markings,
-weapons. Monster stats scale with the compiled size. The world itself is seeded too (value-noise terrain, rising at the
-rim to fence the map, sand by the water, rock on the heights).
+weapons. Monster stats scale with the compiled size. The world itself is seeded too, and endless (see
+[Endless world](#endless-world)).
 
 ![Characters compiled from text](docs/models.jpg)
 
 ## The game
 
-Third-person, high three-quarter perspective camera that trails the player (Q/E rotate it). A 260×260 seeded world
-with water, ~1,450 trees, rocks and bushes, and a 3-minute day/night cycle (the torch earns its place at night). Sixteen
-monsters at a time wander, chase within 12 units, wind up and strike; you get knocked back and flash, they get knocked
+Third-person, high three-quarter perspective camera that trails the player (Q/E rotate it). An endless seeded world
+of meadows, forests, rocky hills and lakes, with an exploration minimap, and a 3-minute day/night cycle (the torch earns
+its place at night). Twelve to twenty-odd monsters at a time wander, chase within 12 units, wind up and strike; you get knocked back and flash, they get knocked
 back, flash, and burst into little cubes. The sword is quick, the axe is slow and heavy with big knockback, the torch
 does little damage but sets monsters alight; burning monsters flee and take damage over time. Dead monsters shrink away
 and respawn somewhere around you; you regenerate slowly, and if you fall you get back up at the start.
@@ -310,6 +310,79 @@ loop calls `village.update(dt)` before the health bars and rendering.
 
 Cost: about 32.6 KB raw (game code +10.9 KB, model JSON +21.7 KB). Not measured with surprisal. At ~90% for code
 and the ~97% that `models.json` packs to overall, that's roughly 1.1 KB + 0.6 KB, so about 1.7 KB shipped.
+
+## Endless world
+
+![6.8 km from the start, in the rocky hills](docs/endless-rocky.jpg)
+
+There is no edge. The world is a pure function of `SEED` and coordinates, so any place regenerates identically on
+every visit and every page load, and nothing generated needs storing. It's one self-contained block in
+[src/game.js](src/game.js) (`// ---------- world`):
+
+- **Noise.** `hash(x, z, seed)` is an integer hash (`Math.imul` mixing), so it stays exact at any coordinate (the old
+  `sin()` hash loses precision far out). `noise()` is smooth value noise on it.
+- **Regions.** Two slow fields, `wet` and `rough` (a feature every few hundred units), pick the region: **meadow**,
+  **forest**, **rocky hills** or **lakes** (`region(x, z)`, each about a quarter of the world). `height()` is four
+  octaves of detail scaled by `rough`, lifted into hills where it's rough and sunk into lakes where it's wet; about a
+  quarter of the world is water. `ground()` colours a point (sand, meadow grass, darker forest grass, rock) and is
+  shared by the terrain and the minimap.
+- **Chunks.** The world is cut into 40×40-unit chunks. Each frame `stream()` drops chunks more than 4 away from the
+  player, builds at most two missing chunks within 3 (nearest first), and refills the scenery instances. A chunk is a
+  terrain mesh (26×26 vertices, coloured per vertex) plus an instance list and colliders. Neighbouring chunks
+  sample `height()` at the same edge points, so seams match exactly (checked: zero difference along a shared edge).
+- **Scenery.** A chunk's contents come from `rng(hash(cx, cz))`: 70 candidate spots, each drawing a fixed number of
+  random values whether or not anything grows there, so the result never depends on build order. What grows depends
+  on the region (`FLORA`: dense pines and oaks in forest, boulders in rocky hills, bushes by lakes, sparse meadows). The
+  16 tree, rock and bush variants are compiled once, and each is one shared `InstancedMesh` that every live chunk
+  writes into, so walking around adds no draw calls (about 40 in all).
+- **Water** is one flat sheet that travels with the player: the water level is the same everywhere, so this matches
+  per-chunk water and costs one mesh.
+- **Monsters by region.** The spawn point's region picks the kind (`FOES`: spiders in forest, goblins and bats in the
+  hills, slimes by the lakes), and the player's region scales the crowd (`CROWD`: forests are busier, lakes quieter).
+- **What's remembered.** Only what can't be derived: the minimap's set of revealed 8×8-unit cells (one short string
+  each, a few thousand after a long walk). Everything else is rebuilt from the seed: live chunks are the 49–81 around
+  you, and the minimap's chunk pictures are a 150-entry cache. Player changes to the world (felled trees, opened chests)
+  would go in a similar keyed set and be applied in `grow()` after generating.
+
+**Adding points of interest.** A village pass would ask the same seed per chunk:
+`const poi = hash(cx, cz, SEED + 5) < 0.01 ? 'village' : null` gives a stable, sparse answer for any chunk, and
+`grow()` (or a `feature(cx, cz)` beside it) would build it and keep scenery off it, the way it already skips `inTown()`.
+The one village today is placed near the start by its own seed and levels the ground through `flatten()` inside
+`height()`, so the terrain, colliders and minimap all agree with it.
+
+**Checked in the browser** (via `window.game`, which now also exposes `scene`, `renderer` and `world`):
+
+- Teleporting to (10000, 10000), elsewhere, and back gives the same chunk (same trees, same heights), and a fresh page
+  load gives the same signature.
+- After teleports to ±10 km and a 1,200-unit walk, `scene.children` stays at 85–110 and live chunks at 49–81.
+  `renderer.info.memory.geometries` stays roughly flat: 171 before, 153 after the walk, 240–350 across teleports
+  (live chunks plus monsters). That needed a fix in `spawn()`: monsters left behind are now disposed of (their
+  geometry and material), where before every respawn leaked one compiled model.
+- Frame time while walking at 40 units/s: median 8.3 ms, worst 9.4 ms (120 Hz display); chunk building never showed
+  up as a hitch.
+
+## Exploration minimap
+
+![The minimap after exploring around a forest, rocky hills and a lake](docs/minimap.png)
+
+Top right, under the mute button, a round 160-pixel map shows 320×320 units around the player at 2 units per pixel.
+Ground you've been within 36 units of is drawn in the world's own colours: deep and shallow water, sand, meadow, forest
+(darker), rock. The rest stays dark (fog of war). A dotted trail of your last 300 steps, a yellow square at the
+start and a red arrow for your facing sit on top. Below it: the region, your coordinates and how far you are from the
+start, e.g. `rocky hills · 5899, -3327 · 6860 m from start`.
+
+It is **north-up** (−z is up): what you've explored keeps its shape and position, the coordinates read straight off
+it, and it doesn't spin when Q/E turns the camera.
+
+It's drawn on a 2D canvas without reading back WebGL. Each revealed cell is painted once into a small per-chunk canvas
+by sampling `height()`, `region()` and `ground()` 16 times. Each frame the visible chunk canvases are blitted and the
+trail and arrow drawn on top. The chunk canvases are an LRU cache of 150: an evicted one is repainted from `seen` when
+you come back into view, so leaving and returning shows exactly the ground you explored.
+
+![6.7 km from the start, in a forest with a spider](docs/endless-far.jpg)
+
+Cost: about 8.2 KB raw (game code +7.9 KB, HTML/CSS +0.3 KB), including the disposal fix and the region tables. Not
+measured with surprisal; at ~90% that's roughly 0.8 KB shipped.
 
 ## Size
 

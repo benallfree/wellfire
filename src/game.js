@@ -5,10 +5,16 @@ import { score, jukebox } from './music.js'
 // The model library is JSON shipped in the page (see models.json).
 const lib = library(document.getElementById('models').textContent)
 
-const SIZE = 260 // world is SIZE x SIZE units, centred on 0,0
 const WATER = 0.2
 const ITEMS = ['sword', 'axe', 'torch']
-const FOES = ['slime', 'slime', 'goblin', 'spider', 'bat']
+// monster mix and how crowded it gets, per region (meadow, forest, rocky hills, lakes)
+const FOES = [
+  ['slime', 'slime', 'bat', 'goblin'],
+  ['spider', 'spider', 'goblin', 'slime'],
+  ['goblin', 'goblin', 'bat', 'spider'],
+  ['slime', 'slime', 'slime', 'bat'],
+]
+const CROWD = [1, 1.3, 1.1, 0.7]
 const R = rng(1337)
 
 // ---------- renderer, scene, light ----------
@@ -40,29 +46,52 @@ function resize() {
 addEventListener('resize', resize)
 resize()
 
-// ---------- terrain: seeded value noise ----------
-const hash = (x, z) => {
-  const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453
-  return s - Math.floor(s)
+// ---------- world: endless, derived from SEED; nothing generated is stored beyond the active radius ----------
+// Every function here is pure in (SEED, x, z): the same coordinates give the same ground and the same scenery on
+// every visit and every page load. Chunks of CH x CH units are built around the player a couple per frame and thrown
+// away when far. The only world state that grows is `seen`, the minimap's revealed cells.
+const SEED = 1337
+const CH = 40 // chunk size in units
+const NEAR = 3 // build chunks within this many chunks of the player (fog ends at 110)
+const hash = (x, z, s = SEED) => {
+  let h = Math.imul(x, 0x27d4eb2d) ^ Math.imul(z, 0x165667b1) ^ Math.imul(s, 0x9e3779b9)
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b)
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
-const noise = (x, z) => {
+const noise = (x, z, s) => {
   const ix = Math.floor(x)
   const iz = Math.floor(z)
   let fx = x - ix
   let fz = z - iz
   fx *= fx * (3 - 2 * fx)
   fz *= fz * (3 - 2 * fz)
-  const a = hash(ix, iz)
-  const b = hash(ix + 1, iz)
-  const c = hash(ix, iz + 1)
-  const d = hash(ix + 1, iz + 1)
+  const a = hash(ix, iz, s)
+  const b = hash(ix + 1, iz, s)
+  const c = hash(ix, iz + 1, s)
+  const d = hash(ix + 1, iz + 1, s)
   return a + (b - a) * fx + (c - a) * fz + (a - b - c + d) * fx * fz
 }
+// Regions come from two slow fields: wet (forest, then lakes) and rough (rocky hills).
+const wet = (x, z) => noise(x * 0.004, z * 0.004, SEED + 1)
+const rough = (x, z) => noise(x * 0.003, z * 0.003, SEED + 2)
+const REGIONS = ['meadow', 'forest', 'rocky hills', 'lakes']
+const region = (x, z) => (wet(x, z) > 0.66 ? 3 : rough(x, z) > 0.58 ? 2 : wet(x, z) > 0.47 ? 1 : 0)
 function height(x, z) {
   let h = 0
-  for (let o = 0, f = 0.015, a = 6; o < 4; o++, f *= 2.1, a *= 0.45) h += (noise(x * f + o * 17, z * f) - 0.5) * a
-  const edge = Math.max(Math.abs(x), Math.abs(z)) / (SIZE / 2)
-  return flatten(x, z, h + 1.2 + Math.max(0, edge - 0.8) * 60) // the map's rim rises into hills
+  for (let o = 0, f = 0.015, a = 6; o < 4; o++, f *= 2.1, a *= 0.45) h += (noise(x * f, z * f, SEED + 10 + o) - 0.5) * a
+  const r = rough(x, z)
+  return flatten(x, z, h * (0.6 + r * 1.2) + 2 + Math.max(0, r - 0.5) * 30 - Math.max(0, wet(x, z) - 0.63) * 60)
+}
+// Ground colour at a point, shared by the terrain mesh and the minimap.
+function ground(c, x, z, h = height(x, z)) {
+  const n = noise(x * 0.3, z * 0.3, SEED + 3) * 0.08
+  const r = region(x, z)
+  if (h < WATER + 0.4) c.set('#d8c890')
+  else if (h > 5 + (r == 2 ? -2 : 2)) c.setRGB(0.48 + n, 0.47 + n, 0.42 + n)
+  else if (r == 1) c.setRGB(0.22 + n, 0.45 + n, 0.18)
+  else c.setRGB(0.32 + n, 0.57 + n, 0.23)
+  return c
 }
 
 // ---------- villages: pick a dry, gentle site near the start and level the ground there ----------
@@ -99,72 +128,128 @@ const inTown = (x, z, pad = 0) => Math.hypot(x - town.x, z - town.z) < town.r + 
   town = { x: best[0], z: best[1], y: height(best[0], best[1]), r: 15, hx, hz }
 }
 
-{
-  const seg = 160
-  const g = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg).rotateX(-90 * DEG)
+// start on dry land near the origin
+const home = new THREE.Vector3()
+home.set(town.hx, 0, town.hz) // found before the village levelled its ground (see villages: site)
+
+// Scenery: each kind compiled from the model JSON in four seeded variants. One InstancedMesh per variant is shared
+// by every live chunk and refilled from their instance lists whenever a chunk comes or goes.
+const KINDS = [
+  ['pine', 0.5],
+  ['oak', 0.6],
+  ['rock', 0.8],
+  ['bush', 0],
+]
+// what grows where, per region: [chance of pine, oak, rock, bush] per candidate spot (the rest stays bare)
+const FLORA = [
+  [0.02, 0.07, 0.03, 0.14], // meadow
+  [0.4, 0.25, 0.03, 0.15], // forest
+  [0.12, 0.02, 0.3, 0.06], // rocky hills
+  [0.04, 0.08, 0.04, 0.2], // lakes
+]
+const groundMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
+const kit = KINDS.flatMap(([kind]) =>
+  [1, 2, 3, 4].map((v) => {
+    const m = make(lib, kind, v)
+    const mesh = new THREE.InstancedMesh(bake(m), m.mat, 900)
+    mesh.castShadow = mesh.receiveShadow = true
+    mesh.frustumCulled = false // instances span many chunks
+    mesh.count = 0
+    scene.add(mesh)
+    return mesh
+  })
+)
+const water = new THREE.Mesh(
+  new THREE.PlaneGeometry(600, 600).rotateX(-90 * DEG),
+  new THREE.MeshLambertMaterial({ color: '#3a7ab8', transparent: true, opacity: 0.75 })
+)
+water.position.y = WATER // one flat sheet that travels with the player: water is the same everywhere
+scene.add(water)
+
+const chunks = new Map() // live chunks only, "cx,cz" -> { mesh, inst, trees }
+let dirty = false
+function grow(cx, cz) {
+  const R = rng((hash(cx, cz, SEED + 4) * 4294967296) | 0)
+  const x0 = cx * CH
+  const z0 = cz * CH
+  const seg = 25
+  const g = new THREE.PlaneGeometry(CH, CH, seg, seg).rotateX(-90 * DEG).translate(x0 + CH / 2, 0, z0 + CH / 2)
   const p = g.attributes.position
   const col = []
   const c = new THREE.Color()
   for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i)
-    const z = p.getZ(i)
-    const h = height(x, z)
+    const h = height(p.getX(i), p.getZ(i)) // edges sample the same points as the neighbour: seams match
     p.setY(i, h)
-    const n = noise(x * 0.3, z * 0.3) * 0.08
-    if (h < WATER + 0.4) c.set('#d8c890')
-    else if (h < 5) c.setRGB(0.3 + n, 0.55 + n, 0.22)
-    else c.setRGB(0.48 + n, 0.47 + n, 0.42 + n)
+    ground(c, p.getX(i), p.getZ(i), h)
     col.push(c.r, c.g, c.b)
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
-  g.computeVertexNormals()
-  const ground = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }))
-  ground.receiveShadow = true
-  scene.add(ground)
-  const water = new THREE.Mesh(
-    new THREE.PlaneGeometry(SIZE, SIZE).rotateX(-90 * DEG),
-    new THREE.MeshLambertMaterial({ color: '#3a7ab8', transparent: true, opacity: 0.75 })
-  )
-  water.position.y = WATER
-  scene.add(water)
-}
-
-// start on dry land near the middle of the map
-const home = new THREE.Vector3()
-home.set(town.hx, 0, town.hz) // found before the village levelled its ground (see villages: site)
-
-// ---------- scenery: each kind compiled from text in a few seeded variants, then instanced ----------
-const trees = [] // colliders: [x, z, radius]
-const blockers = [] // extra colliders: (x, z, actor) => [x, z]
-for (const [kind, count, radius] of [
-  ['pine', 500, 0.5],
-  ['oak', 300, 0.6],
-  ['rock', 250, 0.8],
-  ['bush', 400, 0],
-]) {
-  for (let v = 0; v < 4; v++) {
-    const m = make(lib, kind, v + 1)
-    const mesh = new THREE.InstancedMesh(bake(m), m.mat, count / 4)
-    mesh.castShadow = mesh.receiveShadow = true
-    const o = new THREE.Object3D()
-    for (let i = 0; i < mesh.count; i++) {
-      let x, z, h
-      do {
-        x = (R() - 0.5) * SIZE * 0.9
-        z = (R() - 0.5) * SIZE * 0.9
-        h = height(x, z)
-      } while (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3))
-      const s = 0.8 + R() * 0.5
-      o.position.set(x, h - 0.1, z)
-      o.rotation.y = R() * 7
-      o.scale.setScalar(s)
-      o.updateMatrix()
-      mesh.setMatrixAt(i, o.matrix)
-      if (radius) trees.push([x, z, radius * s])
-    }
-    scene.add(mesh)
+  const mesh = new THREE.Mesh(g, groundMat)
+  mesh.receiveShadow = true
+  scene.add(mesh)
+  const inst = kit.map(() => [])
+  const trees = [] // colliders: [x, z, radius]
+  const o = new THREE.Object3D()
+  for (let i = 0; i < 70; i++) {
+    const x = x0 + R() * CH
+    const z = z0 + R() * CH
+    const pick = R()
+    const v = (R() * 4) | 0
+    const s = 0.8 + R() * 0.5
+    const turn = R() * 7
+    const h = height(x, z)
+    if (h < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3)) continue
+    let k = 0
+    for (let sum = 0, f = FLORA[region(x, z)]; k < 4 && pick >= (sum += f[k]); k++);
+    if (k > 3) continue
+    o.position.set(x, h - 0.1, z)
+    o.rotation.y = turn
+    o.scale.setScalar(s)
+    o.updateMatrix()
+    inst[k * 4 + v].push(o.matrix.clone())
+    if (KINDS[k][1]) trees.push([x, z, KINDS[k][1] * s])
   }
+  chunks.set(cx + ',' + cz, { cx, cz, mesh, inst, trees })
+  dirty = true
 }
+function drop(key) {
+  const ch = chunks.get(key)
+  scene.remove(ch.mesh)
+  ch.mesh.geometry.dispose()
+  chunks.delete(key)
+  dirty = true
+}
+// Called every frame: drop far chunks, build at most `n` missing ones (nearest first), refill the instances.
+function stream(x, z, n = 2) {
+  const px = Math.floor(x / CH)
+  const pz = Math.floor(z / CH)
+  for (const [key, ch] of chunks) if (Math.max(Math.abs(ch.cx - px), Math.abs(ch.cz - pz)) > NEAR + 1) drop(key)
+  const want = []
+  for (let i = -NEAR; i <= NEAR; i++)
+    for (let j = -NEAR; j <= NEAR; j++) if (!chunks.has(px + i + ',' + (pz + j))) want.push([i * i + j * j, px + i, pz + j])
+  want.sort((a, b) => a[0] - b[0])
+  for (const [, cx, cz] of want.slice(0, n)) grow(cx, cz)
+  if (dirty) {
+    dirty = false
+    kit.forEach((mesh, v) => {
+      let k = 0
+      for (const ch of chunks.values()) for (const m of ch.inst[v]) if (k < 900) mesh.setMatrixAt(k++, m)
+      mesh.count = k
+      mesh.instanceMatrix.needsUpdate = true
+    })
+  }
+  water.position.set(x, WATER, z)
+}
+const blockers = [] // extra colliders: (x, z, actor) => [x, z]
+// colliders of the live chunks around a point
+function around(x, z) {
+  const out = []
+  const cx = Math.floor(x / CH)
+  const cz = Math.floor(z / CH)
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) out.push(chunks.get(cx + i + ',' + (cz + j))?.trees || [])
+  return out
+}
+stream(home.x, home.z, 99)
 
 // ---------- actors ----------
 // An actor is a model (compiled from text) plus game state. Player and monsters share it.
@@ -195,19 +280,19 @@ class Actor {
   move(dx, dz, dt) {
     let x = this.pos.x + dx + this.vel.x * dt
     let z = this.pos.z + dz + this.vel.y * dt
-    for (const [tx, tz, r] of trees) {
-      const ex = x - tx
-      const ez = z - tz
-      const d = Math.hypot(ex, ez)
-      if (d < r + 0.4 && d > 0) {
-        x = tx + (ex / d) * (r + 0.4)
-        z = tz + (ez / d) * (r + 0.4)
+    for (const trees of around(x, z))
+      for (const [tx, tz, r] of trees) {
+        const ex = x - tx
+        const ez = z - tz
+        const d = Math.hypot(ex, ez)
+        if (d < r + 0.4 && d > 0) {
+          x = tx + (ex / d) * (r + 0.4)
+          z = tz + (ez / d) * (r + 0.4)
+        }
       }
-    }
     for (const f of blockers) [x, z] = f(x, z, this)
-    const lim = SIZE / 2 - 25
-    this.pos.x = Math.max(-lim, Math.min(lim, x))
-    this.pos.z = Math.max(-lim, Math.min(lim, z))
+    this.pos.x = x
+    this.pos.z = z
     this.vel.multiplyScalar(Math.max(0, 1 - dt * 6))
   }
   update(dt, run) {
@@ -234,6 +319,96 @@ function hud() {
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : item ? item.name : ''} · ${player.kills} kills` : `You fell after ${player.kills} kills…`
 }
 
+// ---------- minimap: north-up, fog of war over ground you haven't been near ----------
+// `seen` (revealed 8x8-unit cells) is the remembered state. Pictures of chunks are a small LRU cache rebuilt from
+// `seen` plus height() and region(), so the map never reads back WebGL and its memory stays bounded.
+const MAP = 160 // canvas pixels
+const UPP = 2 // world units per map pixel
+const CELL = 8 // reveal cell, in units
+const SIGHT = 36 // reveal radius, in units
+const seen = new Set()
+const tiles = new Map()
+const trail = []
+const mapc = $('map').getContext('2d')
+const tc = new THREE.Color()
+function paint(t, i, j) {
+  for (let a = 0; a < CELL; a += UPP)
+    for (let b = 0; b < CELL; b += UPP) {
+      const x = i * CELL + a + 1
+      const z = j * CELL + b + 1
+      const h = height(x, z)
+      ground(tc, x, z, h)
+      if (region(x, z) == 1) tc.multiplyScalar(0.65) // forest reads darker on the map
+      t.ctx.fillStyle = h < WATER ? (h < WATER - 2 ? '#2a5c94' : '#3a7ab8') : '#' + tc.getHexString()
+      t.ctx.fillRect((x - 1 - t.cx * CH) / UPP, (z - 1 - t.cz * CH) / UPP, 1, 1)
+    }
+}
+function tile(cx, cz) {
+  const key = cx + ',' + cz
+  let t = tiles.get(key)
+  if (t) {
+    tiles.delete(key) // keep most recently used last
+    tiles.set(key, t)
+    return t
+  }
+  const n = CH / CELL
+  const cells = []
+  for (let i = cx * n; i < cx * n + n; i++) for (let j = cz * n; j < cz * n + n; j++) seen.has(i + ',' + j) && cells.push([i, j])
+  if (!cells.length) return
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = CH / UPP
+  t = { cx, cz, cv, ctx: cv.getContext('2d') }
+  for (const [i, j] of cells) paint(t, i, j)
+  tiles.set(key, t)
+  if (tiles.size > 150) tiles.delete(tiles.keys().next().value)
+  return t
+}
+let lastCell
+function minimap() {
+  const { x, z } = player.pos
+  const pi = Math.floor(x / CELL)
+  const pj = Math.floor(z / CELL)
+  if (lastCell != pi + ',' + pj) {
+    lastCell = pi + ',' + pj
+    const r = Math.ceil(SIGHT / CELL)
+    for (let i = pi - r; i <= pi + r; i++)
+      for (let j = pj - r; j <= pj + r; j++) {
+        const key = i + ',' + j
+        if (seen.has(key) || Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - z) > SIGHT) continue
+        seen.add(key)
+        const t = tiles.get(Math.floor((i * CELL) / CH) + ',' + Math.floor((j * CELL) / CH))
+        if (t) paint(t, i, j)
+      }
+    const last = trail[trail.length - 1]
+    if (!last || Math.hypot(last[0] - x, last[1] - z) > 6) trail.push([x, z]) > 300 && trail.shift()
+  }
+  const sx = (wx) => (wx - x) / UPP + MAP / 2 // world to map pixels
+  const sz = (wz) => (wz - z) / UPP + MAP / 2
+  mapc.fillStyle = '#0b0f18'
+  mapc.fillRect(0, 0, MAP, MAP)
+  const span = Math.ceil((MAP * UPP) / CH / 2) + 1
+  const cx = Math.floor(x / CH)
+  const cz = Math.floor(z / CH)
+  for (let i = cx - span; i <= cx + span; i++)
+    for (let j = cz - span; j <= cz + span; j++) {
+      const t = tile(i, j)
+      if (t) mapc.drawImage(t.cv, Math.round(sx(i * CH)), Math.round(sz(j * CH)))
+    }
+  mapc.fillStyle = '#fff8'
+  for (const [a, b] of trail) mapc.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
+  mapc.fillStyle = '#fd4'
+  mapc.fillRect(sx(home.x) - 3, sz(home.z) - 3, 6, 6) // the start
+  const fx = Math.sin(player.dir)
+  const fz = Math.cos(player.dir)
+  mapc.fillStyle = '#f33'
+  mapc.beginPath()
+  mapc.moveTo(MAP / 2 + fx * 8, MAP / 2 + fz * 8)
+  mapc.lineTo(MAP / 2 - fx * 4 + fz * 5, MAP / 2 - fz * 4 - fx * 5)
+  mapc.lineTo(MAP / 2 - fx * 4 - fz * 5, MAP / 2 - fz * 4 + fx * 5)
+  mapc.fill()
+  $('pos').textContent = `${REGIONS[region(x, z)]} · ${x | 0}, ${z | 0} · ${Math.hypot(x - home.x, z - home.z) | 0} m from start`
+}
+
 // ---------- player ----------
 const player = new Actor('warrior', 1)
 player.hp = player.maxHp = 30
@@ -256,16 +431,16 @@ equip(0)
 // ---------- monsters ----------
 const foes = []
 let seedNext = 100
-// More monsters roam at night: 12 by day, up to 22 in the dark.
-const crowd = () => 12 + Math.round((1 - day) * 10)
+// More monsters roam at night: 12 by day, up to 22 in the dark, scaled by the region the player is in.
+const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)])
 function spawn(f) {
-  const kind = FOES[(R() * FOES.length) | 0]
   if (f) {
     scene.remove(f.g)
+    f.m.root.traverse((o) => o.geometry?.dispose()) // each monster's mesh is its own; the bar's is shared
+    f.m.mat.dispose()
     foes.splice(foes.indexOf(f), 1)
     if (foes.length >= crowd()) return
   }
-  const e = new Actor(kind, seedNext++)
   let x, z
   do {
     const a = R() * 7
@@ -273,6 +448,9 @@ function spawn(f) {
     x = player.pos.x + Math.cos(a) * d
     z = player.pos.z + Math.sin(a) * d
   } while ((height(x, z) < WATER + 0.3 && R() < 0.95) || inTown(x, z, 4))
+  const mix = FOES[region(x, z)]
+  const kind = mix[(R() * mix.length) | 0]
+  const e = new Actor(kind, seedNext++)
   e.pos.set(x, 0, z)
   const s = e.m.root.scale.x
   e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4 }[kind] * (0.6 + s * 0.6))
@@ -872,6 +1050,8 @@ function frame() {
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
   sun.target.position.copy(target)
 
+  stream(target.x, target.z)
+  minimap()
   village.update(dt)
   bars(dt)
   renderer.render(scene, camera)
@@ -880,4 +1060,4 @@ function frame() {
 hud()
 frame()
 
-window.game = { player, foes, equip, attack, clock, audio, village } // for play-testing from the console
+window.game = { player, foes, equip, attack, clock, audio, village, scene, renderer, world: { SEED, chunks, seen, tiles, height, region, grow, drop } } // for play-testing from the console
