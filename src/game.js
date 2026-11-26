@@ -6,7 +6,7 @@ import { score, jukebox } from './music.js'
 const lib = library(document.getElementById('models').textContent)
 
 const WATER = 0.2
-const ITEMS = ['sword', 'axe', 'torch', 'wood', 'flint', 'boat']
+const ITEMS = ['sword', 'axe', 'torch', 'wood', 'flint', 'boat', 'potion', 'whistle']
 // monster mix and how crowded it gets, per region (meadow, forest, rocky hills, lakes)
 const FOES = [
   ['slime', 'slime', 'bat', 'goblin'],
@@ -466,10 +466,11 @@ class Actor {
     return this.once && this.once[1] < this.m.clips[this.once[0]].d
   }
   move(dx, dz, dt) {
-    const w = wade(this)
+    const up = this.alt > 3 // flying: over trees, fences and water
+    const w = up || wade(this)
     let x = this.pos.x + dx * w + this.vel.x * dt
     let z = this.pos.z + dz * w + this.vel.y * dt
-    for (const trees of around(x, z))
+    if (!up) for (const trees of around(x, z))
       for (const [tx, tz, r] of trees) {
         const ex = x - tx
         const ez = z - tz
@@ -479,7 +480,7 @@ class Actor {
           z = tz + (ez / d) * (r + 0.4)
         }
       }
-    for (const f of blockers) [x, z] = f(x, z, this)
+    if (!up) for (const f of blockers) [x, z] = f(x, z, this)
     // a creature never steps (or is knocked) out of its medium: slide along the shore, else stay put
     const fits = this.fits
     this.stuck = 0
@@ -500,6 +501,8 @@ class Actor {
     const k = this.seat || this.boat ? 0 : Math.min(1, this.speed / run)
     const layers = this.boat
       ? [['row', boat.time, 1]] // rowing (see boat)
+      : this.alt > 3
+      ? [['fly', this.time, 1]]
       : this.swim && this.m.clips.swim
       ? [['swim', this.time * (0.6 + k * 0.6), 1]]
       : [
@@ -529,8 +532,8 @@ function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
-// the tray (models.json "tray"): seven slots, keys 1-7 or a tap, each item taken in hand (Space drops wood or flint);
-// a boat is held up and thrown like them; the potion slot drinks one. Slot 8 (key 8) opens crafting: recipes (tap one; only in a village; a recipe's
+// the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
+// weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). Slot 9 (key 9) opens crafting: recipes (tap one; only in a village; a recipe's
 // inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { recipes: RECIPES, materials: MATS } = lib.tray
@@ -571,6 +574,7 @@ bag.wood ||= 0
 bag.flint ||= 0
 bag.boat ||= 0
 bag.potion ||= 0
+bag.whistle ||= 0
 bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
 // beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star]
 const GOAL = 5
@@ -605,7 +609,8 @@ function slot(i, tap) {
   }
   if (k == 'torch' && !bag.torch) craft()
   if (k == 'boat' && !bag.boat) say('No boat: craft one in a village')
-  if (k == 'potion') drink()
+  if (k == 'potion' && !bag.potion) say('No potion: buy one at the apothecary')
+  if (k == 'whistle' && !bag.whistle) craft('whistle')
   if (ITEMS.includes(k)) equip(ITEMS.indexOf(k), 1)
 }
 function gain(k, n) {
@@ -689,7 +694,7 @@ function chart(g, W, H, k) {
   const u = k / UPP
   const sx = (wx) => (wx - x) * u + W / 2
   const sz = (wz) => (wz - z) * u + H / 2
-  g.fillStyle = '#0b0f18'
+  g.fillStyle = g == bigc && player.seat?.alt ? '#0b0f1840' : '#0b0f18' // flying: the world shows through the big map
   g.fillRect(0, 0, W, H)
   const span = Math.ceil(Math.max(W, H) / u / CH / 2) + 1
   const cx = Math.floor(x / CH)
@@ -753,11 +758,12 @@ function minimap() {
   const pj = Math.floor(z / CELL)
   if (lastCell != pi + ',' + pj) {
     lastCell = pi + ',' + pj
-    const r = Math.ceil(SIGHT / CELL)
+    const S = SIGHT + (player.seat?.alt || 0) * 1.5 // wider from the air
+    const r = Math.ceil(S / CELL)
     for (let i = pi - r; i <= pi + r; i++)
       for (let j = pj - r; j <= pj + r; j++) {
         const key = i + ',' + j
-        if (seen.has(key) || Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - z) > SIGHT) continue
+        if (seen.has(key) || Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - z) > S) continue
         seen.add(key)
         const t = tiles.get(Math.floor((i * CELL) / CH) + ',' + Math.floor((j * CELL) / CH))
         if (t) paint(t, i, j)
@@ -819,7 +825,7 @@ function equip(i, take) {
   if (ITEMS[player.item] in bag && !bag[ITEMS[player.item]]) player.item = 0 // none left to hold
   const k = ITEMS[player.item]
   if (k != 'torch') lit = 0
-  player.lift = k in MATS || k == 'boat'
+  player.lift = player.item > 2 // anything but a weapon is held up over his head
   if (!player.lift) arm = player.item
   const h = hold(lib, player.m, 'handR', k)
   const c = h.vars.carry // a boat goes over his head upside down, in its rest pose so posing keeps it
@@ -858,7 +864,8 @@ function addMount(kind, seed, x, z) {
   m.pos.set(x, 0, z)
   m.hp = m.maxHp = m.was = Math.round(m.m.vars.hp)
   m.dir = R() * 7
-  m.wander = m.flee = m.cool = m.jolt = 0
+  m.wander = m.flee = m.cool = m.jolt = m.alt = m.fy = 0
+  m.sta = 1
   mounts.push(m)
   return m
 }
@@ -879,6 +886,7 @@ function seat(r, m) {
     if (tamed != m) gone.add(m.home)
     tamed = m
     m.flee = m.jolt = 0
+    m.up = 1
   } else {
     r.base = r.run
     r.run = m.m.vars.run * 0.7
@@ -903,12 +911,12 @@ function unseat(r, from) {
     m.from = [from.x, from.z]
   }
 }
-const nearMount = () => mounts.find((m) => !m.rider && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
+const nearMount = () => mounts.find((m) => !m.rider && !m.leave && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
 function mountUp() {
   if (aim) return (aim = null)
   if (well && beacon[well.k] && !beacon[well.k][2]) return (aim = well)
   if (player.boat) return ashore()
-  if (player.seat) return unseat(player)
+  if (player.seat) return player.seat.alt ? say('Land first: Space') : unseat(player)
   if (nearBoat()) return board()
   const m = player.hp > 0 && !village.in && nearMount()
   if (m) seat(player, m)
@@ -917,6 +925,7 @@ function mountUp() {
 // the attack button while riding: the mount's own attack, with damage, reach and cooldown from its model vars
 function buck() {
   const m = player.seat
+  if (m.m.vars.fly) return m.up ? (m.up = 0) : m.sta > 0.2 ? (m.up = 1) : say(m.m.vars.name + ' is tired')
   if (m.busy || m.cool > 0) return
   m.play('attack')
   m.cool = m.m.vars.cool
@@ -927,17 +936,18 @@ function buck() {
 function steer(dt, ix, iz, il) {
   const m = player.seat
   const v = m.m.vars
+  const run = m.alt > 3 && m.sta ? v.fly : v.run
   let sp = 0
   if (chase) {
     m.dir -= ix * v.turn * 0.8 * dt + drag
-    sp = -iz * v.run * (iz > 0 ? 0.3 : 1) * (m.busy ? 0.4 : 1) // reins: turn on the spot, back up slowly
+    sp = -iz * run * (iz > 0 ? 0.3 : 1) * (m.busy ? 0.4 : 1) // reins: turn on the spot, back up slowly
   } else if (il > 0.1) {
     const c = Math.cos(camYaw)
     const s = Math.sin(camYaw)
     let a = Math.atan2(ix * c + iz * s, -ix * s + iz * c) - m.dir
     a = Math.atan2(Math.sin(a), Math.cos(a))
     m.dir += Math.max(-v.turn * dt, Math.min(v.turn * dt, a))
-    sp = v.run * Math.min(1, il) * Math.max(0.3, 1 - Math.abs(a) / 2.5) * (m.busy ? 0.4 : 1)
+    sp = run * Math.min(1, il) * Math.max(0.3, 1 - Math.abs(a) / 2.5) * (m.busy ? 0.4 : 1)
   }
   m.speed += (sp - m.speed) * Math.min(1, dt * 3)
   m.move(Math.sin(m.dir) * m.speed * dt, Math.cos(m.dir) * m.speed * dt, dt)
@@ -960,6 +970,19 @@ function breathe(m) {
   torchLight.intensity = 25
 }
 blockers.push((x, z, w) => (mounts.includes(w) && height(x, z) < WATER - 0.2 ? [w.pos.x, w.pos.z] : [x, z])) // no swimming mounts
+// the whistle (in hand, Space; crafted in a village): the roc flies to you and lands; ridden, it climbs high and flies fast on
+// stamina, out of every creature's reach, and comes down to rest when it runs out
+function whistle() {
+  const v = lib.roc.vars
+  if (player.seat || player.boat) return
+  voice([[0, 1500], [0.12, 2300], [0.24, 2150]], 0.07)
+  voice([[0, 2300], [0.12, 2700], [0.42, 1600]], 0.07, { vib: [9, 50], at: 0.3 })
+  let m = mounts.find((m) => m.m.vars.fly && !m.leave)
+  if (!m) (m = addMount('roc', SEED, player.pos.x - Math.sin(player.dir) * 60, player.pos.z - Math.cos(player.dir) * 60)).alt = v.alt / 2
+  m.come = 1
+  voice([[0, 2200], [0.2, 3100], [0.6, 2800], [2.2, 1200]], 0.12, { vib: [6, 40], hiss: 1.2, at: 1 })
+  setTimeout(() => say(m.m.vars.name + ' the roc answers'), 1000)
+}
 function herd(dt) {
   // roll each newly built chunk once for a wild mount (about one chunk in 17)
   for (const [key, ch] of chunks)
@@ -1006,7 +1029,7 @@ function herd(dt) {
       }
       continue
     }
-    if (m != tamed && !m.rider && !chunks.has(Math.floor(m.pos.x / CH) + ',' + Math.floor(m.pos.z / CH))) {
+    if (m != tamed && !v.fly && !m.rider && !chunks.has(Math.floor(m.pos.x / CH) + ',' + Math.floor(m.pos.z / CH))) {
       dropMount(m)
       continue
     }
@@ -1032,6 +1055,17 @@ function herd(dt) {
       m.pos.z = g.pos.z
       m.dir = g.dir
       m.speed = (g.speed / g.run) * v.run
+    } else if (v.fly) {
+      // called: fly to you; worn out: fly off and away
+      const d = Math.hypot(player.pos.x - m.pos.x, player.pos.z - m.pos.z)
+      if (m.leave && d > 150) {
+        dropMount(m)
+        continue
+      }
+      m.speed = m.leave ? v.fly / 2 : m.come ? Math.min(v.fly / 2, d * 2) : 0
+      if (m.come) m.dir = Math.atan2(player.pos.x - m.pos.x, player.pos.z - m.pos.z)
+      m.move(Math.sin(m.dir) * m.speed * dt, Math.cos(m.dir) * m.speed * dt, dt)
+      m.come &&= m.speed > 10
     } else {
       // riderless: bolt from a threat, else graze and amble
       let sp = 0
@@ -1051,6 +1085,17 @@ function herd(dt) {
       m.dir += Math.max(-v.turn * dt, Math.min(v.turn * dt, a))
       m.speed = sp
       m.move(Math.sin(m.dir) * sp * dt, Math.cos(m.dir) * sp * dt, dt)
+    }
+    if (v.fly) {
+      // altitude: climb to `alt` while ridden and rested (skim low over water when landed by hand), glide in when called
+      const g = Math.max(WATER - 0.9, height(m.pos.x, m.pos.z))
+      if (m.sta <= 0) (m.up = 0), (m.out = r == player) // worn out: it comes down, throws you off and leaves
+      const want = r == player ? (m.up ? v.alt : g < WATER && !m.out ? 4 : 0) : m.come ? m.speed : m.leave ? v.alt : 0
+      m.alt = Math.max(0, m.alt + Math.max(-v.lift * dt, Math.min(v.lift * dt, want - m.alt)))
+      m.sta = Math.min(1, Math.max(0, m.sta + dt * (m.alt > 3 ? -1 / v.tire : 1 / v.rest)))
+      m.fy = Math.max(g, m.fy + (g + m.alt - m.fy) * Math.min(1, dt * 3))
+      m.floor = m.alt ? m.fy : null
+      if (m.out && !m.alt) (m.out = 0), (m.leave = 1), unseat(player, player.pos), say(v.name + ' is worn out and flies off')
     }
     m.update(dt, v.run)
     if (m.rider) {
@@ -1072,8 +1117,8 @@ function herd(dt) {
   $('rider').hidden = !t
   if (t) {
     $('mbar').hidden = !player.seat
-    $('mhp').style.width = (Math.max(0, t.hp) / t.maxHp) * 100 + '%'
-    $('mname').textContent = player.seat ? `${t.m.vars.name} the ${t.m.vars.kind} · R to get off` : `R · ride ${t.m.vars.name} the ${t.m.vars.kind}`
+    $('mhp').style.width = (t.m.vars.fly ? t.sta : Math.max(0, t.hp) / t.maxHp) * 100 + '%'
+    $('mname').textContent = player.seat ? `${t.m.vars.name} the ${t.m.vars.kind} · ${t.m.vars.fly ? 'Space fly/land · ' : ''}R to get off` : `R · ride ${t.m.vars.name} the ${t.m.vars.kind}`
   }
 }
 
@@ -1408,7 +1453,7 @@ var village
       const here = [...built.values()].find((v) => Math.hypot(p.x - v.T.x, p.z - v.T.z) < v.T.r)
       const was = this.in
       const named = this.name
-      this.in = player.hp > 0 && !!here
+      this.in = player.hp > 0 && !!here && !player.seat
       this.name = here?.T.name
       if (this.in != was) stow(this.in)
       if (this.in != was || this.name != named) hud()
@@ -1767,15 +1812,16 @@ function craft(k = 'torch') {
   if (k == 'potion' && !player.room?.shop) return say('Buy it at the apothecary')
   if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(own(m) >= n))[0]] || 'craft one'}`)
   for (const [m, n] of e) m == 'gold' ? earn(-n) : gain(m, -n)
-  gain(k, 1)
   place(k)
   keep('warriorSlots', belt)
+  gain(k, 1)
   if (k == 'torch') fuel = FUEL
   say(`+1 ${k}`)
 }
 function drink() {
   if (!bag.potion) return say('No potion: buy one at the apothecary')
-  if (player.hp <= 0 || player.hp >= player.maxHp) return
+  if (player.hp <= 0) return
+  if (player.hp >= player.maxHp) return say('Already at full health')
   player.hp = Math.min(player.maxHp, player.hp + lib.health.potionHeal)
   gain('potion', -1)
   hud()
@@ -1872,7 +1918,7 @@ function shine(dt) {
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
   if (T && T != well) {
     const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (8)')
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (9)')
   }
   well = T || null
   if (!well) aim = null
@@ -1930,6 +1976,50 @@ function beep(f, d = 0.1, type = 'square', vol = 0.06, slide = 0.5) {
     o.connect(g).connect(audio.out)
     o.start()
     o.stop(ac.currentTime + d)
+  } catch {}
+}
+// a voice: a smooth (sine) note gliding through [seconds, Hz] points, starting `at` seconds from now; vib is
+// [rate, depth in Hz] and hiss mixes in breath (noise through a band that follows the note)
+function voice(pts, vol, { vib = [0, 0], hiss = 0, at = 0 } = {}) {
+  const ac = audio.ac
+  if (!ac || audio.muted) return
+  try {
+    const t = ac.currentTime + at
+    const end = t + pts.at(-1)[0]
+    const o = ac.createOscillator()
+    const g = ac.createGain()
+    const lfo = (rate, depth, param) => {
+      const l = ac.createOscillator()
+      const d = ac.createGain()
+      l.frequency.value = rate
+      d.gain.value = depth
+      l.connect(d).connect(param)
+      l.start(t)
+      l.stop(end)
+    }
+    const glide = (p) => pts.map(([s, f], i) => (i ? p.exponentialRampToValueAtTime(f, t + s) : p.setValueAtTime(f, t)))
+    glide(o.frequency)
+    if (vib[0]) lfo(...vib, o.frequency)
+    if (hiss) {
+      const n = ac.createBufferSource()
+      const b = (n.buffer = ac.createBuffer(1, ((end - t) * ac.sampleRate) | 0, ac.sampleRate)).getChannelData(0)
+      for (let i = 0; i < b.length; i++) b[i] = Math.random() * 2 - 1
+      const f = ac.createBiquadFilter()
+      const h = ac.createGain()
+      f.type = 'bandpass'
+      f.Q.value = 3
+      glide(f.frequency)
+      h.gain.value = hiss
+      n.connect(f).connect(h).connect(g)
+      n.start(t)
+    }
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.03)
+    g.gain.setValueAtTime(vol, t + (end - t) * 0.6)
+    g.gain.exponentialRampToValueAtTime(0.0001, end)
+    o.connect(g).connect(audio.out)
+    o.start(t)
+    o.stop(end)
   } catch {}
 }
 // a splash: half a second of fading noise through a falling low-pass
@@ -2002,7 +2092,10 @@ function attack() {
   if (player.seat) return buck()
   if (player.room?.shop) return craft('potion')
   if (well && !beacon[well.k] && ITEMS[player.item] == 'torch') return setTorch()
-  if (player.lift) return player.busy || player.hp <= 0 || toss(ITEMS[player.item])
+  const k = ITEMS[player.item]
+  if (k == 'potion') return drink()
+  if (k == 'whistle') return whistle()
+  if (player.lift) return player.busy || player.hp <= 0 || toss(k)
   if (player.busy || player.hp <= 0 || village?.in || player.swim || player.boat) return
   player.play(item.anim)
   player.struck = false
@@ -2050,6 +2143,19 @@ function hurt(e, dmg, from, push) {
   hud()
 }
 
+// the big map (N), north-up and zoomed to the trail; see-through while flying, which keeps going under it
+function bigDraw() {
+  const c = $('big')
+  const W = (c.width = innerWidth)
+  const H = (c.height = innerHeight)
+  const { x, z } = player.pos
+  let e = 0
+  for (const [a, b] of [...trail, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
+  const k = Math.min(4, (0.45 * UPP) / e)
+  c.style.opacity = player.seat?.alt ? 0.8 : 1
+  marks(bigc, W / 2, H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k))
+}
+
 // ---------- main loop ----------
 const clock = new THREE.Clock()
 const near = { slime: 0, goblin: 0, spider: 0, bat: 0 } // how present each monster kind is, for the music
@@ -2057,16 +2163,8 @@ const fwd = new THREE.Vector3()
 let inRoom = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
-  if (!$('big').hidden) {
-    const W = ($('big').width = innerWidth)
-    const H = ($('big').height = innerHeight)
-    const { x, z } = player.pos
-    let e = 0
-    for (const [a, b] of [...trail, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
-    const k = Math.min(4, (0.45 * UPP) / e)
-    marks(bigc, W / 2, H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k))
-    return requestAnimationFrame(frame)
-  }
+  const open = !$('big').hidden
+  if (open && !player.seat?.alt) return bigDraw(), requestAnimationFrame(frame) // paused, unless flying
   const tank = chase && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves
   const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
   if (!tank) camYaw += q * dt * 2
@@ -2280,7 +2378,7 @@ function frame() {
     }
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
+      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat) && !(player.seat?.alt > 3)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
     }
     e.update(dt, e.run)
   }
@@ -2322,8 +2420,9 @@ function frame() {
   for (const [c, k] of [[DAY, 'day'], [NIGHT, 'night'], [LITE, 'light']]) c.lerp(hue.set(st[k]), Math.min(1, dt / 2)) // a new stage fades in
   sky.lerpColors(NIGHT, DAY, day)
   scene.fog.color.copy(sky)
-  scene.fog.near = 6 + day * 34
-  scene.fog.far = 40 + day * 70
+  const fly = player.seat?.alt || 0 // the fog draws back as you climb
+  scene.fog.near = 6 + day * 34 + fly
+  scene.fog.far = 40 + day * 70 + fly * 1.5
   sun.color.lerpColors(MOON, SUN, day).multiply(LITE)
   hemi.color.set('#dfefff').multiply(LITE)
   sun.intensity = 0.2 + 2.2 * day
@@ -2338,7 +2437,7 @@ function frame() {
   // camera: a high three-quarter view that trails the player, pulled back while riding; in chase mode it swings
   // round behind the facing (lagging a little), sits lower, looks a step ahead, and rises over higher ground behind
   const target = player.pos
-  const back = (player.seat ? 1.35 : 1) * (camera.aspect < 1 ? 1.3 : 1) // and on a tall phone screen
+  const back = player.seat ? 1.35 + player.seat.alt / 15 : 1 * (camera.aspect < 1 ? 1.3 : 1) // and on a tall phone screen
   const snap = clock.elapsedTime < 0.2 || inRoom != !!player.room
   inRoom = !!player.room
   drag = 0
@@ -2375,6 +2474,7 @@ function frame() {
   minimap()
   village.update(dt)
   bars(dt)
+  if (open) bigDraw()
   renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }

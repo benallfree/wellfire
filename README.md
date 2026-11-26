@@ -14,9 +14,10 @@ Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serve
 need a network connection.)
 
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
-Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-7 pick a tray
-slot (7 drinks a potion), 8 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
-with it at a well sets it in the beacon · wood and flint are held up over his head in both hands (shield and
+Space or J uses what's in hand: a weapon attacks (the axe also chops trees and breaks flint), a potion is drunk, the
+whistle calls the roc, and wood, flint and a boat are thrown · F or Tab swap the item in hand · 1-8 pick a tray
+slot (7 potion, 8 whistle), 9 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
+with it at a well sets it in the beacon · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
 or take a beacon's mirror (then turn and W/S tilt) · C switches to the old free camera (WASD moves
@@ -824,11 +825,11 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
   as `{ "cx,cz": { n: time } }` in `localStorage.warriorFelled`, and `grow()` skips it. Trees regrow after 30 minutes
   (real time): expired entries are pruned on load, so the record stays small however far you roam.
 - **The economy.** `models.json` `tray.recipes` maps each item to its inputs, which can include `gold`: wood (20 gold) and
-  flint (200 gold) are gold-only, a torch is 1 wood + 1 flint, a boat is 10 wood + 30 gold. Slot 7 lists every recipe
+  flint (200 gold) are gold-only, a torch is 1 wood + 1 flint, a boat is 10 wood + 30 gold. Slot 9 lists every recipe
   with its cost, greyed when short; crafting and buying only work in a village (outside, it says "Craft in a village").
   The sword and axe are permanent and not for sale. The game keeps running while the panel is open: you can walk,
   fight and pick things up with it showing. Number keys still take items in hand; tapping or clicking two slots
-  swaps them; Esc or 7 closes it.
+  swaps them; Esc or 9 closes it.
 - **The boat.** Slot 6 counts boats owned. Taking it in hand (key 6 or tapping the slot) lifts a boat over his head,
   upside down like a portaged canoe (the boat's `carry` var: its position and rotation in the hand, set in the held
   prop's rest pose so posing keeps it). Space throws it ahead like wood; where it lands becomes the boat (water or

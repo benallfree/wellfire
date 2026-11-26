@@ -7339,6 +7339,661 @@
       }
     }
   },
+  "roc": {
+    "vars": {
+      "s": "1.7~1.9",
+      "plume": "6a4a2a|3a3a44|8a6a4a|e8e4dc|7a3a22",
+      "wing": "3a2a1a|1a1a20|5a4030|c0b8a8",
+      "belly": "d8c8a8|b0a080|f0ece0",
+      "blanket": "8a2a2a|2a4a8a|4a6a2a",
+      "c": "plume",
+      "name": "Skyclaw|Galewing|Stormcrest|Highsoar|Cloudtalon",
+      "kind": "roc",
+      "run": "5~6",
+      "fly": 58,
+      "turn": 2,
+      "hp": 60,
+      "grip": 99,
+      "dmg": 2,
+      "reach": 3.5,
+      "arc": 0.9,
+      "push": 12,
+      "cool": 1,
+      "at": 0.5,
+      "alt": 40,
+      "lift": 14,
+      "tire": 25,
+      "rest": 10
+    },
+    "scale": "s",
+    "bones": [
+      {
+        "name": "hip",
+        "parent": "root",
+        "position": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "name": "body",
+        "parent": "hip",
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "rotation": [
+          -10,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "saddle",
+        "parent": "body",
+        "position": [
+          0,
+          0.44,
+          0.05
+        ]
+      },
+      {
+        "name": "neck",
+        "parent": "body",
+        "position": [
+          0,
+          0.25,
+          0.5
+        ],
+        "rotation": [
+          30,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "head",
+        "parent": "neck",
+        "position": [
+          0,
+          0.45,
+          0
+        ],
+        "rotation": [
+          -30,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "wing*",
+        "parent": "body",
+        "position": [
+          0.4,
+          0.25,
+          0.15
+        ],
+        "rotation": [
+          0,
+          80,
+          0
+        ]
+      },
+      {
+        "name": "tip*",
+        "parent": "wing*",
+        "position": [
+          1.3,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          -160,
+          0
+        ]
+      },
+      {
+        "name": "leg*",
+        "parent": "hip",
+        "position": [
+          0.2,
+          -0.1,
+          0
+        ]
+      },
+      {
+        "name": "shin*",
+        "parent": "leg*",
+        "position": [
+          0,
+          -0.4,
+          0
+        ]
+      },
+      {
+        "name": "tail",
+        "parent": "hip",
+        "position": [
+          0,
+          0.1,
+          -0.45
+        ],
+        "rotation": [
+          -15,
+          0,
+          0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "hip",
+        "color": "c",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.42,
+          0.42,
+          0.5
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "c",
+        "position": [
+          0,
+          0.05,
+          0.1
+        ],
+        "size": [
+          0.48,
+          0.46,
+          0.75
+        ],
+        "segments": 8
+      },
+      {
+        "shape": "ball",
+        "bone": "body",
+        "color": "belly",
+        "position": [
+          0,
+          -0.12,
+          0.2
+        ],
+        "size": [
+          0.38,
+          0.32,
+          0.6
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "box",
+        "bone": "saddle",
+        "color": "blanket",
+        "position": [
+          0,
+          -0.04,
+          0
+        ],
+        "size": [
+          0.6,
+          0.04,
+          0.6
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "saddle",
+        "color": "5a3a22",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.44,
+          0.09,
+          0.46
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "neck",
+        "color": "c",
+        "position": [
+          0,
+          0.22,
+          0
+        ],
+        "size": [
+          0.16,
+          0.5,
+          0.24
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "head",
+        "color": "c",
+        "position": [
+          0,
+          0.08,
+          0.05
+        ],
+        "size": [
+          0.24,
+          0.22,
+          0.28
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "e0a020",
+        "position": [
+          0,
+          0.04,
+          0.4
+        ],
+        "size": [
+          0,
+          0.36,
+          0.1
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "segments": 4
+      },
+      {
+        "shape": "box",
+        "bone": "head",
+        "color": "fd4!",
+        "position": [
+          0.15,
+          0.12,
+          0.14
+        ],
+        "size": [
+          0.04,
+          0.05,
+          0.05
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "cyl",
+        "bone": "head",
+        "color": "wing",
+        "position": [
+          0,
+          0.25,
+          -0.1
+        ],
+        "size": [
+          0,
+          0.34,
+          0.06
+        ],
+        "rotation": [
+          -50,
+          0,
+          0
+        ],
+        "segments": 4
+      },
+      {
+        "shape": "box",
+        "bone": "wing*",
+        "color": "c",
+        "position": [
+          0.65,
+          0,
+          -0.1
+        ],
+        "size": [
+          1.3,
+          0.07,
+          0.6
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "wing*",
+        "color": "wing",
+        "position": [
+          0.65,
+          -0.02,
+          -0.5
+        ],
+        "size": [
+          1.25,
+          0.05,
+          0.35
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "tip*",
+        "color": "wing",
+        "position": [
+          0.6,
+          0,
+          -0.2
+        ],
+        "size": [
+          1.2,
+          0.05,
+          0.6
+        ]
+      },
+      {
+        "shape": "box",
+        "bone": "tail",
+        "color": "wing",
+        "position": [
+          0,
+          0,
+          -0.35
+        ],
+        "size": [
+          0.6,
+          0.05,
+          0.7
+        ],
+        "rotation": [
+          0,
+          45,
+          0
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "leg*",
+        "color": "c",
+        "position": [
+          0,
+          -0.12,
+          0
+        ],
+        "size": [
+          0.13,
+          0.22,
+          0.13
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "cyl",
+        "bone": "shin*",
+        "color": "e0a020",
+        "position": [
+          0,
+          -0.2,
+          0
+        ],
+        "size": [
+          0.05,
+          0.4,
+          0.05
+        ],
+        "segments": 4
+      },
+      {
+        "shape": "box",
+        "bone": "shin*",
+        "color": "e0a020",
+        "position": [
+          0,
+          -0.4,
+          0.08
+        ],
+        "size": [
+          0.2,
+          0.04,
+          0.3
+        ]
+      }
+    ],
+    "clips": {
+      "idle": {
+        "duration": 2,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "rx",
+            "keys": [
+              0,
+              2
+            ]
+          },
+          {
+            "bone": "neck",
+            "channel": "rx",
+            "keys": [
+              0,
+              -6
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              6
+            ]
+          },
+          {
+            "bone": "tail",
+            "channel": "rx",
+            "keys": [
+              0,
+              5
+            ]
+          }
+        ]
+      },
+      "walk": {
+        "duration": 0.8,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "leg^",
+            "channel": "rx",
+            "keys": [
+              30,
+              -30
+            ]
+          },
+          {
+            "bone": "shin^",
+            "channel": "rx",
+            "keys": [
+              0,
+              25
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0,
+              0.06,
+              0,
+              0.06
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "rz",
+            "keys": [
+              3,
+              -3
+            ]
+          },
+          {
+            "bone": "neck",
+            "channel": "rx",
+            "keys": [
+              -8,
+              8
+            ]
+          }
+        ]
+      },
+      "fly": {
+        "duration": 0.9,
+        "loop": true,
+        "channels": [
+          {
+            "bone": "wing*",
+            "channel": "ry",
+            "keys": [
+              -80
+            ]
+          },
+          {
+            "bone": "tip*",
+            "channel": "ry",
+            "keys": [
+              160
+            ]
+          },
+          {
+            "bone": "wing*",
+            "channel": "rz",
+            "keys": [
+              30,
+              -25
+            ]
+          },
+          {
+            "bone": "tip*",
+            "channel": "rz",
+            "keys": [
+              15,
+              -15
+            ]
+          },
+          {
+            "bone": "leg*",
+            "channel": "rx",
+            "keys": [
+              -70
+            ]
+          },
+          {
+            "bone": "body",
+            "channel": "rx",
+            "keys": [
+              4,
+              -4
+            ]
+          },
+          {
+            "bone": "neck",
+            "channel": "rx",
+            "keys": [
+              -25
+            ]
+          },
+          {
+            "bone": "hip",
+            "channel": "y",
+            "keys": [
+              0.08,
+              -0.08
+            ]
+          }
+        ]
+      },
+      "attack": {
+        "duration": 0.8,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "neck",
+            "channel": "rx",
+            "keys": [
+              0,
+              -20,
+              25,
+              0
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              0,
+              -10,
+              15,
+              0
+            ]
+          },
+          {
+            "bone": "wing*",
+            "channel": "ry",
+            "keys": [
+              0,
+              -50,
+              -50,
+              0
+            ]
+          },
+          {
+            "bone": "wing*",
+            "channel": "rz",
+            "keys": [
+              0,
+              40,
+              40,
+              0
+            ]
+          }
+        ]
+      },
+      "hit": {
+        "duration": 0.35,
+        "loop": false,
+        "channels": [
+          {
+            "bone": "body",
+            "channel": "rx",
+            "keys": [
+              0,
+              -12,
+              0
+            ]
+          },
+          {
+            "bone": "neck",
+            "channel": "rx",
+            "keys": [
+              0,
+              -20,
+              0
+            ]
+          }
+        ]
+      }
+    }
+  },
   "gold": {
     "parts": [
       {
@@ -7825,6 +8480,93 @@
       }
     ]
   },
+  "whistle": {
+    "vars": {
+      "name": "Whistle"
+    },
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "e8dcc0",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "size": [
+          0.035,
+          0.24,
+          0.035
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "6b4a2e",
+        "position": [
+          0.13,
+          0,
+          0
+        ],
+        "size": [
+          0.04,
+          0.03,
+          0.04
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "7a4a2a",
+        "position": [
+          -0.06,
+          0.07,
+          0
+        ],
+        "size": [
+          0.025,
+          0.12,
+          0.06
+        ],
+        "rotation": [
+          0,
+          0,
+          30
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "f2ece0",
+        "position": [
+          -0.1,
+          0.12,
+          0
+        ],
+        "size": [
+          0.02,
+          0.06,
+          0.045
+        ],
+        "rotation": [
+          0,
+          0,
+          30
+        ]
+      }
+    ]
+  },
   "potion": {
     "vars": {
       "name": "Potion"
@@ -7900,7 +8642,8 @@
       "wood",
       "flint",
       "boat",
-      "potion"
+      "potion",
+      "whistle"
     ],
     "materials": {
       "wood": "fell a tree with the axe",
@@ -7924,6 +8667,10 @@
       },
       "potion": {
         "gold": 250
+      },
+      "whistle": {
+        "wood": 3,
+        "gold": 50
       }
     }
   },
