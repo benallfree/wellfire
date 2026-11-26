@@ -1536,8 +1536,8 @@ var village
           f.update(dt, 1.6)
         }
       // the sage: a bubble over them when you're near; bump them and they stop, turn and say which way the sunstone is
-      const g = !h && here?.sage
-      const d = g && Math.hypot(g.pos.x - p.x, g.pos.z - p.z)
+      const g = !h && !title && here?.sage
+      const d = g ? Math.hypot(g.pos.x - p.x, g.pos.z - p.z) : 99
       $('bub').hidden = !(d < 12)
       if (d < 12) {
         const T = here.T
