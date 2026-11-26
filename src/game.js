@@ -480,7 +480,7 @@ class Actor {
     this.vel = new THREE.Vector2() // knockback
     this.dir = 0
     this.speed = 0
-    this.time = 0
+    this.time = this.step = 0 // step: the gait's phase, advanced at the current speed (time * speed jumps when speed changes)
     this.once = null // one-shot clip: [name, t]
     this.hp = this.maxHp = 1
     this.flash = 0
@@ -526,15 +526,16 @@ class Actor {
     this.time += dt
     if (this.once) this.once[1] += dt
     const k = this.seat || this.boat ? 0 : Math.min(1, this.speed / run)
+    this.step += dt * (this.swim ? 0.6 + k * 0.6 : Math.max(0.6, k))
     const layers = this.boat
       ? [['row', boat.time, 1]] // rowing (see boat)
       : this.alt > 3
       ? [['fly', this.time, 1]]
       : this.swim && this.m.clips.swim
-      ? [['swim', this.time * (0.6 + k * 0.6), 1]]
+      ? [['swim', this.step, 1]]
       : [
           ['idle', this.time, 1 - k],
-          ['walk', this.time * Math.max(0.6, k), k],
+          ['walk', this.step, k],
         ]
     if (this.seat) layers.push(['ride', 0, 1]) // sitting on a mount (see mounts)
     if (this.lift) layers.push(['lift', 0, 1]) // an item held over his head
