@@ -887,7 +887,7 @@ neither needs a torch. The minimap and HUD are unchanged and stay readable.
   hand as a club ("Your torch burnt out: pick it to relight (1 wood)"); taking it again relights it for
   one wood. Putting it out keeps what's left.
 - **Water and riding.** Swimming douses it (and you can't light it while swimming); ashore, take it again to relight
-  it. On a mount or in a village the weapon is stowed as before. In the boat it stands in the bow post (see the boat).
+  it. On a mount you keep holding the torch, lit (any other weapon is stowed); in a village it is stowed as before. In the boat it stands in the bow post (see the boat).
 
 Cost: about +2.9 KB raw (`game.js` +2,369 bytes, about 0.9 KB of it comments; `compiler.js` +456; `index.html` +64;
 `models.json` +2 bytes minified, eight colours gaining a `!`). Estimate only: surprisal wasn't run here.

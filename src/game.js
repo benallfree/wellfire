@@ -786,7 +786,7 @@ function equip(i, take) {
   player.lift = k in MATS
   if (!player.lift) arm = player.item
   item = hold(lib, player.m, 'handR', k).vars
-  if (village?.in || player.seat || player.swim || player.boat) village.stow(1)
+  if (village?.in || player.swim || player.boat || (player.seat && k != 'torch')) village.stow(1)
   else village?.sling(player.lift && ITEMS[arm])
   torch()
   tray()
@@ -832,7 +832,7 @@ function seat(r, m) {
   m.rider = r
   r.was = r.hp
   if (r == player) {
-    village.stow(1)
+    ITEMS[player.item] != 'torch' && village.stow(1) // a torch stays in hand on a mount
     if (tamed != m) gone.add(m.home)
     tamed = m
     m.flee = m.jolt = 0
