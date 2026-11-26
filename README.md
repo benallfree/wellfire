@@ -466,8 +466,9 @@ settlements and routes wherever you walk, and nothing about them is stored. The 
   stowed in any of them, and spawning avoids every site, built or not.
 - **Minimap.** Roads show as you reveal the ground they cross, and a village gets a ring and its name once you've
   seen its centre. The revealed-cell set is still the only remembered state.
-- **Townsfolk talk.** Bump into a villager to hear a line in the speech bubble over them (the sage's bubble, shared;
-  the sage keeps its sunstone hint and takes no role). Roles cycle by index from `talk.roles` in `models.json`:
+- **Townsfolk talk.** Within `talk` (1.8) of a villager, the nearest one stops, turns to you and shows `Space · talk`
+  in a bubble. Space (or HIT) opens a box with their line and pauses the game; Space, Enter, Esc or a tap closes it.
+  An unlit well nearby takes Space first. The sage keeps its sunstone hint and takes no role. Roles cycle by index from `talk.roles` in `models.json`:
   a mission giver (the goal), guides and greeters, with lines picked by seed from `talk.mission`, `talk.guide` and
   `talk.greet` (`@` is a village name). A guide names the nearest unseen village without a lit beacon and reveals a
   circle round it (the same `reveal()` as sight), never the road. Each villager's line is fixed once heard, so a guide
@@ -960,8 +961,7 @@ replace the old glinting flint rocks. Tuning is in models.json `"eggs"`.
   sunstone egg) with a far-future time, so the prune keeps it, it never regrows and it reloads cracked. No sunstone
   can be mined twice.
 - **The sage.** One townsperson in each village (`folk[seed % count]`) knows which way the sunstone sleeps. Within 12
-  units a `…` bubble floats over them. Bump them (within `talk`, 1.8) and they stop, turn to you and say, in the
-  bubble, which quarter of the wilds (north, east, south or west of the village) holds it. Once it's cracked, they
+  units a `…` bubble floats over them. Talk to them (Space, within `talk`) and they say which quarter of the wilds (north, east, south or west of the village) holds it. Once it's cracked, they
   say it's found.
 - **The HUD** shows `n sunstone` in the info line while you carry any.
 - **Saved.** `localStorage.warriorBeacons` holds `{ siteKey: [azimuth, angle from straight up, locked] }`. Torches and

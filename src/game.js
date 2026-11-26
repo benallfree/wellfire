@@ -672,6 +672,7 @@ const mapc = $('map').getContext('2d')
 const bigc = $('big').getContext('2d')
 const bigMap = () => ($('big').hidden ^= 1)
 $('map').onpointerdown = $('big').onpointerdown = bigMap
+$('say').onpointerdown = () => ($('say').hidden = true)
 const FLAT = document.createElement('canvas') // world-aligned, big enough to cover the map at any turn
 FLAT.width = FLAT.height = Math.ceil(MAP * 1.42)
 const flat = FLAT.getContext('2d')
@@ -1359,7 +1360,10 @@ var village
   const TALK = lib.talk
   const told = {}
   const talk = (v, f) => {
-    const k = v.T.seed + f.i
+    const T = v.T
+    const q = gem(T.gi, T.gj)
+    if (f == v.sage) return !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? `${T.name}'s sunstone is found. Light the wells!` : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`
+    const k = T.seed + f.i
     const pick = (a, name) => a[k % a.length].replace('@', name)
     if (told[k]) return told[k]
     const role = TALK.roles[f.i % TALK.roles.length]
@@ -1471,6 +1475,12 @@ var village
     sling,
     in: false,
     name: '',
+    chat: 0,
+    speak() {
+      const [v, f] = this.chat
+      $('say').hidden = !($('bub').hidden = true)
+      $('say').innerHTML = `<small>${f == v.sage ? 'Sage' : 'Townsfolk'} of ${v.T.name}</small><p>${talk(v, f)}</p><small>Space or tap</small>`
+    },
     enter(h) {
       fade(() => {
         player.room = h
@@ -1543,6 +1553,8 @@ var village
             o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
           }
       }
+      let near = EGG.talk
+      this.chat = 0
       for (const v of built.values())
         for (const f of v.folk) {
           const dx = f.goal[0] - f.pos.x
@@ -1550,12 +1562,7 @@ var village
           const d = Math.hypot(dx, dz)
           f.speed = 0
           const n = Math.hypot(p.x - f.pos.x, p.z - f.pos.z)
-          if (n < EGG.talk && !f.near && !f.keep && f != v.sage && player.hp > 0 && !title) {
-            f.near = f.wait = 3
-            f.dir = Math.atan2(p.x - f.pos.x, p.z - f.pos.z)
-            f.line = talk(v, f)
-            v.talker = f
-          } else if (n > EGG.talk + 1) f.near = 0
+          if (n < near && !f.keep && player.hp > 0 && !player.seat && !title) (near = n), (this.chat = [v, f])
           if ((f.wait -= dt) > 0) f.keep || f.move(0, 0, dt)
           else if (d < 0.6) {
             f.wait = 2 + v.VR() * 5
@@ -1567,21 +1574,18 @@ var village
           }
           f.update(dt, 1.6)
         }
-      // the sage: a bubble over them when you're near; bump them and they stop, turn and say which way the sunstone is
-      const t = here?.talker
-      const g = !h && !title && (t && Math.hypot(t.pos.x - p.x, t.pos.z - p.z) < EGG.talk + 1 ? t : here?.sage)
+      // the nearest townsfolk stops, turns and offers to talk (Space); the sage shows a bubble from farther off
+      const c = !h && this.chat
+      const g = c ? c[1] : !h && !title && here?.sage
       const d = g ? Math.hypot(g.pos.x - p.x, g.pos.z - p.z) : 99
       $('bub').hidden = !(d < 12)
       if (d < 12) {
-        const T = here.T
-        const q = gem(T.gi, T.gj)
-        if (d < EGG.talk) {
+        if (c) {
           g.wait = Math.max(g.wait, 2)
           g.goal = [g.pos.x, g.pos.z]
           g.dir = Math.atan2(p.x - g.pos.x, p.z - g.pos.z)
         }
-        $('bub').textContent =
-          g.line || (d > EGG.talk + 1 ? '…' : !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? `${T.name}'s sunstone is found. Light the wells!` : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`)
+        $('bub').textContent = c ? 'Space · talk' : '…'
         const v = g.pos.clone().setY(g.pos.y + 2.4).project(camera)
         Object.assign($('bub').style, { left: (v.x + 1) * 50 + '%', top: (1 - v.y) * 50 + '%' })
       }
@@ -2135,6 +2139,7 @@ let camYaw = 45 * DEG
 addEventListener('keydown', (e) => {
   keys[e.code] = 1
   if (e.code == 'Escape' && !$('inv').hidden) pack()
+  if (!$('say').hidden) return ['Space', 'KeyJ', 'Escape', 'Enter'].includes(e.code) && ($('say').hidden = true)
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1, 1)
   if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
@@ -2151,7 +2156,8 @@ addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
 addEventListener('touchstart', (e) => {
   for (const t of e.changedTouches) {
-    if (t.target.id == 'swap') equip(player.item + 1, 1)
+    if (!$('say').hidden) $('say').hidden = true
+    else if (t.target.id == 'swap') equip(player.item + 1, 1)
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
     else if (t.target.id == 'mute' || t.target.closest('#tray,#nav,#big,#inv')) continue
@@ -2178,6 +2184,7 @@ function attack() {
   if (player.seat) return buck()
   if (player.room?.shop) return craft('potion')
   if (well && !beacon[well.k]?.[2]) return beacon[well.k] ? (aim = well) : setTorch() // at a well, Space lights or takes the beam
+  if (village?.chat) return village.speak()
   const k = ITEMS[player.item]
   if (k == 'potion') return drink()
   if (k == 'whistle') return whistle()
@@ -2251,6 +2258,7 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
   const open = !$('big').hidden
   if (open && !player.seat?.alt) return bigDraw(), requestAnimationFrame(frame) // paused, unless flying
+  if (!$('say').hidden) return requestAnimationFrame(frame)
   const tank = chase && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves
   const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
   if (!tank) camYaw += q * dt * 2
