@@ -8265,7 +8265,7 @@
         ]
       },
       {
-        "name": "mirror",
+        "name": "stone",
         "parent": "root",
         "position": [
           0,
@@ -8324,62 +8324,36 @@
         "segments": 5
       },
       {
-        "shape": "box",
-        "bone": "root",
-        "color": "6b4423",
+        "shape": "cyl",
+        "bone": "stone",
+        "color": "ffa530!",
         "position": [
-          0.4,
-          0.55,
+          0,
+          0.14,
           0
         ],
         "size": [
-          0.06,
-          0.9,
-          0.06
+          0,
+          0.28,
+          0.24
         ],
-        "mirror": true
+        "segments": 6
       },
       {
         "shape": "cyl",
-        "bone": "mirror",
-        "color": "a07a30",
+        "bone": "stone",
+        "color": "ff7a20!",
         "position": [
           0,
-          0,
-          -0.02
-        ],
-        "size": [
-          0.4,
-          0.03,
-          0.4
-        ],
-        "rotation": [
-          90,
-          0,
-          0
-        ],
-        "segments": 12
-      },
-      {
-        "shape": "cyl",
-        "bone": "mirror",
-        "color": "e8f0ff!",
-        "position": [
-          0,
-          0,
+          -0.14,
           0
         ],
         "size": [
-          0.35,
-          0.04,
-          0.35
-        ],
-        "rotation": [
-          90,
-          0,
+          0.24,
+          0.28,
           0
         ],
-        "segments": 12
+        "segments": 6
       }
     ],
     "clips": {
@@ -8477,6 +8451,218 @@
           0.1
         ],
         "segments": 5
+      }
+    ]
+  },
+  "egg": {
+    "vars": {
+      "name": "Thunder egg"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "9a5a32",
+        "position": [
+          0,
+          0.18,
+          0
+        ],
+        "size": [
+          0.34,
+          0.3,
+          0.31
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "5e3420",
+        "position": [
+          0,
+          0.2,
+          0
+        ],
+        "size": [
+          0.355,
+          0.07,
+          0.325
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "b8834e",
+        "position": [
+          0.12,
+          0.34,
+          0.08
+        ],
+        "size": [
+          0.1,
+          0.06,
+          0.09
+        ],
+        "segments": 5
+      }
+    ]
+  },
+  "cracked": {
+    "vars": {
+      "name": "Cracked egg"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "9a5a32",
+        "position": [
+          -0.24,
+          0.02,
+          0
+        ],
+        "size": [
+          0.3,
+          0.14,
+          0.28
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "d8cfee",
+        "position": [
+          -0.24,
+          0.13,
+          0
+        ],
+        "size": [
+          0.25,
+          0.03,
+          0.25
+        ],
+        "segments": 8
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "7a5aa8",
+        "position": [
+          -0.24,
+          0.145,
+          0
+        ],
+        "size": [
+          0.12,
+          0.03,
+          0.12
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "9a5a32",
+        "position": [
+          0.26,
+          0.02,
+          0.06
+        ],
+        "size": [
+          0.3,
+          0.14,
+          0.28
+        ],
+        "rotation": [
+          0,
+          0,
+          12
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "d8cfee",
+        "position": [
+          0.25,
+          0.13,
+          0.06
+        ],
+        "size": [
+          0.25,
+          0.03,
+          0.25
+        ],
+        "rotation": [
+          0,
+          0,
+          12
+        ],
+        "segments": 8
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "7a5aa8",
+        "position": [
+          0.25,
+          0.145,
+          0.06
+        ],
+        "size": [
+          0.12,
+          0.03,
+          0.12
+        ],
+        "rotation": [
+          0,
+          0,
+          12
+        ],
+        "segments": 6
+      }
+    ]
+  },
+  "sunstone": {
+    "vars": {
+      "name": "Sunstone"
+    },
+    "parts": [
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "ffa530!",
+        "position": [
+          0,
+          0.07,
+          0
+        ],
+        "size": [
+          0,
+          0.14,
+          0.12
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "ff7a20!",
+        "position": [
+          0,
+          -0.07,
+          0
+        ],
+        "size": [
+          0.12,
+          0.14,
+          0
+        ],
+        "segments": 6
       }
     ]
   },
@@ -8647,7 +8833,7 @@
     ],
     "materials": {
       "wood": "fell a tree with the axe",
-      "flint": "strike a glinting rock with the axe",
+      "flint": "crack thunder eggs with the axe",
       "gold": "slay monsters"
     },
     "recipes": {
@@ -8751,5 +8937,23 @@
     "farPay": 2,
     "payRamp": 100,
     "spawnPad": 22
+  },
+  "eggs": {
+    "perChunk": 2.4,
+    "region": [
+      0.8,
+      0.7,
+      1.6,
+      0.6
+    ],
+    "flint": 0.2,
+    "gold": 0.15,
+    "coins": [
+      5,
+      15
+    ],
+    "gemNear": 40,
+    "gemFar": 200,
+    "talk": 1.8
   }
 }

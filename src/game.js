@@ -341,10 +341,25 @@ for (const k in felled) {
   for (const i in felled[k]) if (Date.now() - felled[k][i] > REGROW) delete felled[k][i]
   if (!Object.keys(felled[k]).length) delete felled[k]
 }
-// flint: about one rock in eight glints. Struck with the axe it gives a flint, and the glint (kept in `felled` as
-// "f" + index) comes back after REGROW like a tree.
-const glint = new THREE.OctahedronGeometry(0.16)
-const glintMat = new THREE.MeshBasicMaterial({ color: '#bdf' })
+// item models, each baked once and shared: tray icons, drops and thunder eggs
+const geos = {}
+const geo = (k) => (geos[k] ||= bake(make(lib, k, 1)))
+const itemMat = glow(new THREE.MeshLambertMaterial({ vertexColors: true }))
+// thunder eggs (models.json "eggs"): about perChunk a chunk, weighted by region. A seeded roll fills each with flint,
+// gold or nothing, and every village hides one sunstone egg gemNear-gemFar units out (gem()). Struck with the axe an
+// egg splits for good: its id goes in `felled` with a far-future time, so the prune keeps it and it never regrows.
+const EGG = lib.eggs
+const gem = memo((gi, gj) => {
+  const T = site(gi, gj)
+  const R = rng((h2(gi, gj, SEED + 12) * 4294967296) | 0)
+  for (let i = 0; T && i < 20; i++) {
+    const a = R() * 7
+    const d = EGG.gemNear + R() * (EGG.gemFar - EGG.gemNear)
+    const x = T.x + Math.cos(a) * d
+    const z = T.z + Math.sin(a) * d
+    if (height(x, z) > WATER + 0.5 && !inTown(x, z, 3) && road(x, z)[0] > RW + 1.5) return [x, z]
+  }
+})
 function grow(cx, cz) {
   const R = rng((hash(cx, cz, SEED + 4) * 4294967296) | 0)
   const key = cx + ',' + cz
@@ -368,7 +383,6 @@ function grow(cx, cz) {
   scene.add(mesh)
   const inst = kit.map(() => [])
   const trees = [] // colliders: [x, z, radius]
-  const flints = [] // [x, z, glint mesh]
   const o = new THREE.Object3D()
   for (let i = 0; i < 70; i++) {
     const x = x0 + R() * CH
@@ -389,15 +403,28 @@ function grow(cx, cz) {
     const m = o.matrix.clone()
     inst[k * 4 + v].push(m)
     if (KINDS[k][1]) trees.push(k < 2 ? [x, z, KINDS[k][1] * s, i, k * 4 + v, m, key] : [x, z, KINDS[k][1] * s]) // pines and oaks can be felled (see wood)
-    if (k == 2 && turn < 0.9 && !(Date.now() - (felled[key]?.['f' + i] || 0) < REGROW)) {
-      const g = new THREE.Mesh(glint, glintMat)
-      g.position.set(x, h + 0.5 + s * 0.5, z)
-      g.i = i
-      mesh.add(g) // goes when the chunk's ground does
-      flints.push(g)
-    }
   }
-  chunks.set(key, { cx, cz, mesh, inst, trees, flints, key })
+  const eggs = []
+  const E = rng((hash(cx, cz, SEED + 13) * 4294967296) | 0)
+  const egg = (x, z, id, c) => {
+    const g = new THREE.Mesh(geo(felled[key]?.[id] ? 'cracked' : 'egg'), itemMat)
+    g.position.set(x, height(x, z), z)
+    g.rotation.y = x * 7
+    Object.assign(g, { k: id, c, done: felled[key]?.[id] })
+    mesh.add(g) // goes when the chunk's ground does
+    eggs.push(g)
+  }
+  for (let i = 0, n = EGG.perChunk * EGG.region[region(x0 + CH / 2, z0 + CH / 2)] + E(); i < n - 1; i++) {
+    const x = x0 + E() * CH
+    const z = z0 + E() * CH
+    const c = E()
+    if (height(x, z) > WATER + 0.5 && Math.hypot(x - home.x, z - home.z) > 6 && !inTown(x, z, 3) && road(x, z)[0] > RW + 1.5) egg(x, z, 'e' + i, c < EGG.flint ? 'flint' : c < EGG.flint + EGG.gold ? 'gold' : 0)
+  }
+  for (const T of sites(x0, z0)) {
+    const p = gem(T.gi, T.gj)
+    if (p && Math.floor(p[0] / CH) == cx && Math.floor(p[1] / CH) == cz) egg(...p, 'e' + T.k, 'sunstone')
+  }
+  chunks.set(key, { cx, cz, mesh, inst, trees, eggs, key })
   dirty = true
 }
 function drop(key) {
@@ -530,7 +557,7 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills${bag.sunstone ? ` · ${bag.sunstone} sunstone` : ''} · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
 // weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). Slot 9 (key 9) opens crafting: recipes (tap one; only in a village; a recipe's
@@ -539,9 +566,6 @@ function hud() {
 const { recipes: RECIPES, materials: MATS } = lib.tray
 // tray icons are the items' own models, each drawn once at startup into a small picture (models.json tray.icons:
 // picture size, camera fov and view direction, per-item turn in degrees and zoom); any item with a model gets one
-const geos = {}
-const geo = (k) => (geos[k] ||= bake(make(lib, k, 1)))
-const itemMat = glow(new THREE.MeshLambertMaterial({ vertexColors: true }))
 const ICON = { pack: 'craft' }
 {
   const { size, fov, view, turn, zoom } = lib.tray.icons
@@ -617,6 +641,7 @@ function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
   keep('warriorBag', bag)
   ITEMS[player.item] == k && !bag[k] ? equip(arm) : tray()
+  hud()
   ;($('tray').children[belt.indexOf(k)] || $('tray').lastChild).animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
 }
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
@@ -914,7 +939,6 @@ function unseat(r, from) {
 const nearMount = () => mounts.find((m) => !m.rider && !m.leave && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
 function mountUp() {
   if (aim) return (aim = null)
-  if (well && beacon[well.k] && !beacon[well.k][2]) return (aim = well)
   if (player.boat) return ashore()
   if (player.seat) return player.seat.alt ? say('Land first: Space') : unseat(player)
   if (nearBoat()) return board()
@@ -1314,6 +1338,7 @@ var village
       v.folk.push(f)
       parts.push(f.m)
     }
+    v.sage = v.folk[T.seed % v.folk.length] // the one who knows which way the sunstone sleeps
     const f = new Actor('villager', T.seed - 1)
     f.pos.set(h.x, 0, h.z - h.rd / 2 + 0.9)
     f.floor = h.y
@@ -1510,6 +1535,23 @@ var village
           }
           f.update(dt, 1.6)
         }
+      // the sage: a bubble over them when you're near; bump them and they stop, turn and say which way the sunstone is
+      const g = !h && here?.sage
+      const d = g && Math.hypot(g.pos.x - p.x, g.pos.z - p.z)
+      $('bub').hidden = !(d < 12)
+      if (d < 12) {
+        const T = here.T
+        const q = gem(T.gi, T.gj)
+        if (d < EGG.talk) {
+          g.wait = Math.max(g.wait, 2)
+          g.goal = [g.pos.x, g.pos.z]
+          g.dir = Math.atan2(p.x - g.pos.x, p.z - g.pos.z)
+        }
+        $('bub').textContent =
+          d > EGG.talk + 1 ? '…' : !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? `${T.name}'s sunstone is found. Light the wells!` : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`
+        const v = g.pos.clone().setY(g.pos.y + 2.4).project(camera)
+        Object.assign($('bub').style, { left: (v.x + 1) * 50 + '%', top: (1 - v.y) * 50 + '%' })
+      }
     },
   }
 }
@@ -1627,8 +1669,9 @@ function pickups(dt) {
       }
     }
     c.rotation.y += dt * 3
-    c.visible = c.age < 40 || c.tossed || (c.age * 8) & 1 // blink before it goes
-    if ((c.age > 45 && !c.tossed) || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) lose(c)
+    const stay = c.tossed || c.k == 'sunstone' // a sunstone never fades
+    c.visible = c.age < 40 || stay || (c.age * 8) & 1 // blink before it goes
+    if ((c.age > 45 && !stay) || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) lose(c)
   }
 }
 
@@ -1786,8 +1829,8 @@ function boating(dt) {
 
 // ---------- beacons: the goal. Set a torch in five villages' wells and aim each beam at the star ----------
 // The star hangs at one fixed direction, as if infinitely far, so the same aim is right from every village. At a
-// well, Space with the torch in hand sets it in the beacon (a new torch takes a wood and a flint). R takes the mirror: turning swings
-// the beam, W/S tilt it, and the camera looks along it. The beam warms from white to gold as it nears the star and
+// well, Space sets a torch and a sunstone (from a thunder egg) in the beacon, and you hold the beam at once (Space takes it
+// again later, R lets go): turning swings it, W/S tilt it, and the camera looks along it. The beam warms from white to gold as it nears the star and
 // locks within LOCK radians. Beams are drawn from anywhere: a far one is moved toward the camera and shrunk by the same
 // factor, which leaves its picture unchanged but keeps it inside the camera's range (it is also fattened, to be seen). Parallel beams all meet at their
 // vanishing point, the star. The fifth lock starts the light show and the end screen.
@@ -1798,12 +1841,12 @@ scene.add(star)
 const beamGeo = new THREE.CylinderGeometry(1.5, 0.45, 1, 8, 1, true).translate(0, 0.5, 0)
 const UP = new THREE.Vector3(0, 1, 0)
 const ray = new THREE.Vector3()
-const beams = new Map() // site key -> { T, mesh, m }: m is the fire and mirror, built only near
-let aim = null // the site whose mirror you hold
+const beams = new Map() // site key -> { T, mesh, m }: m is the fire and sunstone, built only near
+let aim = null // the site whose beam you hold
 let well = null // the site whose well you stand at
 let show = 0 // seconds into the light show
 const siteAt = (k) => site(...k.split(',').map(Number))
-const top = (T) => new THREE.Vector3(T.x, T.y + 3.5, T.z) // the mirror, over the well's roof
+const top = (T) => new THREE.Vector3(T.x, T.y + 3.5, T.z) // the sunstone, over the well's roof
 const dir = (b) => ray.setFromSphericalCoords(1, b[1], b[0])
 function craft(k = 'torch') {
   const r = RECIPES[k]
@@ -1829,33 +1872,44 @@ function drink() {
   beep(392, 0.4, 'triangle', 0.06, 2)
 }
 function setTorch() {
+  if (!bag.sunstone) return say('A beacon needs a sunstone: ask the townsfolk where one sleeps')
   if (!bag.torch) return craft()
   beacon[well.k] = [player.dir, 1.2, 0]
   keep('warriorBeacons', beacon)
   lit = 0
   fuel = FUEL
   gain('torch', -1)
+  gain('sunstone', -1)
   equip(player.item)
   beep(200, 0.5, 'sawtooth', 0.05, 3)
-  say(`${well.name}'s beacon burns · R: aim its mirror at the star`)
+  aim = well
+  say(`${well.name}'s beacon burns · turn and tilt the beam onto the star · R lets go`)
 }
-// strike a glinting rock in front with the axe
-function knap() {
+// strike a thunder egg in front with the axe: it splits for good and spills what it held
+function crack() {
   for (const ch of chunks.values())
-    for (const g of ch.flints) {
-      const dx = g.position.x - player.pos.x
-      const dz = g.position.z - player.pos.z
-      if (g.visible && Math.hypot(dx, dz) < item.reach + 1 && Math.cos(Math.atan2(dx, dz) - player.dir) > 0.4) {
-        g.visible = false
-        ;(felled[ch.key] ||= {})['f' + g.i] = Date.now()
+    for (const g of ch.eggs) {
+      const p = g.position
+      const dx = p.x - player.pos.x
+      const dz = p.z - player.pos.z
+      if (!g.done && Math.hypot(dx, dz) < item.reach + 1 && Math.cos(Math.atan2(dx, dz) - player.dir) > 0.4) {
+        g.done = g.geometry = geo('cracked')
+        ;(felled[ch.key] ||= {})[g.k] = 9e15
         keep('warriorFelled', felled)
-        spill('flint', 1, g.position)
-        burst(g.position, '#bdf', 10)
-        beep(1400, 0.08, 'square', 0.05, 0.6)
+        burst(p, '#b8834e', 12)
+        beep(110, 0.25, 'square', 0.06, 0.5)
+        const [lo, hi] = EGG.coins
+        if (g.c) spill(g.c, g.c == 'gold' ? Math.round((lo + R() * (hi - lo)) * st.pay) : 1, p)
+        if (g.c == 'sunstone') {
+          burst(p, '#fb4', 30)
+          for (let i = 0; i < 5; i++) setTimeout(() => beep(523 * 1.26 ** i, 0.5, 'triangle', 0.06, 1), i * 110)
+          say('A sunstone! Set it in a well with a torch')
+        }
+        return
       }
     }
 }
-// holding the mirror: turn and tilt the beam
+// holding the beam: turn and tilt it
 function aiming(dt, ix, iz) {
   const b = beacon[aim.k]
   b[0] -= ix * dt * 0.6 + drag * 0.3
@@ -1880,7 +1934,7 @@ function shine(dt) {
   const c = camera.position
   const t = clock.elapsedTime
   if (aim || show) {
-    // the camera stands behind the mirror and looks along the beam; in the show, it looks up at the star
+    // the camera stands behind the sunstone and looks along the beam; in the show, it looks up at the star
     const o = aim ? top(aim) : p.clone().setY(p.y + 3)
     aim ? dir(beacon[aim.k]) : ray.copy(STAR)
     camera.position.lerp(o.clone().addScaledVector(ray, -6).setY(o.y + 1), Math.min(1, dt * 4))
@@ -1889,7 +1943,6 @@ function shine(dt) {
   star.position.copy(c).addScaledVector(STAR, 150)
   star.scale.setScalar((2.5 + (1 - day) * 1) * (1 + Math.min(show, 3)) * (1 + Math.sin(t * 5) * 0.1))
   star.rotation.y = t
-  glintMat.color.setHSL(0.58, 0.6, 0.65 + Math.sin(t * 6) * 0.25)
   for (const k in beacon) {
     let o = beams.get(k)
     if (!o) beams.set(k, (o = { T: siteAt(k), mesh: new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, fog: false })) })), scene.add(o.mesh)
@@ -1911,14 +1964,14 @@ function shine(dt) {
       pose(o.m, [['idle', t, 1]]) // (resets the root too)
       o.m.root.position.set(T.x, T.y + 2.45, T.z)
       o.m.root.updateMatrixWorld()
-      o.m.bones.mirror.lookAt(base.add(ray.multiplyScalar(-1)).add(UP).add(UP)) // tipped halfway between the fire and the beam
+      o.m.bones.stone.rotation.y = t * 2 // the sunstone turns over the fire
     }
   }
   // the well you stand at, and what it wants
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
   if (T && T != well) {
     const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (9)')
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'Space: aim the beam at the star') : !bag.sunstone ? 'A beacon needs a sunstone: ask the townsfolk where one sleeps' : bag.torch ? 'Space: set a torch and the sunstone in the beacon' : 'A beacon needs a torch: craft one in the pack (9)')
   }
   well = T || null
   if (!well) aim = null
@@ -2091,7 +2144,7 @@ addEventListener('touchend', (e) => {
 function attack() {
   if (player.seat) return buck()
   if (player.room?.shop) return craft('potion')
-  if (well && !beacon[well.k] && ITEMS[player.item] == 'torch') return setTorch()
+  if (well && !beacon[well.k]?.[2]) return beacon[well.k] ? (aim = well) : setTorch() // at a well, Space lights or takes the beam
   const k = ITEMS[player.item]
   if (k == 'potion') return drink()
   if (k == 'whistle') return whistle()
@@ -2242,7 +2295,7 @@ function frame() {
         if (fire) e.burn = item.burn
       }
     }
-    if (item.chop) chop(), knap()
+    if (item.chop) chop(), crack()
   }
   herd(dt)
   boating(dt)
@@ -2461,7 +2514,7 @@ function frame() {
     torchLight.position.copy(word.position).lerp(camera.position, 0.15).y -= 3
     torchLight.intensity = 90 * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
   } else if (!aim && !show) {
-    // (holding a beacon's mirror, or in the light show, shine() runs the camera)
+    // (holding a beacon's beam, or in the light show, shine() runs the camera)
     camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
     if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
     else camera.lookAt(target.x, target.y + 1, target.z)

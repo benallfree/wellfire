@@ -17,10 +17,10 @@ need a network connection.)
 Space or J uses what's in hand: a weapon attacks (the axe also chops trees and breaks flint), a potion is drunk, the
 whistle calls the roc, and wood, flint and a boat are thrown · F or Tab swap the item in hand · 1-8 pick a tray
 slot (7 potion, 8 whistle), 9 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
-with it at a well sets it in the beacon · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
+at a well sets a torch and a sunstone in the beacon, then aims the beam (turn, W/S tilt; R lets go) · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
-or take a beacon's mirror (then turn and W/S tilt) · C switches to the old free camera (WASD moves
+or let go of a beam · C switches to the old free camera (WASD moves
 relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
 [Chase camera](#chase-camera).
@@ -909,19 +909,20 @@ aimed at it. Five beams pin the eye and the night goes blind, which is the end s
 
 The game has an ending now. One bright star hangs at a fixed, seeded direction in the sky (about 15-40° up), as if
 infinitely far away, so the right aim is the same from every village. Set your torch in the beacon on five villages'
-wells, turn each mirror until its beam meets the star, and the five beams start a light show and the end screen. The
+wells, turn each beam until it meets the star, and the five beams start a light show and the end screen. The
 design discussion and the other options weighed are in [docs/goal-ideas.md](docs/goal-ideas.md).
 
-- **Setting a beacon.** At a well (within 3.5 units), slot 3 sets your torch in it. The torch is gone from the tray
-  (the torch slot now has a count; the first one is free), a fire bowl and a mirror (the `beacon` model) appear on
-  the well's roof, and a pale beam rises. Tips at the well say what it needs.
-- **Aiming.** R takes the mirror (R again, or walking off, lets go). The camera stands behind the mirror and looks
+- **Setting a beacon.** At a well (within 3.5 units), Space sets a torch and a sunstone in it (see
+  [Thunder eggs and sunstones](#thunder-eggs-and-sunstones)). Both leave the bag (the torch slot has a count; the
+  first one is free), a fire bowl with a sunstone turning over it (the `beacon` model) appears on the well's roof, a
+  pale beam rises, and you're aiming at once. Tips at the well say what it needs.
+- **Aiming.** Setting the beacon takes the beam; Space at a lit, unfinished well takes it again; R or walking off
+  lets go. The camera stands behind the sunstone and looks
   along the beam. Turning (A/D, drag) swings it round, W/S tilt it, and the warrior and the minimap turn with it. A
   `✦` on the minimap rim always shows the star's way. The beam warms from white to gold as it nears the star and
   locks within 3° (0.05 rad) with a chime and a burst. A locked beacon stays locked.
-- **A new torch.** About one rock in eight has a glinting crystal over it. Swing the axe at it for a flint (the glint
-  comes back after the same 30 minutes as a felled tree, kept in `warriorFelled` as `"f" + index`). With a wood and a
-  flint, slot 3 (or tapping the flint) makes a torch.
+- **A new torch.** Flint comes from thunder eggs (below). With a wood and a flint, slot 3 (or tapping the flint)
+  makes a torch.
 - **Beams from anywhere.** Every beam is drawn wherever you are, not only near its village. A far beam is moved
   toward the camera and shrunk by the same factor (12 / distance), which leaves its picture unchanged but keeps it
   inside the camera's 200-unit range. It is drawn long enough to run out past that range and fattened with distance
@@ -933,6 +934,29 @@ design discussion and the other options weighed are in [docs/goal-ideas.md](docs
   swells, the sky flushes through hues, and sparks burst round the star. After 4 s the end screen lists the five
   villages in the order you set them, your gold, kills and distance from the start. A tap dismisses it and the world
   goes on.
+
+### Thunder eggs and sunstones
+
+Every beacon needs a sunstone, and sunstones sleep in thunder eggs: round, rust-banded stones, about knee high, that
+replace the old glinting flint rocks. Tuning is in models.json `"eggs"`.
+
+- **Where.** About `perChunk` (2.4) eggs per 40-unit chunk, weighted by region (`region`: meadow, forest, rocky
+  hills, lakes), never in water, villages or roads. Positions and contents are seeded per chunk: the same seed gives
+  the same eggs with the same contents.
+- **What's inside.** Swing the axe at one: it splits into two crystal-lined halves and spills its contents through
+  the drop system. `flint` (0.2) gives a flint, `gold` (0.15) gives 5-15 gold (`coins`, times the stage's pay), and the
+  rest are hollow.
+- **One sunstone per village.** Each village hides exactly one sunstone egg at a seeded dry spot `gemNear`-`gemFar`
+  (40-200) units out in its wilds, among about 100 eggs, so finding it takes about 50 cracks unguided. Any sunstone
+  works at any well. A dropped sunstone never fades.
+- **Cracked for good.** A cracked egg is kept in `warriorFelled` as `"e" + index` (or `"e" + village key` for a
+  sunstone egg) with a far-future time, so the prune keeps it, it never regrows and it reloads cracked. No sunstone
+  can be mined twice.
+- **The sage.** One townsperson in each village (`folk[seed % count]`) knows which way the sunstone sleeps. Within 12
+  units a `…` bubble floats over them. Bump them (within `talk`, 1.8) and they stop, turn to you and say, in the
+  bubble, which quarter of the wilds (north, east, south or west of the village) holds it. Once it's cracked, they
+  say it's found.
+- **The HUD** shows `n sunstone` in the info line while you carry any.
 - **Saved.** `localStorage.warriorBeacons` holds `{ siteKey: [azimuth, angle from straight up, locked] }`. Torches and
   flint are in the bag.
 
