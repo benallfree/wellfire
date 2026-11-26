@@ -14,8 +14,8 @@ Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serve
 need a network connection.)
 
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
-Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-6 pick a tray
-slot, 7 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
+Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-7 pick a tray
+slot (7 drinks a potion), 8 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
 with it at a well sets it in the beacon · wood and flint are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,

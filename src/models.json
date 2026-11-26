@@ -7825,6 +7825,58 @@
       }
     ]
   },
+  "potion": {
+    "vars": {
+      "name": "Potion"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "d8283a",
+        "position": [
+          0,
+          0.12,
+          0
+        ],
+        "size": [
+          0.12,
+          0.12,
+          0.12
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "cfe4ee",
+        "position": [
+          0,
+          0.27,
+          0
+        ],
+        "size": [
+          0.04,
+          0.1,
+          0.04
+        ]
+      },
+      {
+        "shape": "cyl",
+        "bone": "root",
+        "color": "8a5a3a",
+        "position": [
+          0,
+          0.33,
+          0
+        ],
+        "size": [
+          0.05,
+          0.05,
+          0.05
+        ]
+      }
+    ]
+  },
   "tray": {
     "icons": {
       "sword": "🗡️",
@@ -7833,6 +7885,7 @@
       "wood": "🪵",
       "flint": "🪨",
       "boat": "🛶",
+      "potion": "🧪",
       "pack": "🛠️"
     },
     "slots": [
@@ -7841,7 +7894,8 @@
       "torch",
       "wood",
       "flint",
-      "boat"
+      "boat",
+      "potion"
     ],
     "materials": {
       "wood": "fell a tree with the axe",
@@ -7862,7 +7916,15 @@
       "boat": {
         "wood": 10,
         "gold": 30
+      },
+      "potion": {
+        "gold": 250
       }
     }
+  },
+  "health": {
+    "townRegen": 3,
+    "fieldRegen": 0.05,
+    "potionHeal": 30
   }
 }

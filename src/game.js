@@ -527,8 +527,8 @@ function hud() {
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
-// the tray (models.json "tray"): six slots, keys 1-6 or a tap, each item taken in hand (Space drops wood or flint);
-// a boat is held up and thrown like them. Slot 7 (key 7) opens crafting: recipes (tap one; only in a village; a recipe's
+// the tray (models.json "tray"): seven slots, keys 1-7 or a tap, each item taken in hand (Space drops wood or flint);
+// a boat is held up and thrown like them; the potion slot drinks one. Slot 8 (key 8) opens crafting: recipes (tap one; only in a village; a recipe's
 // inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
@@ -540,6 +540,7 @@ const bag = kept('warriorBag', {})
 bag.wood ||= 0
 bag.flint ||= 0
 bag.boat ||= 0
+bag.potion ||= 0
 bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
 // beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star]
 const GOAL = 5
@@ -570,6 +571,7 @@ function slot(i, tap) {
   }
   if (k == 'torch' && !bag.torch) craft()
   if (k == 'boat' && !bag.boat) say('No boat: craft one in a village')
+  if (k == 'potion') drink()
   if (ITEMS.includes(k)) equip(ITEMS.indexOf(k), 1)
 }
 function gain(k, n) {
@@ -1193,6 +1195,11 @@ var village
       houses.push({ m, x, z, ry, w, d, ty: T.y, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d })
     }
 
+    // the first house is the apothecary: a big bottle by its door, a shopkeeper inside
+    const h = houses[0]
+    h.shop = 1
+    add('potion', 1, h.out[0] + Math.cos(h.ry) * 1.4, T.y, h.out[1] - Math.sin(h.ry) * 1.4).root.scale.setScalar(4)
+
     // fence ring, open at the gates
     {
       const m = make(lib, 'fence', 1)
@@ -1227,6 +1234,13 @@ var village
       v.folk.push(f)
       parts.push(f.m)
     }
+    const f = new Actor('villager', T.seed - 1)
+    f.pos.set(h.x, 0, h.z - h.rd / 2 + 0.9)
+    f.floor = h.y
+    f.goal = [f.pos.x, f.pos.z]
+    f.wait = f.keep = Infinity
+    v.folk.push(f)
+    parts.push(f.m)
     return v
   }
   function raze(v) {
@@ -1262,6 +1276,7 @@ var village
       z = Math.max(h.z - h.rd / 2 + 0.7, Math.min(h.z + h.rd / 2 - (gap ? 0.1 : 0.45), z))
       ;[x, z] = box(x, z, h.x - h.rw / 2 + 0.8, h.z - h.rd / 2 + 1.3, 0.95, 1.4) // bed
       ;[x, z] = box(x, z, h.x + h.rw / 2 - 1.6, h.z + 0.2, 1.1, 1.3) // table and stools
+      if (h.shop) [x, z] = box(x, z, h.x, h.z - h.rd / 2 + 0.9, 0.5, 0.5) // the shopkeeper
       return box(x, z, h.x + h.rw / 2 - 0.35, h.z - h.rd / 2 + 0.8, 0.6, 0.9) // shelf
     }
     for (const v of built.values()) [x, z] = fend(v, x, z, who)
@@ -1335,6 +1350,7 @@ var village
         player.vel.set(0, 0)
         player.dir = Math.PI
         glow.position.set(h.x, h.y + 1.2, h.z - h.rd / 2 + 1.2)
+        if (h.shop) say(`Apothecary · ${ICON.potion} potion ${RECIPES.potion.gold} gold · Space to buy`)
       })
     },
     leave() {
@@ -1403,7 +1419,7 @@ var village
           const dz = f.goal[1] - f.pos.z
           const d = Math.hypot(dx, dz)
           f.speed = 0
-          if ((f.wait -= dt) > 0) f.move(0, 0, dt)
+          if ((f.wait -= dt) > 0) f.keep || f.move(0, 0, dt)
           else if (d < 0.6) {
             f.wait = 2 + v.VR() * 5
             f.goal = v.spots[(v.VR() * v.spots.length) | 0]
@@ -1725,6 +1741,7 @@ function craft(k = 'torch') {
   const r = RECIPES[k]
   const e = Object.entries(r)
   if (!village.in) return say('Craft in a village')
+  if (k == 'potion' && !player.room?.shop) return say('Buy it at the apothecary')
   if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(own(m) >= n))[0]] || 'craft one'}`)
   for (const [m, n] of e) m == 'gold' ? earn(-n) : gain(m, -n)
   gain(k, 1)
@@ -1732,6 +1749,15 @@ function craft(k = 'torch') {
   keep('warriorSlots', belt)
   if (k == 'torch') fuel = FUEL
   say(`+1 ${ICON[k]} ${k}`)
+}
+function drink() {
+  if (!bag.potion) return say('No potion: buy one at the apothecary')
+  if (player.hp <= 0 || player.hp >= player.maxHp) return
+  player.hp = Math.min(player.maxHp, player.hp + lib.health.potionHeal)
+  gain('potion', -1)
+  hud()
+  burst(player.pos, '#f45', 14)
+  beep(392, 0.4, 'triangle', 0.06, 2)
 }
 function setTorch() {
   if (!bag.torch) return craft()
@@ -1822,7 +1848,7 @@ function shine(dt) {
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
   if (T && T != well) {
     const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (7)')
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'R: aim the mirror at the star') : bag.torch ? 'Torch in hand, Space: set it in the beacon' : 'A beacon needs a torch: craft one in the pack (8)')
   }
   well = T || null
   if (!well) aim = null
@@ -1950,6 +1976,7 @@ addEventListener('touchend', (e) => {
 // ---------- combat ----------
 function attack() {
   if (player.seat) return buck()
+  if (player.room?.shop) return craft('potion')
   if (well && !beacon[well.k] && ITEMS[player.item] == 'torch') return setTorch()
   if (player.lift) return player.busy || player.hp <= 0 || toss(ITEMS[player.item])
   if (player.busy || player.hp <= 0 || village?.in || player.swim || player.boat) return
@@ -2111,9 +2138,10 @@ function frame() {
     if (player.boat) (player.boat = player.floor = null), village.stow(0)
     hud()
   }
+  // health comes back fast in a village, barely at all outside (models.json "health", hp a second)
   if (alive && player.hp < player.maxHp && !player.swim) {
-    player.regen = (player.regen || 0) + dt
-    if (player.regen > 2) {
+    player.regen = (player.regen || 0) + dt * lib.health[village.in ? 'townRegen' : 'fieldRegen']
+    if (player.regen > 1) {
       player.regen = 0
       player.hp++
       hud()
