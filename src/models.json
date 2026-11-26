@@ -7387,7 +7387,11 @@
   },
   "boat": {
     "vars": {
-      "name": "Boat"
+      "name": "Boat",
+      "carry": {
+        "position": [0, -0.39, -0.22],
+        "rotation": [-150, 0, 180]
+      }
     },
     "bones": [
       {

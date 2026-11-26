@@ -17,7 +17,8 @@ need a network connection.)
 Space or J attack (the axe also chops trees and breaks flint) · F or Tab swap the item in hand · 1-6 pick a tray
 slot, 7 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
 with it at a well sets it in the beacon · wood and flint are held up over his head in both hands (shield and
-weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · B build a boat at the water · R ride, board and leave the boat,
+weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
+carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
 or take a beacon's mirror (then turn and W/S tilt) · C switches to the old free camera (WASD moves
 relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
@@ -808,7 +809,7 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 | | |
 |---|---|
 | ![Three chops and a tree tips away from you, dropping 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
-| ![B at the water: 10 wood launches a rowboat](docs/boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](docs/boat-rowing.jpg) |
+| ![A boat thrown onto the water: 10 wood and 30 gold build one](docs/boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](docs/boat-rowing.jpg) |
 | ![A slime on the bank can't reach the boat](docs/boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](docs/boat-ashore.jpg) |
 | ![The torch in the boat at night: it stands in the bow post and lights the water](docs/boat-torch-night.jpg) | |
 
@@ -826,8 +827,11 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
   The sword and axe are permanent and not for sale. The game keeps running while the panel is open: you can walk,
   fight and pick things up with it showing. Number keys still take items in hand; tapping or clicking two slots
   swaps them; Esc or 7 closes it.
-- **The boat.** Slot 6 counts boats owned. B (or tapping that slot) with a boat, standing by water at least 0.3 deep, spends one and launches a rowboat
-  (the `boat` model) 2-4 units away, searching out from straight ahead. R boards it
+- **The boat.** Slot 6 counts boats owned. Taking it in hand (key 6 or tapping the slot) lifts a boat over his head,
+  upside down like a portaged canoe (the boat's `carry` var: its position and rotation in the hand, set in the held
+  prop's rest pose so posing keeps it). Space throws it ahead like wood; where it lands becomes the boat (water or
+  land), spending one from the tray. There is no B key. On land it sits on the ground without bobbing, and rowing a
+  beached boat works the oars but moves and turns nothing. R boards it
   within 4.5 units, on foot or swimming; a rider gets off the mount first, so mounts never board. In the boat you sit
   on the thwart facing the stern and row (the warrior's `row` clip), A/D turn, W rows at 3 u/s (half walking speed) with glide, S backs slowly, and it runs aground
   rather than leave the water. R at a shore steps you out onto land; with no land within 4 units it says so.
@@ -848,7 +852,7 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
   fear and lure. Board with a lit torch and it goes to the post; step ashore and it goes back to your hand, lit.
   Picking another weapon in the boat puts it out; picking the torch lights it in the post again.
 - **Persistence.** There is one boat: building another moves it. Its place and heading go in
-  `localStorage.warriorBoat` when you launch, when you get out, and on `pagehide`, so you find it where you left it.
+  `localStorage.warriorBoat` when you throw one, when you get out, and on `pagehide`, so you find it where you left it.
   The chase camera needs nothing new, since the boat drives the hero's facing.
 
 Cost: about +8.8 KB raw in `src/game.js` (81,542 vs 72,770 bytes, a good share of it comments), +1.3 KB in
