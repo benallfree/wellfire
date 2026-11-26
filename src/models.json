@@ -7993,5 +7993,11 @@
       "bold": 1,
       "say": "The sky reddens. The eye bleeds, and the creatures grow wild."
     }
-  ]
+  ],
+  "wilds": {
+    "nearPay": 0.2,
+    "farPay": 2,
+    "payRamp": 100,
+    "spawnPad": 22
+  }
 }

@@ -1051,6 +1051,7 @@ function herd(dt) {
 
 // ---------- monsters ----------
 const foes = []
+const { nearPay, farPay, payRamp, spawnPad } = lib.wilds
 let seedNext = 100
 // More monsters roam at night: 12 by day, up to 22 in the dark, scaled by the region the player is in.
 const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)] * st.crowd)
@@ -1072,7 +1073,7 @@ function spawn(f) {
     x = player.pos.x + Math.cos(a) * d
     z = player.pos.z + Math.sin(a) * d
     h = height(x, z)
-    if (inTown(x, z, 4)) continue
+    if (inTown(x, z, spawnPad)) continue
     if (h < SWIM - 0.5) kind = eels < 4 ? 'eel' : null
     else if (h > WATER + 0.3) {
       const mix = FOES[region(x, z)]
@@ -1467,14 +1468,16 @@ function ripple(p, size = 1) {
 }
 
 // ---------- gold: a kill spills coins that bounce, sit spinning, and drift to the player when close ----------
-// A kill pays its kind's "gold" var (models.json) x its size x a seeded roll x up to 1.6 at night x its region.
+// A kill pays its kind's "gold" var (models.json) x its size x a seeded roll x up to 1.6 at night x its region x how far
+// it fell from the nearest village fence (models.json "wilds": nearPay at the fence up to farPay payRamp units out).
 const PAY = [1, 1.2, 1.4, 1.1] // per region: meadow, forest, rocky hills, lakes
+const wild = (x, z) => nearPay + ((farPay - nearPay) * Math.max(0, Math.min(payRamp, ...sites(x, z).map((t) => Math.hypot(x - t.x, z - t.z) - t.r)))) / payRamp
 const coins = []
 const coinGeo = bake(make(lib, 'coin', 1))
 const coinMat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#5a3c00' })
 function loot(e) {
   const roll = hash(e.seed, player.kills, SEED + 5)
-  const g = Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)] * st.pay))
+  const g = Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)] * st.pay * wild(e.pos.x, e.pos.z)))
   const n = Math.min(g, 6)
   for (let i = 0; i < n; i++) {
     const c = new THREE.Mesh(coinGeo, coinMat)
