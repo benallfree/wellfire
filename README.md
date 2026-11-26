@@ -1,5 +1,7 @@
 # Warrior: a 3D js13k spike measured with surprisal
 
+**Play Wellfire:** https://benallfree.github.io/wellfire/ (built from `main` on every push by `.github/workflows/pages.yml`)
+
 A small third-person action game: a warrior runs around a seeded open world fighting slimes, goblins, spiders and bats
 with a sword, an axe or a torch. Every model in it (the warrior, the props, the creatures, the trees) is **text** (plain
 JSON), and the compiler that turns it into rigged three.js meshes ships in the same page. The question behind it: if js13k
