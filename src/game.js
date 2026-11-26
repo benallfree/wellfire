@@ -963,7 +963,9 @@ function buck() {
   m.play('attack')
   m.cool = m.m.vars.cool
   m.striking = true
-  beep(m.m.vars.burn ? 90 : 150, 0.3, 'sawtooth', 0.05, 0.5)
+  if (m.m.vars.burn) beep(90, 0.3, 'sawtooth', 0.05, 0.5)
+  // a steed rears with a whinny: a quick squeal up, then a shaking slide down
+  else voice([[0, 700], [0.12, 1300], [0.3, 1150], [0.8, 450]], 0.06, { vib: [13, 90], hiss: 0.5 })
 }
 // riding: turn toward the stick at the mount's turn rate, run along its facing, with a little momentum
 function steer(dt, ix, iz, il) {
