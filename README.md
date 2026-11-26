@@ -51,7 +51,8 @@ src/music.js     the score compiler, synthesized instruments + WebAudio sequence
 src/game.js      world, actors, combat, AI, camera, input, HUD (~17 KB)
 src/index.html   page shell: HUD markup, import map for three.js
 tools/build.mjs  inlines everything into one file: dist/index.html (the shipped artifact)
-tools/ship.mjs   build + surprisal -3 --compare: dist/index.13k vs. the budget (below)
+tools/ship.mjs   build + baseline + surprisal -3 --compare: dist/index.13k vs. the baseline and the budget (below)
+tools/roadroll.mjs  the js13k baseline: terser -> roadroller -> advzip, dist/roadroller/index.zip (below)
 tools/size.mjs   the size report (below)
 tools/formats.mjs  JSON vs. the old text DSL and other formats under surprisal (docs/json-vs-dsl.md)
 tools/viewer.html  dev-only model viewer: /tools/viewer.html?m=goblin&seeds=1,2,3&clip=walk
@@ -942,14 +943,29 @@ crafting all grew. At about 0.12 compressed bytes per raw JS byte, the code alon
 
 ## Size
 
-`npm run ship` builds `dist/index.html` and compresses it with surprisal at `-3` with `--compare` (the level the size
-history uses), writing `dist/index.13k` and printing its size against the 13,312-byte budget. surprisal's progress
-and the comparison table stream live; a run takes about 2½ minutes on the GPU. It uses
-`/Volumes/Code/repos/surprisal/bin/surprisal` unless `SURPRISAL` points elsewhere.
+`npm run ship` builds `dist/index.html`, packs the js13k baseline, then compresses the build with surprisal at `-3`
+with `--compare` (the level the size history uses). It writes `dist/index.13k` and ends with both sizes against the
+13,312-byte budget and each other. surprisal's progress and the comparison table stream live; the surprisal step takes
+about 2½ minutes on the GPU. It uses `/Volumes/Code/repos/surprisal/bin/surprisal` unless `SURPRISAL` points elsewhere.
+
+The baseline is the best-known conventional js13k pipeline (`tools/roadroll.mjs`): terser (3 compress passes,
+mangled), then [roadroller](https://github.com/lifthrasiir/roadroller), then a Zopfli zip with `advzip -4`
+(`brew install advancecomp`). The model and score JSON are inlined into the JS as string literals so roadroller packs
+them too. It writes `dist/roadroller/index.html` (a playable page) and `dist/roadroller/index.zip`, in about 15
+seconds. `npm run baseline` (same as `npm run ship -- --baseline`) builds and packs the baseline without running
+surprisal. `ROADROLLER_O` sets roadroller's optimization level (default 1; 2 is exhaustive and much slower) and
+`ADVZIP_ITER` the Zopfli iterations (default 1000).
 
 ```bash
 npm run ship
 ```
+
+```bash
+npm run baseline
+```
+
+Baseline on the current build: terser 119,487 bytes, roadroller 43,811 (the page), zip **31,497** (236.6% of the
+budget). surprisal `-3` on the same build: 12,531.
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal
 build with the `-0..-9` CLI, newer than the Homebrew `0.0.1-alpha.1`; point `SURPRISAL` at it if `surprisal` on your
