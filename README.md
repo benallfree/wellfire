@@ -51,6 +51,7 @@ src/music.js     the score compiler, synthesized instruments + WebAudio sequence
 src/game.js      world, actors, combat, AI, camera, input, HUD (~17 KB)
 src/index.html   page shell: HUD markup, import map for three.js
 tools/build.mjs  inlines everything into one file: dist/index.html (the shipped artifact)
+tools/ship.mjs   build + surprisal -3 --compare: dist/index.13k vs. the budget (below)
 tools/size.mjs   the size report (below)
 tools/formats.mjs  JSON vs. the old text DSL and other formats under surprisal (docs/json-vs-dsl.md)
 tools/viewer.html  dev-only model viewer: /tools/viewer.html?m=goblin&seeds=1,2,3&clip=walk
@@ -940,6 +941,15 @@ crafting all grew. At about 0.12 compressed bytes per raw JS byte, the code alon
 (9,082 × 0.12 ≈ 1,090), plus a little for the model. That's an estimate: surprisal wasn't run.
 
 ## Size
+
+`npm run ship` builds `dist/index.html` and compresses it with surprisal at `-3` with `--compare` (the level the size
+history uses), writing `dist/index.13k` and printing its size against the 13,312-byte budget. surprisal's progress
+and the comparison table stream live; a run takes about 2½ minutes on the GPU. It uses
+`/Volumes/Code/repos/surprisal/bin/surprisal` unless `SURPRISAL` points elsewhere.
+
+```bash
+npm run ship
+```
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal
 build with the `-0..-9` CLI, newer than the Homebrew `0.0.1-alpha.1`; point `SURPRISAL` at it if `surprisal` on your
