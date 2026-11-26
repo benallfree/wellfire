@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { DEG, rng, library, make, hold, pose, bake } from './compiler.js'
+import { DEG, rng, library, make, hold, pose, bake, glow } from './compiler.js'
 import { score, jukebox } from './music.js'
 
 // The model library is JSON shipped in the page (see models.json).
@@ -533,7 +533,35 @@ function hud() {
 // a boat is held up and thrown like them; the potion slot drinks one. Slot 8 (key 8) opens crafting: recipes (tap one; only in a village; a recipe's
 // inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
-const { icons: ICON, recipes: RECIPES, materials: MATS } = lib.tray
+const { recipes: RECIPES, materials: MATS } = lib.tray
+// tray icons are the items' own models, each drawn once at startup into a small picture (models.json tray.icons:
+// picture size, camera fov and view direction, per-item turn in degrees and zoom); any item with a model gets one
+const geos = {}
+const geo = (k) => (geos[k] ||= bake(make(lib, k, 1)))
+const itemMat = glow(new THREE.MeshLambertMaterial({ vertexColors: true }))
+const ICON = { pack: 'craft' }
+{
+  const { size, fov, view, turn, zoom } = lib.tray.icons
+  const r = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true })
+  const s = new THREE.Scene()
+  const cam = new THREE.PerspectiveCamera(fov, 1, 0.01, 50)
+  r.setSize(size, size)
+  cam.add(new THREE.DirectionalLight('#fff', 2))
+  s.add(new THREE.HemisphereLight('#fff', '#666', 2), cam)
+  for (const k of new Set([...ITEMS, ...lib.tray.slots, ...Object.keys(RECIPES), 'gold'])) {
+    const m = new THREE.Mesh(geo(k), itemMat)
+    m.rotation.y = (turn[k] || 0) * DEG
+    s.add(m)
+    const b = new THREE.Box3().setFromObject(m).getBoundingSphere(new THREE.Sphere())
+    cam.position.set(...view).setLength(b.radius / Math.sin((fov * DEG) / 2) / (zoom[k] || 1)).add(b.center)
+    cam.lookAt(b.center)
+    r.render(s, cam)
+    ICON[k] = `<img src="${r.domElement.toDataURL()}">`
+    s.remove(m)
+  }
+  r.forceContextLoss()
+}
+$('gold').insertAdjacentHTML('afterbegin', ICON.gold)
 const belt = kept('warriorSlots', lib.tray.slots)
 let pick = -1
 const place = (k) => belt.includes(k) || belt.push(k)
@@ -561,7 +589,7 @@ function tray() {
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
-      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + (ICON[m] || '<i></i>')).join(' + ')}</b>`)
+      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
       .join('') +
     (village?.in ? '' : '<br>Craft in a village') +
     '<br>tap two slots to swap'
@@ -1357,7 +1385,7 @@ var village
         player.vel.set(0, 0)
         player.dir = Math.PI
         glow.position.set(h.x, h.y + 1.2, h.z - h.rd / 2 + 1.2)
-        if (h.shop) say(`Apothecary · ${ICON.potion} potion ${RECIPES.potion.gold} gold · Space to buy`)
+        if (h.shop) say(`Apothecary · potion ${RECIPES.potion.gold} gold · Space to buy`)
       })
     },
     leave() {
@@ -1467,31 +1495,16 @@ function ripple(p, size = 1) {
   ripples.push(r)
 }
 
-// ---------- gold: a kill spills coins that bounce, sit spinning, and drift to the player when close ----------
+// ---------- drops: a kill spills coins, a felled tree logs, a struck rock flint; they bounce, sit spinning, and drift to the player when close ----------
 // A kill pays its kind's "gold" var (models.json) x its size x a seeded roll x up to 1.6 at night x its region x how far
 // it fell from the nearest village fence (models.json "wilds": nearPay at the fence up to farPay payRamp units out).
 const PAY = [1, 1.2, 1.4, 1.1] // per region: meadow, forest, rocky hills, lakes
 const wild = (x, z) => nearPay + ((farPay - nearPay) * Math.max(0, Math.min(payRamp, ...sites(x, z).map((t) => Math.hypot(x - t.x, z - t.z) - t.r)))) / payRamp
-const coins = []
-const coinGeo = bake(make(lib, 'coin', 1))
+const drops = []
 const coinMat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#5a3c00' })
 function loot(e) {
   const roll = hash(e.seed, player.kills, SEED + 5)
-  const g = Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)] * st.pay * wild(e.pos.x, e.pos.z)))
-  const n = Math.min(g, 6)
-  for (let i = 0; i < n; i++) {
-    const c = new THREE.Mesh(coinGeo, coinMat)
-    const a = R() * 7
-    const s = 1.5 + R() * 2.5
-    c.castShadow = true
-    c.position.set(e.pos.x, e.pos.y + 0.6, e.pos.z)
-    c.rotation.y = a
-    c.v = new THREE.Vector3(Math.cos(a) * s, 4 + R() * 3, Math.sin(a) * s)
-    c.worth = Math.floor(g / n) + (i < g % n)
-    c.age = 0
-    scene.add(c)
-    coins.push(c)
-  }
+  spill('gold', Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)] * st.pay * wild(e.pos.x, e.pos.z))), e.pos)
 }
 function earn(n) {
   gold = Math.max(0, gold + n)
@@ -1502,55 +1515,59 @@ function earn(n) {
   tray()
   $('gold').animate([{ transform: 'scale(1.6)', color: n < 0 ? '#f55' : '#fff' }, { transform: 'scale(1)' }], n < 0 ? 900 : 250)
 }
-// dropped wood or flint (thrown ahead, or the logs of a felled tree): lies spinning until you walk onto it
-const geos = {}
-const itemMat = new THREE.MeshLambertMaterial({ vertexColors: true })
-function shed(k, q, vx, vz) {
-  const c = new THREE.Mesh((geos[k] ||= bake(make(lib, k, 1))), itemMat)
+// one drop of item k worth n, thrown from q; a tossed one (Space) stays put until you walk onto it
+function shed(k, q, v, n = 1, tossed) {
+  const c = new THREE.Mesh(geo(k), k == 'gold' ? coinMat : itemMat)
   c.position.copy(q)
-  c.v = new THREE.Vector3(vx, 3, vz)
-  c.k = k
-  c.age = 0
-  c.castShadow = true
+  Object.assign(c, { v, k, n, tossed, age: 0, castShadow: true })
   scene.add(c)
-  coins.push(c)
+  drops.push(c)
+}
+// n of item k burst out of p, in up to 6 pieces
+function spill(k, n, p) {
+  const m = Math.min(n, 6)
+  for (let i = 0; i < m; i++) {
+    const a = R() * 7
+    const s = 1.5 + R() * 2.5
+    shed(k, { x: p.x, y: p.y + 0.6, z: p.z }, new THREE.Vector3(Math.cos(a) * s, 4 + R() * 3, Math.sin(a) * s), Math.floor(n / m) + (i < n % m))
+  }
 }
 function toss(k) {
-  shed(k, player.pos.clone().setY(player.pos.y + 1.2), Math.sin(player.dir) * 4, Math.cos(player.dir) * 4)
+  shed(k, player.pos.clone().setY(player.pos.y + 1.2), new THREE.Vector3(Math.sin(player.dir) * 4, 3, Math.cos(player.dir) * 4), 1, 1)
   player.play('jab')
   gain(k, -1)
 }
+const lose = (c) => (scene.remove(c), drops.splice(drops.indexOf(c), 1))
 function pickups(dt) {
   const p = player.pos
   coinMat.emissive.setRGB(0.35, 0.24, 0).multiplyScalar(0.7 + Math.sin(clock.elapsedTime * 4) * 0.3) // a soft glow pulse
-  for (const c of [...coins]) {
+  for (const c of [...drops]) {
     const q = c.position
     if (c.k == 'boat' && q.y < Math.max(WATER, height(q.x, q.z) + 0.3)) {
       dock(q.x, q.z, player.dir)
       afloat(height(q.x, q.z)) ? (splash(0.3), ripple(q, 2)) : beep(90, 0.15, 'square', 0.05, 0.5)
-      scene.remove(c)
-      coins.splice(coins.indexOf(c), 1)
+      lose(c)
       continue
     }
     const dx = p.x - q.x
     const dy = p.y + 0.8 - q.y
     const dz = p.z - q.z
     const wet = q.y < WATER
-    const d = player.swim && wet ? Math.hypot(dx, dz) || 0.01 : Math.hypot(dx, dy, dz) // a swimmer dives for sunk coins at any depth
+    const d = player.swim && wet ? Math.hypot(dx, dz) || 0.01 : Math.hypot(dx, dy, dz) // a swimmer dives for sunk drops at any depth
     c.age += dt
-    if (player.hp > 0 && d < (c.k ? 1.6 : 3.5) && c.age > (c.k ? 1 : 0.5)) {
+    if (player.hp > 0 && d < (c.tossed ? 1.6 : 3.5) && c.age > (c.tossed ? 1 : 0.5)) {
       // magnet: faster the closer it gets
       const sp = Math.min(d, (5 + (3.5 - d) * 5) * dt) / d
       q.x += dx * sp
       q.y += dy * sp
       q.z += dz * sp
       if (d < 0.6) {
-        c.k ? gain(c.k, 1) : earn(c.worth)
+        c.k == 'gold' ? earn(c.n) : gain(c.k, c.n)
         beep(1568, 0.06, 'square', 0.03, 1) // ching
         setTimeout(() => beep(2093, 0.3, 'triangle', 0.05, 0.98), 60)
         burst(q.clone().setY(q.y - 0.6), '#fd4', 5)
-        c.age = 99
-        c.k = 0
+        lose(c)
+        continue
       }
     } else {
       // fall and bounce, then rest on the ground; in water, sink slowly to the bed
@@ -1565,17 +1582,14 @@ function pickups(dt) {
       }
     }
     c.rotation.y += dt * 3
-    c.visible = c.age < 40 || c.k || (c.age * 8) & 1 // blink before it goes
-    if ((c.age > 45 && !c.k) || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) {
-      scene.remove(c)
-      coins.splice(coins.indexOf(c), 1)
-    }
+    c.visible = c.age < 40 || c.tossed || (c.age * 8) & 1 // blink before it goes
+    if ((c.age > 45 && !c.tossed) || !chunks.has(Math.floor(q.x / CH) + ',' + Math.floor(q.z / CH))) lose(c)
   }
 }
 
 // ---------- wood: the axe (its "chop" var) fells pines and oaks for the tray ----------
 // A struck tree leaves its InstancedMesh for a mesh of its own that shakes; three chops and it falls away from you,
-// drops 3 logs along the trunk to pick up, and sinks. Its chunk key and candidate index go in `felled`, so grow() skips it until it regrows.
+// bursts out 3 logs to pick up, and sinks. Its chunk key and candidate index go in `felled`, so grow() skips it until it regrows.
 const falling = []
 function chop() {
   const p = player.pos
@@ -1629,7 +1643,7 @@ function fells(dt) {
       f.quaternion.setFromAxisAngle(f.ax, Math.min(1.5, f.t * f.t * 2.5))
       if (f.t > 0.8 && !f.paid) {
         f.paid = 1
-        for (let i = 1; i < 4; i++) shed('wood', f.position.clone().add({ x: -f.ax.z * i * 1.2, y: 0.5, z: f.ax.x * i * 1.2 }), R() - 0.5, R() - 0.5) // logs along the trunk
+        spill('wood', 3, f.position)
         splash(0.25) // crash
         beep(55, 0.4, 'sawtooth', 0.06, 0.5)
         burst(f.position, '#7a5230', 10)
@@ -1757,7 +1771,7 @@ function craft(k = 'torch') {
   place(k)
   keep('warriorSlots', belt)
   if (k == 'torch') fuel = FUEL
-  say(`+1 ${ICON[k]} ${k}`)
+  say(`+1 ${k}`)
 }
 function drink() {
   if (!bag.potion) return say('No potion: buy one at the apothecary')
@@ -1789,7 +1803,7 @@ function knap() {
         g.visible = false
         ;(felled[ch.key] ||= {})['f' + g.i] = Date.now()
         keep('warriorFelled', felled)
-        gain('flint', 1)
+        spill('flint', 1, g.position)
         burst(g.position, '#bdf', 10)
         beep(1400, 0.08, 'square', 0.05, 0.6)
       }
@@ -2412,5 +2426,5 @@ frame()
 
 window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, depth, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
-window.game.coins = coins
+window.game.drops = drops
 Object.assign(window.game, { bag, felled, falling, board, ashore, boat: () => boat, beacon, STAR, craft, aim: () => aim, well: () => well })
