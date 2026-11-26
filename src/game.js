@@ -1478,7 +1478,7 @@ var village
     chat: 0,
     speak() {
       const [v, f] = this.chat
-      $('say').hidden = !($('bub').hidden = true)
+      $('say').hidden = false
       $('say').innerHTML = `<small>${f == v.sage ? 'Sage' : 'Townsfolk'} of ${v.T.name}</small><p>${talk(v, f)}</p><small>Space or tap</small>`
     },
     enter(h) {
@@ -1574,20 +1574,13 @@ var village
           }
           f.update(dt, 1.6)
         }
-      // the nearest townsfolk stops and turns to you (Space talks); the sage shows a bubble from farther off
+      // the nearest townsfolk stops and turns to you (Space talks)
       const c = !h && this.chat
       if (c) {
         const f = c[1]
         f.wait = Math.max(f.wait, 2)
         f.goal = [f.pos.x, f.pos.z]
         f.dir = Math.atan2(p.x - f.pos.x, p.z - f.pos.z)
-      }
-      const g = !h && !title && here?.sage
-      const d = g ? Math.hypot(g.pos.x - p.x, g.pos.z - p.z) : 99
-      $('bub').hidden = !(d < 12)
-      if (d < 12) {
-        const v = g.pos.clone().setY(g.pos.y + 2.4).project(camera)
-        Object.assign($('bub').style, { left: (v.x + 1) * 50 + '%', top: (1 - v.y) * 50 + '%' })
       }
     },
   }

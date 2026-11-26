@@ -960,8 +960,8 @@ replace the old glinting flint rocks. Tuning is in models.json `"eggs"`.
 - **Cracked for good.** A cracked egg is kept in `warriorFelled` as `"e" + index` (or `"e" + village key` for a
   sunstone egg) with a far-future time, so the prune keeps it, it never regrows and it reloads cracked. No sunstone
   can be mined twice.
-- **The sage.** One townsperson in each village (`folk[seed % count]`) knows which way the sunstone sleeps. Within 12
-  units a `…` bubble floats over them. Talk to them (Space, within `talk`) and they say which quarter of the wilds (north, east, south or west of the village) holds it. Once it's cracked, they
+- **The sage.** One townsperson in each village (`folk[seed % count]`) knows which way the sunstone sleeps. Talk to them
+  (Space) and they say which quarter of the wilds (north, east, south or west of the village) holds it. Once it's cracked, they
   say it's found.
 - **The HUD** shows `n sunstone` in the info line while you carry any.
 - **Saved.** `localStorage.warriorBeacons` holds `{ siteKey: [azimuth, angle from straight up, locked] }`. Torches and
