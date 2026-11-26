@@ -1,6 +1,8 @@
 // Builds the game, packs the js13k baseline (terser -> roadroller -> advzip, tools/roadroll.mjs), then compresses
-// with surprisal at -3 (--compare), the level the size history is measured at, and compares the two.
-//   npm run ship                      build, baseline, surprisal
+// with surprisal at -3 by default (--compare), the level the size history is measured at, and compares the two.
+//   npm run ship                      build, baseline, surprisal -3
+//   npm run ship -9                   the same at another level (-0..-9; npm hands it over as npm_config_9)
+//   npm run ship -- -9                the same, passed as an argument
 //   npm run ship -- --baseline        build and baseline only (no surprisal; also `npm run baseline`)
 //   SURPRISAL=/path/to/surprisal npm run ship
 // Output streams straight through (stdio inherit): surprisal's progress line and the --compare table show live.
@@ -16,6 +18,16 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const input = 'dist/index.html'
 const out = 'dist/index.13k'
 const baselineOnly = process.argv.includes('--baseline')
+// Level: `-N` in the arguments, or `npm run ship -N`, which npm swallows as config and exposes as npm_config_N.
+const levels = [
+  ...process.argv.slice(2).filter((a) => /^-\d$/.test(a)).map((a) => a.slice(1)),
+  ...Object.keys(process.env).filter((k) => /^npm_config_\d$/.test(k)).map((k) => k.slice(-1)),
+]
+if (new Set(levels).size > 1) {
+  console.error(`more than one level given: -${[...new Set(levels)].join(' -')}`)
+  process.exit(1)
+}
+const level = '-' + (levels[0] ?? '3')
 
 // A bare name (e.g. "surprisal") is looked up on PATH by spawn; a path must exist.
 if (!baselineOnly && SURPRISAL.includes('/') && !existsSync(SURPRISAL)) {
@@ -47,8 +59,8 @@ const base = await roadroll()
 
 let size
 if (!baselineOnly) {
-  const args = ['-3', '--compare', '-f', '-o', out, input]
-  console.log(`[${t()}] compressing at -3 (--compare)…  ${SURPRISAL} ${args.join(' ')}`)
+  const args = [level, '--compare', '-f', '-o', out, input]
+  console.log(`[${t()}] compressing at ${level} (--compare)…  ${SURPRISAL} ${args.join(' ')}`)
   rmSync(root + out, { force: true }) // never report a stale archive
   run(SURPRISAL, args)
   if (!existsSync(root + out)) {
@@ -61,7 +73,7 @@ if (!baselineOnly) {
 console.log(`\n[${t()}] against the ${BUDGET.toLocaleString()}-byte budget:`)
 console.log(row('terser + roadroller + advzip (zip)', base.zip))
 if (size !== undefined) {
-  console.log(row('surprisal -3 (dist/index.13k)', size))
+  console.log(row(`surprisal ${level} (dist/index.13k)`, size))
   const d = base.zip - size
   console.log(`  surprisal is ${Math.abs(d).toLocaleString()} bytes ${d >= 0 ? 'smaller' : 'larger'} (${((size / base.zip) * 100).toFixed(1)}% of the baseline)`)
 }

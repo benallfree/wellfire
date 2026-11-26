@@ -980,7 +980,7 @@ crafting all grew. At about 0.12 compressed bytes per raw JS byte, the code alon
 `npm run ship` builds `dist/index.html`, packs the js13k baseline, then compresses the build with surprisal at `-3`
 with `--compare` (the level the size history uses). It writes `dist/index.13k` and ends with both sizes against the
 13,312-byte budget and each other. surprisal's progress and the comparison table stream live; the surprisal step takes
-about 2½ minutes on the GPU. It uses `/Volumes/Code/repos/surprisal/bin/surprisal` unless `SURPRISAL` points elsewhere.
+about 2½ minutes on the GPU. It uses `/Volumes/Code/repos/surprisal/bin/surprisal` unless `SURPRISAL` points elsewhere. Pass a level to use another one: `npm run ship -9` (npm warns about an unknown config `--9`; the script still reads it) or `npm run ship -- -9`.
 
 The baseline is the best-known conventional js13k pipeline (`tools/roadroll.mjs`): terser (3 compress passes,
 mangled), then [roadroller](https://github.com/lifthrasiir/roadroller), then a Zopfli zip with `advzip -4`
