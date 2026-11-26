@@ -1070,6 +1070,7 @@ function herd(dt) {
       if (m.striking && m.once?.[0] == 'attack' && m.once[1] > m.m.clips.attack.d * v.at) {
         m.striking = false
         if (v.burn) breathe(m)
+        crack(m, v.reach + 1, v.arc)
         for (const e of foes) {
           const dx = e.pos.x - m.pos.x
           const dz = e.pos.z - m.pos.z
@@ -1915,14 +1916,14 @@ function setTorch() {
   aim = well
   say(`${well.name}'s beacon burns · turn and tilt the beam onto the star · R lets go`)
 }
-// strike a thunder egg in front with the axe: it splits for good and spills what it held
-function crack() {
+// strike a thunder egg in front with the axe (or a ridden mount's attack: o, reach, arc): it splits for good and spills what it held
+function crack(o = player, reach = item.reach + 1, arc = 1.16) {
   for (const ch of chunks.values())
     for (const g of ch.eggs) {
       const p = g.position
-      const dx = p.x - player.pos.x
-      const dz = p.z - player.pos.z
-      if (!g.done && Math.hypot(dx, dz) < item.reach + 1 && Math.cos(Math.atan2(dx, dz) - player.dir) > 0.4) {
+      const dx = p.x - o.pos.x
+      const dz = p.z - o.pos.z
+      if (!g.done && Math.hypot(dx, dz) < reach && Math.cos(Math.atan2(dx, dz) - o.dir) > Math.cos(arc)) {
         g.done = g.geometry = geo('cracked')
         ;(felled[ch.key] ||= {})[g.k] = 9e15
         keep('warriorFelled', felled)
