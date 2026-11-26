@@ -1553,7 +1553,7 @@ var village
             o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
           }
       }
-      let near = EGG.talk
+      let near = EGG.talk + 1
       this.chat = 0
       for (const v of built.values())
         for (const f of v.folk) {
@@ -1574,18 +1574,18 @@ var village
           }
           f.update(dt, 1.6)
         }
-      // the nearest townsfolk stops, turns and offers to talk (Space); the sage shows a bubble from farther off
+      // the nearest townsfolk stops and turns to you (Space talks); the sage shows a bubble from farther off
       const c = !h && this.chat
-      const g = c ? c[1] : !h && !title && here?.sage
+      if (c) {
+        const f = c[1]
+        f.wait = Math.max(f.wait, 2)
+        f.goal = [f.pos.x, f.pos.z]
+        f.dir = Math.atan2(p.x - f.pos.x, p.z - f.pos.z)
+      }
+      const g = !h && !title && here?.sage
       const d = g ? Math.hypot(g.pos.x - p.x, g.pos.z - p.z) : 99
       $('bub').hidden = !(d < 12)
       if (d < 12) {
-        if (c) {
-          g.wait = Math.max(g.wait, 2)
-          g.goal = [g.pos.x, g.pos.z]
-          g.dir = Math.atan2(p.x - g.pos.x, p.z - g.pos.z)
-        }
-        $('bub').textContent = c ? 'Space · talk' : '…'
         const v = g.pos.clone().setY(g.pos.y + 2.4).project(camera)
         Object.assign($('bub').style, { left: (v.x + 1) * 50 + '%', top: (1 - v.y) * 50 + '%' })
       }
@@ -2183,7 +2183,7 @@ addEventListener('touchend', (e) => {
 function attack() {
   if (player.seat) return buck()
   if (player.room?.shop) return craft('potion')
-  if (well && !beacon[well.k]?.[2]) return beacon[well.k] ? (aim = well) : setTorch() // at a well, Space lights or takes the beam
+  if (well && !beacon[well.k]?.[2] && (beacon[well.k] || bag.sunstone || !village?.chat)) return beacon[well.k] ? (aim = well) : setTorch() // at a well, Space lights or takes the beam
   if (village?.chat) return village.speak()
   const k = ITEMS[player.item]
   if (k == 'potion') return drink()
