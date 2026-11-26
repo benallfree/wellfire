@@ -32,6 +32,8 @@ const DAY = new THREE.Color('#9cc8e8')
 const NIGHT = new THREE.Color('#03050c')
 const SUN = new THREE.Color('#fff4dd')
 const MOON = new THREE.Color('#5a78c8')
+const LITE = new THREE.Color()
+const hue = new THREE.Color()
 const sky = DAY.clone()
 let day = 1
 scene.background = sky
@@ -546,6 +548,10 @@ bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
 const GOAL = 5
 const beacon = kept('warriorBeacons', {})
 const done = () => Object.values(beacon).filter((b) => b[2]).length
+// each locked beam is a stage (models.json stages): the sky tints, the creatures harden; the last is red
+const STAGES = lib.stages
+let st = STAGES[Math.min(done(), GOAL - 1)]
+DAY.set(st.day), NIGHT.set(st.night), LITE.set(st.light)
 const own = (m) => (m == 'gold' ? gold : bag[m])
 const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
@@ -1047,7 +1053,7 @@ function herd(dt) {
 const foes = []
 let seedNext = 100
 // More monsters roam at night: 12 by day, up to 22 in the dark, scaled by the region the player is in.
-const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)])
+const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)] * st.crowd)
 function spawn(f) {
   if (f) {
     scene.remove(f.g)
@@ -1079,9 +1085,9 @@ function spawn(f) {
   e.fits = HABITAT[kind] || onLand
   if (kind == 'eel') e.swim = 0.1
   const s = e.m.root.scale.x
-  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6))
-  e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5, eel: 4.8 }[kind]
-  e.dmg = { slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind]
+  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6) * st.hp)
+  e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5, eel: 4.8 }[kind] * st.run
+  e.dmg = Math.round({ slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind] * st.dmg)
   e.reach = 1.2 + s * 0.4
   e.wander = 0
   e.cool = 1
@@ -1468,7 +1474,7 @@ const coinGeo = bake(make(lib, 'coin', 1))
 const coinMat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: '#5a3c00' })
 function loot(e) {
   const roll = hash(e.seed, player.kills, SEED + 5)
-  const g = Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)]))
+  const g = Math.max(1, Math.round(e.m.vars.gold * (0.6 + e.m.root.scale.x * 0.6) * (0.7 + roll * 0.6) * (1 + (1 - day) * 0.6) * PAY[region(e.pos.x, e.pos.z)] * st.pay))
   const n = Math.min(g, 6)
   for (let i = 0; i < n; i++) {
     const c = new THREE.Mesh(coinGeo, coinMat)
@@ -1802,6 +1808,7 @@ function aiming(dt, ix, iz) {
   burst(top(aim), '#fd4', 24)
   say(`${aim.name}'s beam meets the star · ✦ ${n}/${GOAL}`)
   if (n == GOAL) show = 0.01
+  else (st = STAGES[n]), setTimeout(() => say(st.say), 2600)
   aim = null
   hud()
 }
@@ -2195,9 +2202,9 @@ function frame() {
       tx /= l
       tz /= l
       sp = e.run * 0.7
-    } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) && !village.in && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
+    } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
       // slimes and spiders shy from a lit torch, circling its edge, but dare a rush every few seconds
-      if (lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
+      if (!st.bold && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
         const k = d < 5 ? -1 : 0
         tx = (dx / d) * k + (dz / d) * 0.7
         tz = (dz / d) * k - (dx / d) * 0.7
@@ -2215,7 +2222,7 @@ function frame() {
         sp = e.run
       } else if (e.cool <= 0 && !e.busy) {
         e.play('attack')
-        e.cool = 1.8 + R() * 1.5
+        e.cool = (1.8 + R() * 1.5) * st.cool
         e.striking = true
       }
       e.dir = Math.atan2(dx, dz)
@@ -2295,11 +2302,13 @@ function frame() {
   // the fog closes in and turns black, so only torches, fires, windows, eyes and coins show beyond arm's reach.
   day = Math.min(1, Math.max(0, Math.cos((t - morn) / 30 + 0.6) * 0.8 + 0.6)) * dawn
   dawn += ((title ? 0.15 : 1) - dawn) * Math.min(1, dt / 2)
+  for (const [c, k] of [[DAY, 'day'], [NIGHT, 'night'], [LITE, 'light']]) c.lerp(hue.set(st[k]), Math.min(1, dt / 2)) // a new stage fades in
   sky.lerpColors(NIGHT, DAY, day)
   scene.fog.color.copy(sky)
   scene.fog.near = 6 + day * 34
   scene.fog.far = 40 + day * 70
-  sun.color.lerpColors(MOON, SUN, day)
+  sun.color.lerpColors(MOON, SUN, day).multiply(LITE)
+  hemi.color.set('#dfefff').multiply(LITE)
   sun.intensity = 0.2 + 2.2 * day
   hemi.intensity = 0.03 + day * 1.27
 

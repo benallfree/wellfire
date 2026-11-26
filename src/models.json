@@ -7926,5 +7926,72 @@
     "townRegen": 3,
     "fieldRegen": 0.05,
     "potionHeal": 30
-  }
+  },
+  "stages": [
+    {
+      "day": "#9cc8e8",
+      "night": "#03050c",
+      "light": "#ffffff",
+      "hp": 1,
+      "dmg": 1,
+      "run": 1,
+      "sight": 1,
+      "cool": 1,
+      "crowd": 1,
+      "pay": 1
+    },
+    {
+      "day": "#86cdb4",
+      "night": "#020a07",
+      "light": "#e4fff0",
+      "hp": 1.4,
+      "dmg": 1.5,
+      "run": 1.1,
+      "sight": 1.4,
+      "cool": 0.8,
+      "crowd": 1.2,
+      "pay": 1.4,
+      "say": "The sky turns sickly green. The creatures stir."
+    },
+    {
+      "day": "#a48cd8",
+      "night": "#06030f",
+      "light": "#eedcff",
+      "hp": 1.9,
+      "dmg": 2,
+      "run": 1.2,
+      "sight": 1.9,
+      "cool": 0.6,
+      "crowd": 1.45,
+      "pay": 2,
+      "say": "The sky bruises violet. The creatures grow bold."
+    },
+    {
+      "day": "#e0884a",
+      "night": "#0d0502",
+      "light": "#ffc890",
+      "hp": 2.6,
+      "dmg": 3,
+      "run": 1.35,
+      "sight": 2.6,
+      "cool": 0.45,
+      "crowd": 1.75,
+      "pay": 2.8,
+      "say": "The sky burns orange. The creatures hunt in packs."
+    },
+    {
+      "day": "#b02418",
+      "night": "#140202",
+      "light": "#ff6a58",
+      "hp": 3.6,
+      "dmg": 4,
+      "run": 1.55,
+      "sight": 3.6,
+      "cool": 0.3,
+      "crowd": 2.2,
+      "pay": 4,
+      "bold": 1,
+      "say": "The sky reddens. The eye bleeds, and the creatures grow wild."
+    }
+  ]
 }
