@@ -2686,9 +2686,9 @@ function frame() {
   if (!$('say').hidden) return requestAnimationFrame(frame)
   const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
   const fps = fpNow()
-  // first person: a wide (90 degree), close lens, and the left arm and shield hidden so they don't fill the view (the
-  // weapon arm stays, so swings show)
-  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = !fps), fps || document.exitPointerLock?.()
+  // first person: a wide (90 degree), close lens, and the head and the left arm and shield hidden so they don't fill
+  // the view (the weapon arm stays, so swings show)
+  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps), fps || document.exitPointerLock?.()
 
   // on foot or riding: A/D turn and W/S walk along the facing (Q/E strafe), or, in free mode, move relative to the camera
   let ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + stick.x
@@ -2998,6 +2998,12 @@ function frame() {
     player.m.bones.head.getWorldPosition(camera.position)
     camera.position.x += fx * 0.3
     camera.position.z += fz * 0.3
+    // underground the camera itself keeps clear of the walls (the body stops 0.35 short, the face reaches further)
+    for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
+      const ax = hw + 0.2 - Math.abs(camera.position.x - cx)
+      const az = hd + 0.2 - Math.abs(camera.position.z - cz)
+      if (ax > 0 && az > 0) ax < az ? (camera.position.x = cx + Math.sign(camera.position.x - cx) * (hw + 0.2)) : (camera.position.z = cz + Math.sign(camera.position.z - cz) * (hd + 0.2))
+    }
     camera.lookAt(camera.position.x + fx * Math.cos(pitch), camera.position.y + Math.sin(pitch), camera.position.z + fz * Math.cos(pitch))
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
