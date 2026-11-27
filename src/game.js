@@ -1756,7 +1756,6 @@ var village
       const h = player.room
       if (h) {
         if (p.z > h.z + h.rd / 2 - 0.3) this.leave()
-        camYaw = 0 // move relative to the room camera
         // a fixed room camera, warm firelight, no sky
         camera.position.set(h.x + (p.x - h.x) * 0.3, h.y + 5.5, h.z + h.rd / 2 + 3.2)
         camera.lookAt(h.x + (p.x - h.x) * 0.3, h.y + 0.6, h.z - 0.4)
@@ -2717,8 +2716,8 @@ const chase = 1 // (tank controls always; the old free camera is gone)
 // attacks. Esc lets go.
 let first = 0
 let pitch = 0
-const free = () => !player.room && !title // the mouse can look (not in a house's fixed cutaway room)
-const fpNow = () => (first || player.cave) && free()
+const free = () => !title // the mouse can turn you (in a house's room too)
+const fpNow = () => (first || player.cave) && !player.room && free() // (never first person in a room's cutaway)
 let drag = 0 // turning from the locked mouse, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
 // look with the locked pointer, or by dragging with the button held where the browser won't lock it
@@ -2838,7 +2837,7 @@ let wasFp = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
   if (!$('say').hidden) return requestAnimationFrame(frame)
-  const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
+  const tank = chase || player.cave // steered the same everywhere; a house's room keeps its fixed cutaway camera
   const fps = fpNow()
   // first person: a wide (90 degree), close lens, and the head and the left arm hidden so they don't fill the view (the
   // weapon arm stays, so swings show; a lit torch shows at the lower left)
