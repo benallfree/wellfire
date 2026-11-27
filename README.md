@@ -18,7 +18,7 @@ need a network connection.)
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
 Space or J uses what's in hand: a weapon attacks (the axe also chops trees and breaks flint), a potion is drunk, the
 whistle calls the roc, and wood, flint and a boat are thrown · F or Tab swap the item in hand · 1-8 pick a tray
-slot (7 potion, 8 whistle), 9 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
+slot (7 potion, 8 whistle), 0 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
 at a well sets a torch and a sunstone in the beacon, then aims the beam (turn, W/S tilt; R lets go) · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,

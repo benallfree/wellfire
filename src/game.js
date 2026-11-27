@@ -561,7 +561,7 @@ function hud() {
   $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
-// weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). Slot 9 (key 9) opens crafting: recipes (tap one; only in a village; a recipe's
+// weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). The last slot (key 0) opens crafting: recipes (tap one; only in a village; a recipe's
 // inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { recipes: RECIPES, materials: MATS } = lib.tray
@@ -615,7 +615,7 @@ const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
-      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
+      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
@@ -2012,7 +2012,7 @@ function shine(dt) {
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
   if (T && T != well) {
     const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'Space: aim the beam at the star') : !bag.sunstone ? 'A beacon needs a sunstone: ask the townsfolk where one sleeps' : bag.torch ? 'Space: set a torch and the sunstone in the beacon' : 'A beacon needs a torch: craft one in the pack (9)')
+    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'Space: aim the beam at the star') : !bag.sunstone ? 'A beacon needs a sunstone: ask the townsfolk where one sleeps' : bag.torch ? 'Space: set a torch and the sunstone in the beacon' : 'A beacon needs a torch: craft one in the pack (0)')
   }
   well = T || null
   if (!well) aim = null
@@ -2146,7 +2146,7 @@ addEventListener('keydown', (e) => {
   if (!$('say').hidden) return ['Space', 'KeyJ', 'Escape', 'Enter'].includes(e.code) && ($('say').hidden = true)
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
   if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1, 1)
-  if (e.code.startsWith('Digit')) slot(+e.code[5] - 1)
+  if (e.code.startsWith('Digit')) slot(e.code == 'Digit0' ? belt.length : e.code < 'Digit9' ? e.code[5] - 1 : -1) // 1-8 the tray, 0 crafting
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyN' || (e.code == 'Escape' && !$('big').hidden)) bigMap()
