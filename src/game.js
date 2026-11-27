@@ -2198,7 +2198,7 @@ const got = (T) => {
   const p = den(T.gi, T.gj)
   return felled.gems?.[T.k] || (p && felled[Math.floor(p[0] / CH) + ',' + Math.floor(p[1] / CH)]?.['e' + T.k])
 }
-// walking into a ripe bush while hurt eats its berries; eaten ones grow back after BERRY.regrow seconds
+// walking (or riding, not flying) into a ripe bush while hurt eats its berries; eaten ones grow back after BERRY.regrow seconds
 function berry() {
   const p = player.pos
   const cx = Math.floor(p.x / CH)
@@ -2210,7 +2210,7 @@ function berry() {
           if (Date.now() - b.eaten > BERRY.regrow * 1e3) (b.eaten = 0), (dirty = true)
           continue
         }
-        if (player.cave || player.hp <= 0 || player.hp >= player.maxHp || Math.hypot(b.x - p.x, b.z - p.z) > BERRY.reach) continue
+        if (player.cave || player.seat?.alt > 3 || player.hp <= 0 || player.hp >= player.maxHp || Math.hypot(b.x - p.x, b.z - p.z) > BERRY.reach) continue
         const n = Math.min(player.maxHp - player.hp, Math.ceil(player.maxHp * BERRY.heal))
         learn('berries')
         player.hp += n
@@ -2476,7 +2476,7 @@ function act() {
       village.chat && ['talk', HINT.talk],
       m && ['ride', HINT.ride.replace('$', m.m.vars.name)],
       c && (c.rock ? ['crack', axe ? HINT.crack : HINT.crackAxe] : ['goIn', lit ? HINT.goIn : HINT.lightUp]),
-      player.hp < player.maxHp && within(4, (c) => c.berries.filter((b) => !b.eaten)) && ['berries', HINT.berries],
+      player.hp < player.maxHp && !(player.seat?.alt > 3) && within(4, (c) => c.berries.filter((b) => !b.eaten)) && ['berries', HINT.berries],
       within(2.5, (c) => c.rocks.filter((r) => !r.done)) && ['rock', axe ? HINT.rock : HINT.rockAxe],
     ].find((h) => h && !learned[h[0]]) || []
   )
