@@ -1016,7 +1016,7 @@ function whistle() {
   voice([[0, 2300], [0.12, 2700], [0.42, 1600]], 0.07, { vib: [9, 50], at: 0.3 })
   let m = mounts.find((m) => m.m.vars.fly && !m.leave)
   if (!m) (m = addMount('roc', SEED, player.pos.x - Math.sin(player.dir) * 60, player.pos.z - Math.cos(player.dir) * 60)).alt = v.alt / 2
-  m.come = 1
+  m.come = m.sta = 1 // a call always brings it fully rested
   voice([[0, 2200], [0.2, 3100], [0.6, 2800], [2.2, 1200]], 0.12, { vib: [6, 40], hiss: 1.2, at: 1 })
   setTimeout(() => say(m.m.vars.name + ' the roc answers'), 1000)
 }
@@ -1130,7 +1130,7 @@ function herd(dt) {
       if (m.sta <= 0) (m.up = 0), (m.out = r == player) // worn out: it comes down, throws you off and leaves
       const want = r == player ? (m.up ? v.alt : g < WATER && !m.out ? 4 : 0) : m.come ? m.speed : m.leave ? v.alt : 0
       m.alt = Math.max(0, m.alt + Math.max(-v.lift * dt, Math.min(v.lift * dt, want - m.alt)))
-      m.sta = Math.min(1, Math.max(0, m.sta + dt * (m.alt > 3 ? -1 / v.tire : 1 / v.rest)))
+      m.sta = Math.min(1, Math.max(0, m.sta + dt * (m.alt > 3 && r ? -1 / v.tire : 1 / v.rest)))
       m.fy = Math.max(g, m.fy + (g + m.alt - m.fy) * Math.min(1, dt * 3))
       m.floor = m.alt ? m.fy : null
       if (r == player && m.alt > 3) m.flew = 1
