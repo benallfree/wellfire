@@ -406,11 +406,11 @@ function grow(cx, cz) {
   }
   const eggs = []
   const E = rng((hash(cx, cz, SEED + 13) * 4294967296) | 0)
-  const egg = (x, z, id, c) => {
+  const egg = (x, z, id, c, T) => {
     const g = new THREE.Mesh(geo(felled[key]?.[id] ? 'cracked' : 'egg'), itemMat)
     g.position.set(x, height(x, z), z)
     g.rotation.y = x * 7
-    Object.assign(g, { k: id, c, done: felled[key]?.[id] })
+    Object.assign(g, { k: id, c, T, done: felled[key]?.[id] })
     mesh.add(g) // goes when the chunk's ground does
     eggs.push(g)
   }
@@ -422,7 +422,7 @@ function grow(cx, cz) {
   }
   for (const T of sites(x0, z0)) {
     const p = gem(T.gi, T.gj)
-    if (p && Math.floor(p[0] / CH) == cx && Math.floor(p[1] / CH) == cz) egg(...p, 'e' + T.k, 'sunstone')
+    if (p && Math.floor(p[0] / CH) == cx && Math.floor(p[1] / CH) == cz) egg(...p, 'e' + T.k, 'sunstone', T)
   }
   chunks.set(key, { cx, cz, mesh, inst, trees, eggs, key })
   dirty = true
@@ -558,7 +558,7 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills${bag.sunstone ? ` · ${bag.sunstone} sunstone` : ''} · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
 // weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). Slot 9 (key 9) opens crafting: recipes (tap one; only in a village; a recipe's
@@ -576,7 +576,7 @@ const ICON = { pack: 'craft' }
   r.setSize(size, size)
   cam.add(new THREE.DirectionalLight('#fff', 2))
   s.add(new THREE.HemisphereLight('#fff', '#666', 2), cam)
-  for (const k of new Set([...ITEMS, ...lib.tray.slots, ...Object.keys(RECIPES), 'gold'])) {
+  for (const k of new Set([...ITEMS, ...lib.tray.slots, ...Object.keys(RECIPES), 'gold', 'sunstone'])) {
     const m = new THREE.Mesh(geo(k), itemMat)
     m.rotation.y = (turn[k] || 0) * DEG
     s.add(m)
@@ -600,6 +600,7 @@ bag.flint ||= 0
 bag.boat ||= 0
 bag.potion ||= 0
 bag.whistle ||= 0
+bag.sunstone ||= 0
 bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
 // beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star]
 const GOAL = 5
@@ -615,7 +616,7 @@ function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
       .map((k, i) => `<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
-      .join('')
+      .join('') + `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>`
   $('inv').innerHTML =
     Object.entries(RECIPES)
       .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
@@ -643,7 +644,7 @@ function gain(k, n) {
   keep('warriorBag', bag)
   ITEMS[player.item] == k && !bag[k] ? equip(arm) : tray()
   hud()
-  ;($('tray').children[belt.indexOf(k)] || $('tray').lastChild).animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
+  ;$('tray').children[k == 'sunstone' ? belt.length + 1 : belt.indexOf(k)]?.animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
 }
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
 $('tray').onpointerdown = (e) => {
@@ -1658,6 +1659,15 @@ function toss(k) {
   player.play('jab')
   gain(k, -1)
 }
+// picking up a sunstone is the big moment: a fanfare, a fountain of sparks and a box that pauses the game
+let found = ''
+function sunstone() {
+  for (let i = 0; i < 8; i++) setTimeout(() => beep(523 * 1.26 ** (i % 4) * (i > 3 ? 2 : 1), 0.6, 'triangle', 0.06, 1), i * 120)
+  for (let i = 0; i < 4; i++) burst(player.pos.clone().setY(player.pos.y + i * 0.6), ['#fb4', '#fff', '#f84', '#fe8'][i], 20)
+  $('say').hidden = false
+  $('say').innerHTML = `<small>✦ ✦ ✦</small><h2>You found ${found ? found + "'s" : 'a'} sunstone!</h2><p>Set it in a village well with a torch, and its beam will rise to the star</p><small>Space or tap</small>`
+  $('say').animate([{ transform: 'translate(-50%,-50%) scale(.3)', boxShadow: '0 0 0 #fb4' }, { transform: 'translate(-50%,-50%) scale(1.1)', boxShadow: '0 0 80px #fb4' }, { transform: 'translate(-50%,-50%)', boxShadow: '0 0 0 #fb4' }], 900)
+}
 const lose = (c) => (scene.remove(c), drops.splice(drops.indexOf(c), 1))
 function pickups(dt) {
   const p = player.pos
@@ -1684,6 +1694,7 @@ function pickups(dt) {
       q.z += dz * sp
       if (d < 0.6) {
         c.k == 'gold' ? earn(c.n) : gain(c.k, c.n)
+        if (c.k == 'sunstone') sunstone()
         beep(1568, 0.06, 'square', 0.03, 1) // ching
         setTimeout(() => beep(2093, 0.3, 'triangle', 0.05, 0.98), 60)
         burst(q.clone().setY(q.y - 0.6), '#fd4', 5)
@@ -1934,11 +1945,7 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
         beep(110, 0.25, 'square', 0.06, 0.5)
         const [lo, hi] = EGG.coins
         if (g.c) spill(g.c, g.c == 'gold' ? Math.round((lo + R() * (hi - lo)) * st.pay) : 1, p)
-        if (g.c == 'sunstone') {
-          burst(p, '#fb4', 30)
-          for (let i = 0; i < 5; i++) setTimeout(() => beep(523 * 1.26 ** i, 0.5, 'triangle', 0.06, 1), i * 110)
-          say('A sunstone! Set it in a well with a torch')
-        }
+        if (g.c == 'sunstone') burst(p, '#fb4', 30), (found = g.T.name)
         return
       }
     }
