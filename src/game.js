@@ -6,7 +6,7 @@ import { score, jukebox } from './music.js'
 const lib = library(document.getElementById('models').textContent)
 
 const WATER = 0.2
-const ITEMS = ['sword', 'axe', 'torch', 'wood', 'flint', 'boat', 'potion', 'whistle']
+const ITEMS = ['sword', 'axe', 'torch', 'wood', 'flint', 'haste', 'potion', 'whistle']
 // monster mix and how crowded it gets, per region (meadow, forest, rocky hills, lakes)
 const FOES = [
   ['slime', 'slime', 'bat', 'goblin'],
@@ -576,11 +576,9 @@ class Actor {
   update(dt, run) {
     this.time += dt
     if (this.once) this.once[1] += dt
-    const k = this.seat || this.boat ? 0 : Math.min(1, this.speed / run)
+    const k = this.seat ? 0 : Math.min(1, this.speed / run)
     this.step += dt * (this.swim ? 0.6 + k * 0.6 : Math.max(0.6, k))
-    const layers = this.boat
-      ? [['row', boat.time, 1]] // rowing (see boat)
-      : this.alt > 3
+    const layers = this.alt > 3
       ? [['fly', this.time, 1]]
       : this.swim && this.m.clips.swim
       ? [['swim', this.step, 1]]
@@ -609,13 +607,20 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${player.cave ? 'cave of ' + player.cave.c.T.name : village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${player.cave ? 'cave of ' + player.cave.c.T.name : village?.in ? village.name + ' · weapon stowed' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
-// weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). The last slot (key 0) opens crafting: recipes (tap one; only in a village; a recipe's
+// weapon swings, wood and flint are thrown, a potion is drunk, the whistle is blown). The last slot (key 0) opens crafting: recipes (tap one; only in a village; a recipe's
 // inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { recipes: RECIPES, materials: MATS } = lib.tray
+// the apothecary's wares: a healing potion and a speed potion (models.json "haste" vars: speed times walking, for time
+// seconds, on foot and swimming, not riding; the teal bar). In the shop Space buys a healing potion, and either
+// potion's tray slot (key or tap) buys one of that kind
+const POTS = ['haste', 'potion']
+const HASTE = lib.haste.vars
+let haste = 0 // seconds of speed left
+const wares = () => POTS.map((k) => `${belt.indexOf(k) + 1} ${lib[k].vars.name} ${RECIPES[k].gold} gold`).join(' · ')
 // tray icons are the items' own models, each drawn once at startup into a small picture (models.json tray.icons:
 // picture size, camera fov and view direction, per-item turn in degrees and zoom); any item with a model gets one
 const ICON = { pack: 'craft' }
@@ -641,15 +646,16 @@ const ICON = { pack: 'craft' }
   r.forceContextLoss()
 }
 $('gold').insertAdjacentHTML('afterbegin', ICON.gold)
-const belt = kept('warriorSlots', lib.tray.slots)
+const belt = kept('warriorSlots', lib.tray.slots).map((k) => (k == 'boat' ? 'haste' : k)) // the boat's slot went to the speed potion
 let pick = -1
 const place = (k) => belt.includes(k) || belt.push(k)
 lib.tray.slots.map(place)
 const bag = kept('warriorBag', {})
 bag.wood ||= 0
 bag.flint ||= 0
-bag.boat ||= 0
+delete bag.boat // the boat is gone (older saves)
 bag.potion ||= 0
+bag.haste ||= 0
 bag.whistle ||= 0
 bag.sunstone ||= 0
 bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
@@ -670,7 +676,7 @@ function tray() {
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
-      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
+      .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${lib[k].vars.name} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
       .join('') +
     (village?.in ? '' : '<br>Craft in a village') +
     '<br>tap two slots to swap'
@@ -685,8 +691,8 @@ function slot(i, tap) {
     return tray()
   }
   if (k == 'torch' && !bag.torch) craft()
-  if (k == 'boat' && !bag.boat) say('No boat: craft one in a village')
-  if (k == 'potion' && !bag.potion) say('No potion: buy one at the apothecary')
+  if (POTS.includes(k) && player.room?.shop) return craft(k) // in the apothecary a potion's slot buys one
+  if (POTS.includes(k) && !bag[k]) say('No potion: buy one at the apothecary')
   if (k == 'whistle' && !bag.whistle) craft('whistle')
   if (ITEMS.includes(k)) equip(ITEMS.indexOf(k), 1)
 }
@@ -938,15 +944,12 @@ let item
 // The torch is a weapon like the sword and axe: taking it in hand (its slot, F or SWAP) lights it (a fire swing: +2
 // damage and the burn) and lights the night. Unlit, it's a weak club. A torch burns for FUEL seconds (the orange bar),
 // then it's spent and leaves the bag; take another from the slot, or craft one (a wood and a flint). Water douses it.
-// In the boat the lit torch stands in the bow post.
 const FUEL = 90 // a minute and a half: enough for a cave run (the 6×6 maze and its guard) if lit at the mouth
 let lit = 0
 let arm = 0 // the weapon last in hand: it goes on his back while he holds an item (wood, flint) up in both hands
 let fuel = FUEL
-let boat
 function torch() {
-  hold(lib, player.m, 'handL', player.boat || player.lift ? null : 'shield')
-  boat && hold(lib, boat, 'post', player.boat && lit ? 'torch' : null)
+  hold(lib, player.m, 'handL', player.lift ? null : 'shield')
   for (const b in player.m.props) if (player.m.props[b].bones.flame) player.m.props[b].bones.flame.visible = b != 'back' && lit > 0
   hud()
 }
@@ -963,15 +966,8 @@ function equip(i, take) {
   if (k != 'torch') lit = 0
   player.lift = player.item > 2 // anything but a weapon is held up over his head
   if (!player.lift) arm = player.item
-  const h = hold(lib, player.m, 'handR', k)
-  const c = h.vars.carry // a boat goes over his head upside down, in its rest pose so posing keeps it
-  if (c) {
-    const [, p, r] = h.rest.find((e) => e[0] == h.root)
-    p.set(...c.position)
-    r.set(...c.rotation.map((d) => d * DEG))
-  }
-  item = h.vars
-  if (village?.in || player.swim || player.boat || (player.seat && k != 'torch')) village.stow(1)
+  item = hold(lib, player.m, 'handR', k).vars
+  if (village?.in || player.swim || (player.seat && k != 'torch')) village.stow(1)
   else village?.sling(player.lift && ITEMS[arm])
   torch()
   tray()
@@ -1052,9 +1048,7 @@ const nearMount = () => !player.cave && mounts.find((m) => !m.rider && !m.leave 
 function mountUp() {
   if (aim) return (aim = null)
   if (player.cave) return
-  if (player.boat) return ashore()
   if (player.seat) return player.seat.alt ? say('Land first: Space') : unseat(player)
-  if (nearBoat()) return board()
   const m = player.hp > 0 && !village.in && nearMount()
   if (m) seat(player, m), learn('ride')
   hud()
@@ -1114,7 +1108,7 @@ blockers.push((x, z, w) => (mounts.includes(w) && height(x, z) < WATER - 0.2 ? [
 // you get off, it flies away, and only the whistle brings it back
 function whistle() {
   const v = lib.roc.vars
-  if (player.seat || player.boat || player.cave) return
+  if (player.seat || player.cave) return
   voice([[0, 1500], [0.12, 2300], [0.24, 2150]], 0.07)
   voice([[0, 2300], [0.12, 2700], [0.42, 1600]], 0.07, { vib: [9, 50], at: 0.3 })
   let m = mounts.find((m) => m.m.vars.fly && !m.leave)
@@ -1625,7 +1619,7 @@ var village
         player.vel.set(0, 0)
         player.dir = Math.PI
         glow.position.set(h.x, h.y + 1.2, h.z - h.rd / 2 + 1.2)
-        if (h.shop) say(`Apothecary · potion ${RECIPES.potion.gold} gold · Space to buy`)
+        if (h.shop) say('Apothecary · ' + wares())
       })
     },
     leave() {
@@ -1813,12 +1807,6 @@ function pickups(dt) {
   coinMat.emissive.setRGB(0.35, 0.24, 0).multiplyScalar(0.7 + Math.sin(clock.elapsedTime * 4) * 0.3) // a soft glow pulse
   for (const c of [...drops]) {
     const q = c.position
-    if (c.k == 'boat' && q.y < Math.max(WATER, height(q.x, q.z) + 0.3)) {
-      dock(q.x, q.z, player.dir)
-      afloat(height(q.x, q.z)) ? (splash(0.3), ripple(q, 2)) : beep(90, 0.15, 'square', 0.05, 0.5)
-      lose(c)
-      continue
-    }
     const dx = p.x - q.x
     const dy = p.y + 0.8 - q.y
     const dz = p.z - q.z
@@ -1929,89 +1917,6 @@ function fells(dt) {
   }
 }
 
-// ---------- boat: crafted in a village (its tray slot counts them), held up and thrown (Space), left where you get out ----------
-// In the boat you sit and row (tank steering, about half walking speed, with glide) and cannot attack. Land
-// monsters can't reach you and eels can't bite through the hull; bats still can. There is one boat in the world:
-// throwing another spends one from the tray and moves it there (water or land: beached, rowing doesn't move it); the one left ashore can be boarded again. Its place is kept in localStorage.
-const afloat = (h) => h < WATER - 0.3
-// the nearest point 1.8-4.2 units from (x, z) whose ground passes `ok`, searching out from straight ahead
-function spot(x, z, dir, ok) {
-  for (let i = 0; i < 36; i++) {
-    const j = i % 9
-    const a = dir + ((j + 1) >> 1) * (j & 1 ? 0.45 : -0.45)
-    const d = 1.8 + ((i / 9) | 0) * 0.8
-    const sx = x + Math.sin(a) * d
-    const sz = z + Math.cos(a) * d
-    if (ok(height(sx, sz))) return [sx, sz, a]
-  }
-}
-function dock(x, z, dir) {
-  if (!boat) {
-    boat = make(lib, 'boat', 1)
-    scene.add((boat.g = new THREE.Group()).add(boat.root)) // pose() resets the model's root, so it rides in a group
-    boat.v = boat.time = 0
-  }
-  boat.g.position.set(x, WATER, z)
-  boat.g.rotation.y = dir
-  keep('warriorBoat', [x, z, dir])
-}
-const docked = kept('warriorBoat')
-if (docked) dock(...docked)
-addEventListener('pagehide', () => boat && keep('warriorBoat', [boat.g.position.x, boat.g.position.z, boat.g.rotation.y]))
-const nearBoat = () => boat && !player.boat && player.hp > 0 && !village.in && Math.hypot(boat.g.position.x - player.pos.x, boat.g.position.z - player.pos.z) < 4.5
-function board() {
-  learn('board')
-  player.boat = 1
-  player.once = null
-  village.stow(1)
-  boat.v = 0
-  hud()
-}
-function ashore() {
-  const b = boat.g.position
-  const s = spot(b.x, b.z, player.dir, onLand)
-  if (!s) return say('Row to a shore to get out')
-  player.boat = player.floor = null
-  player.pos.set(s[0], 0, s[1])
-  village.stow(0)
-  dock(b.x, b.z, boat.g.rotation.y)
-  hud()
-}
-function row(dt, ix, iz) {
-  const b = boat.g
-  const wet = afloat(height(b.position.x, b.position.z)) // beached, the oars row the air
-  if (wet) b.rotation.y -= ix * 1.4 * dt + drag
-  boat.v += ((wet ? -iz * (iz > 0 ? 1.2 : 3) : 0) - boat.v) * Math.min(1, dt * 1.5)
-  const x = b.position.x + Math.sin(b.rotation.y) * boat.v * dt
-  const z = b.position.z + Math.cos(b.rotation.y) * boat.v * dt
-  if (afloat(height(x, z))) b.position.set(x, b.position.y, z)
-  else boat.v = 0 // aground
-  if (Math.abs(boat.v) > 0.5 && R() < dt * 2) ripple(b.position, 0.9)
-  // the stroke keeps time with the speed; stopping, it runs on to the finish (key 0) and rests there, oars level
-  if (Math.abs(boat.v) > 0.3 || ix || iz || boat.time % 1.6 > 0.08) boat.time += dt * Math.max(0.8, Math.abs(boat.v) * 0.6)
-  player.dir = b.rotation.y
-  player.speed = 0
-}
-// every frame: the boat bobs and rolls, the rider sits on the thwart
-function boating(dt) {
-  if (!boat) return
-  const b = boat.g
-  const g = height(b.position.x, b.position.z)
-  const wet = afloat(g)
-  b.position.y = wet ? WATER - 0.03 + Math.sin(clock.elapsedTime * 2) * 0.04 : g // afloat, the floor (top 0.1) stays above the water
-  b.rotation.z = Math.sin(clock.elapsedTime * 1.3) * 0.04 * wet
-  pose(boat, [[0, clock.elapsedTime]]) // rests the oars (shipped along the hull) and flickers a torch in the post
-  if (player.boat) {
-    player.pos.set(b.position.x, 0, b.position.z)
-    player.floor = b.position.y + 0.3 - player.m.bones.hip.position.y * player.m.root.scale.y
-  }
-  if (!player.seat && player.boat) {
-    $('rider').hidden = 0
-    $('mbar').hidden = 1
-    $('mname').textContent = player.boat ? 'R · get out at a shore' : 'R · board the boat'
-  }
-}
-
 // ---------- beacons: the goal. Set a torch in five villages' wells and aim each beam at the star ----------
 // The star hangs at one fixed direction, as if infinitely far, so the same aim is right from every village. At a
 // well, Space sets a torch and a sunstone (from a cave) in the beacon, and you hold the beam at once (Space takes it
@@ -2043,25 +1948,26 @@ DAY.set(st.day), NIGHT.set(st.night), LITE.set(st.light)
 function craft(k = 'torch') {
   const r = RECIPES[k]
   const e = Object.entries(r)
+  const name = lib[k].vars.name.toLowerCase()
   if (!village.in) return say('Craft in a village')
-  if (k == 'potion' && !player.room?.shop) return say('Buy it at the apothecary')
-  if (!has(r)) return say(`A ${k} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(own(m) >= n))[0]] || 'craft one'}`)
+  if (POTS.includes(k) && !player.room?.shop) return say('Buy it at the apothecary')
+  if (!has(r)) return say(`A ${name} takes ${e.map(([m, n]) => n + ' ' + m).join(' and ')}: ${MATS[e.find(([m, n]) => !(own(m) >= n))[0]] || 'craft one'}`)
   for (const [m, n] of e) m == 'gold' ? earn(-n) : gain(m, -n)
   place(k)
   keep('warriorSlots', belt)
   gain(k, 1)
-  if (k == 'potion') learn('buy')
+  if (POTS.includes(k)) learn('buy')
   if (k == 'torch') fuel = FUEL
-  say(`+1 ${k}`)
+  say(`+1 ${name}`)
 }
-function drink() {
-  if (!bag.potion) return say('No potion: buy one at the apothecary')
+function drink(k) {
+  if (!bag[k]) return say('No potion: buy one at the apothecary')
   if (player.hp <= 0) return
-  if (player.hp >= player.maxHp) return say('Already at full health')
-  player.hp = Math.min(player.maxHp, player.hp + lib.health.potionHeal)
-  gain('potion', -1)
+  if (k == 'haste') (haste = HASTE.time), burst(player.pos, '#3dc', 14)
+  else if (player.hp >= player.maxHp) return say('Already at full health')
+  else (player.hp = Math.min(player.maxHp, player.hp + lib.health.potionHeal)), burst(player.pos, '#f45', 14)
+  gain(k, -1)
   hud()
-  burst(player.pos, '#f45', 14)
   beep(392, 0.4, 'triangle', 0.06, 2)
 }
 function setTorch() {
@@ -2213,7 +2119,7 @@ function caves() {
   if (!K) {
     let c
     for (const ch of chunks.values()) for (const o of ch.caves) if (!o.rock && Math.hypot(p.x - o.mouth[0], p.z - o.mouth[1]) < 0.9) c = o
-    if (!c || player.seat || player.boat || player.swim || player.hp <= 0 || title) return c || (dark = 0)
+    if (!c || player.seat || player.swim || player.hp <= 0 || title) return c || (dark = 0)
     if (lit) return village.fade(() => enter(c))
     dark ||= say('Pitch dark in there: light your torch first') || 1
     return
@@ -2436,15 +2342,14 @@ function act() {
   const b = well && beacon[well.k]
   const m = !village.in && nearMount()
   const c = !player.cave && [...chunks.values()].flatMap((c) => c.caves).find((c) => (c.rock ? far(c.rock.position) : far({ x: c.mouth[0], z: c.mouth[1] })) < 4)
-  if (player.seat || player.boat || aim) return []
+  if (player.seat || aim) return []
   return (
     [
-      player.room?.shop && ['buy', HINT.buy.replace('$', RECIPES.potion.gold)],
+      player.room?.shop && ['buy', HINT.buy.replace('$', wares())],
       well && b && !b[2] && ['aimHere', HINT.aimHere],
       well && !b && bag.sunstone && ['set', bag.torch ? HINT.set : HINT.torchFirst],
       village.chat && ['talk', HINT.talk],
       m && ['ride', HINT.ride.replace('$', m.m.vars.name)],
-      nearBoat() && ['board', HINT.board],
       c && (c.rock ? ['crack', axe ? HINT.crack : HINT.crackAxe] : ['goIn', lit ? HINT.goIn : HINT.lightUp]),
       player.hp < player.maxHp && within(4, (c) => c.berries.filter((b) => !b.eaten)) && ['berries', HINT.berries],
       within(2.5, (c) => c.rocks.filter((r) => !r.done)) && ['rock', axe ? HINT.rock : HINT.rockAxe],
@@ -2564,19 +2469,6 @@ function shine(dt) {
     if (show > 14) show = 0
   }
 }
-// after the rower is posed: each oar turns in its lock towards a hand across the boat
-const hand = new THREE.Vector3()
-function grip() {
-  boat.g.updateMatrixWorld(true)
-  player.g.updateMatrixWorld(true)
-  for (const s of 'LR') {
-    const o = boat.bones['oar' + s]
-    player.m.bones[s == 'L' ? 'handR' : 'handL'].getWorldPosition(hand) // he faces the stern
-    boat.root.worldToLocal(hand).sub(o.position)
-    o.quaternion.setFromUnitVectors(seatAt.set(s == 'L' ? -1 : 1, 0, 0), hand.normalize())
-  }
-}
-
 // ---------- sound: music compiled from the score text, plus a few synthesized blips ----------
 const audio = jukebox(score($('score').textContent))
 function muteButton() {
@@ -2736,10 +2628,10 @@ function attack() {
   if (well && !beacon[well.k]?.[2] && (beacon[well.k] || bag.sunstone || !village?.chat)) return beacon[well.k] ? (aim = well) : setTorch() // at a well, Space lights or takes the beam
   if (village?.chat) return village.speak()
   const k = ITEMS[player.item]
-  if (k == 'potion') return drink()
+  if (POTS.includes(k)) return drink(k)
   if (k == 'whistle') return whistle()
   if (player.lift) return player.busy || player.hp <= 0 || toss(k)
-  if (player.busy || player.hp <= 0 || village?.in || player.swim || player.boat) return
+  if (player.busy || player.hp <= 0 || village?.in || player.swim) return
   player.play(item.anim)
   player.struck = false
   // chase mode: the swing turns toward the nearest monster in front, so you needn't line up exactly
@@ -2829,9 +2721,8 @@ function frame() {
   if (!arr) (drag += ((keys.ArrowRight | 0) - (keys.ArrowLeft | 0)) * 2.2 * dt), (pitch = Math.max(-1.3, Math.min(1.3, pitch + ((keys.ArrowUp | 0) - (keys.ArrowDown | 0)) * 1.5 * dt)))
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
-  const run = 6
+  const run = 6 * (haste > 0 ? HASTE.speed : 1) // a speed potion quickens him on foot and swimming
   if (aim) aiming(dt, ix, iz)
-  else if (player.boat) row(dt, ix, iz)
   else if (player.seat) {
     steer(dt, ix, iz, il)
     player.dir = player.seat.dir
@@ -2862,7 +2753,7 @@ function frame() {
     player.speed = 0
   }
   // swimming: deep water sinks the warrior to his shoulders, stows the weapon and costs breath
-  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.cave && !player.seat && !player.boat
+  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.cave && !player.seat
   if (deep != !!player.swim) {
     if (deep && lit) (lit = 0), say('The water put out your torch')
     player.swim = deep ? 1.25 : 0
@@ -2902,15 +2793,16 @@ function frame() {
     if (item.chop && !player.cave) chop(), crack()
   }
   herd(dt)
-  boating(dt)
   fells(dt)
   player.update(dt, run)
-  if (player.boat) grip()
   player.safe -= dt
   // a torch that burns out is spent: one fewer in the bag, and the next one starts fresh
   if (lit && (fuel -= dt) <= 0) (lit = 0), (fuel = FUEL), gain('torch', -1), torch(), say(bag.torch ? 'Your torch burnt out: take another (3)' : 'Your torch burnt out: craft a new one (a wood and a flint)')
   $('fuel').style.width = (fuel / FUEL) * 100 + '%'
   $('fuelbar').style.opacity = lit ? 1 : 0
+  haste -= dt
+  $('haste').style.width = (haste / HASTE.time) * 100 + '%'
+  $('hastebar').style.opacity = haste > 0 ? 1 : 0
   if (!alive && (player.dead += dt) > 3) {
     // fall with a sunstone and it's lost: it goes back to its cave, guard and all, to be won again
     if (bag.sunstone) gain('sunstone', -bag.sunstone), delete felled.gems?.[felled.carry], delete felled.carry, keep('warriorFelled', felled), setTimeout(() => say('You fell, and the sunstone went back to its cave'), 1500) // (after the well's own tip at home)
@@ -2920,7 +2812,6 @@ function frame() {
     if (player.cave) leave() // a fall underground wakes you at home, the cave left behind
     if (player.seat) unseat(player) // and off whatever you rode (a roc flies away)
     player.pos.copy(bed)
-    if (player.boat) (player.boat = player.floor = null), village.stow(0)
     hud()
   }
   // health comes back fast in a village, barely at all outside (models.json "health", hp a second)
@@ -3041,7 +2932,7 @@ function frame() {
     }
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive && !village.in && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat) && !(player.seat?.alt > 3) && clear(e.pos.x, e.pos.z, player.pos.x, player.pos.z)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow; no blow lands through a cave wall, or through the fence (monsters never get inside)
+      if (d < e.reach + 0.6 && alive && !village.in && (e.kind != 'eel' || wet) && !(player.seat?.alt > 3) && clear(e.pos.x, e.pos.z, player.pos.x, player.pos.z)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow; no blow lands through a cave wall, or through the fence (monsters never get inside)
     }
     e.update(dt, e.run)
   }
@@ -3072,7 +2963,7 @@ function frame() {
   }
 
   // torch light follows the flame, flickering
-  const flame = lit && (boat?.props.post?.bones.flame || player.m.props.handR?.bones.flame)
+  const flame = lit && player.m.props.handR?.bones.flame
   const t = clock.elapsedTime
   if (flame) {
     flame.getWorldPosition(torchLight.position)
@@ -3219,4 +3110,4 @@ frame()
 window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, clock, audio, village, scene, camera, renderer, spawn, world: { SEED, WATER, SWIM, chunks, seen, tiles, terrain, height, depth, region, grow, drop, site, sites, links, road, home } } // for play-testing from the console
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.drops = drops
-Object.assign(window.game, { bag, felled, falling, board, ashore, boat: () => boat, beacon, STAR, craft, aim: () => aim, well: () => well })
+Object.assign(window.game, { bag, felled, falling, beacon, STAR, craft, aim: () => aim, well: () => well })

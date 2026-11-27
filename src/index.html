@@ -14,8 +14,9 @@ body{margin:0;overflow:hidden;font:15px system-ui,sans-serif;color:#fff;user-sel
 #tray img{width:44px;vertical-align:top}
 #airbar{height:6px;width:200px;transition:opacity .4s}
 #air{height:100%;background:#7cf;width:100%;border-radius:3px}
-#fuelbar{height:6px;width:200px;margin-top:3px;opacity:0;transition:opacity .4s}
+#fuelbar,#hastebar{height:6px;width:200px;margin-top:3px;opacity:0;transition:opacity .4s}
 #fuel{height:100%;background:#f93;width:100%;border-radius:3px}
+#haste{height:100%;background:#3dc;width:100%;border-radius:3px}
 #foot{position:fixed;left:16px;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:center;gap:16px;pointer-events:none;text-shadow:0 1px 2px #000}
 #help{opacity:.8;text-align:center}
 #hint{color:#fff;font-weight:bold;text-align:center;text-shadow:0 1px 3px #000}
@@ -48,8 +49,8 @@ body{margin:0;overflow:hidden;font:15px system-ui,sans-serif;color:#fff;user-sel
 </style>
 </head>
 <body>
-<div id="ui"><div id="bar"><div id="hp"></div></div><div id="airbar"><div id="air"></div></div><div id="fuelbar"><div id="fuel"></div></div><div><span id="info"></span> · <b id="gold"><span id="g">0</span></b></div><div id="rider" hidden><div id="mbar"><div id="mhp"></div></div><span id="mname"></span></div></div>
-<div id="foot"><div id="tip"></div><div id="hint"><b id="way">⬆</b> <span id="hx"></span></div><div id="inv" hidden></div><div id="tray"></div><div id="help">W/S walk · A/D strafe · ←/→ turn · Space use · F swap · 1-8 tray · 0 craft · R ride/board · C camera · click mouse turn · N map · M mute</div></div>
+<div id="ui"><div id="bar"><div id="hp"></div></div><div id="airbar"><div id="air"></div></div><div id="fuelbar"><div id="fuel"></div></div><div id="hastebar"><div id="haste"></div></div><div><span id="info"></span> · <b id="gold"><span id="g">0</span></b></div><div id="rider" hidden><div id="mbar"><div id="mhp"></div></div><span id="mname"></span></div></div>
+<div id="foot"><div id="tip"></div><div id="hint"><b id="way">⬆</b> <span id="hx"></span></div><div id="inv" hidden></div><div id="tray"></div><div id="help">W/S walk · A/D strafe · ←/→ turn · Space use · F swap · 1-8 tray · 0 craft · R ride · C camera · click mouse turn · N map · M mute</div></div>
 <b id="mute">♪</b>
 <div id="say" hidden></div>
 <div id="nav"><canvas id="map" width="160" height="160"></canvas><div id="pos"></div></div>

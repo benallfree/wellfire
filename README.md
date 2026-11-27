@@ -3,7 +3,7 @@
 **Play:** https://benallfree.github.io/wellfire/
 
 A small js13k-style three.js action game: a warrior roams an endless seeded world of meadows, forests, rocky hills
-and lakes, fights slimes, goblins, spiders, bats and eels, rides steeds, drakes and a roc, rows a boat, and relights the
+and lakes, fights slimes, goblins, spiders, bats and eels, rides steeds, drakes and a roc, and relights the
 beacons on five villages' wells to blind the star that watches from the sky.
 
 The experiment behind it: what if js13k measured entries with [surprisal](https://github.com/benallfree/surprisal), a
@@ -11,11 +11,9 @@ language-model compressor, instead of zip? Then readable source *is* the compact
 mangled, and every model, animation and song is plain text compiled in the page at load. The game is checked against the
 13,312-byte budget under surprisal and against the best conventional pipeline (terser, roadroller, Zopfli zip).
 
-| | |
-|---|---|
-| ![A lit torch swing at night: flame bits and a burning slime](docs/night-fight.jpg) | ![Rowing at night with the torch in the bow post](docs/boat-torch-night.jpg) |
+![A lit torch swing at night: flame bits and a burning slime](docs/night-fight.jpg)
 
-<sub>Screenshots are from earlier builds; the HUD and help line have changed since.</sub>
+<sub>The screenshot is from an earlier build; the HUD and help line have changed since.</sub>
 
 ## Quick start
 
@@ -37,15 +35,15 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | key | does |
 |---|---|
 | W/S or ↑/↓ | walk forward and back (on a mount: run and back up; holding a beam: tilt it) |
-| A/D | strafe (on a mount or in the boat: turn) |
+| A/D | strafe (on a mount: turn) |
 | ←/→ | turn |
 | click | lock the mouse (Esc lets go). Sideways turns you (in first person up/down also tilts the view); a click attacks |
 | C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Dragging with the mouse button held looks too (for browsers that won't lock). Caves are always first person |
-| Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood, flint or the boat; at a well, set or take the beam |
+| Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood or flint; at a well, set or take the beam |
 | F or Tab | swap to the next item |
-| 1–8 | pick a tray slot (sword, axe, torch, wood, flint, boat, potion, whistle) |
+| 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle); in the apothecary, a potion's slot buys one |
 | 0 | crafting (in a village) |
-| R | ride or leave a mount, board or leave the boat, let go of a beam |
+| R | ride or leave a mount, let go of a beam |
 | N | the big map (Esc closes it) |
 | M or ♪ | sound on and off |
 
@@ -54,9 +52,13 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
 ## The game
 
 - **Getting by.** Health comes back in villages, not in the wilds; out there you eat berries from bushes (a tenth of
-  your health, regrowing in 4 minutes) or drink potions. Kills spill gold; swinging the axe fells trees for wood and
+  your health, regrowing in 4 minutes) or drink healing potions. Kills spill gold; swinging the axe fells trees for wood and
   breaks rocks for coins or, about one time in three, flint. In a village you craft: a torch from a wood and a
-  flint, plus wood, flint, a boat, potions and the roc's whistle for gold and wood. Townsfolk talk.
+  flint, plus wood, flint and the roc's whistle for gold and wood. Townsfolk talk.
+- **The apothecary**, the first house in each village (a big bottle by its door), sells two potions: healing (250
+  gold, +30 health) and speed (150 gold: 1.6× walking and swimming speed for 30 s, not on a mount; a teal bar under
+  the torch's counts it down). Inside, its slot (key or tap) buys one of that kind, and Space buys a healing potion.
+  Drink either from the tray like any item (Space).
 - **Night.** A 3-minute day. Nights are near-black, so the torch matters: lit, it lights the way, sets monsters
   alight and scares slimes and spiders back (bats are drawn to it), and it burns down in 90 seconds.
 - **Caves.** Each village has a cave out in its wilds, sealed by a boulder that takes 8 axe blows. Inside, with a lit
@@ -72,10 +74,10 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   beam.
 - **Near home** (Oakdale, where you start and wake after a fall) the wilds are thinner and tamer, ramping to full
   strength 400 units out.
-- **Getting around.** Steeds and drakes roam the wilds to be ridden (a drake breathes fire); the boat crosses water;
+- **Getting around.** Steeds and drakes roam the wilds to be ridden (a drake breathes fire); a speed potion hurries you along;
   the whistle calls a roc that flies high and fast on its stamina, out of every creature's reach, and leaves after
   each flight, or a minute after the call, ridden or not (a ridden roc comes down and sets you off).
-- **The hint line**, just above the tray. In yellow, the move you can make right here (ride, board, talk, crack the
+- **The hint line**, just above the tray. In yellow, the move you can make right here (ride, talk, crack the
   boulder, go into the cave, eat berries, break a rock, set or aim at a well, buy a potion), each gone for good once
   you've made it. In white, the mission, with an arrow that turns to point the way: step by step until your first beam
   is on the star (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat its guard, take
