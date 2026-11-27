@@ -1778,7 +1778,8 @@ var village
           const lz = (p.x - o.x) * s + (p.z - o.z) * c
           if (this.in && Math.abs(lx) < 0.6 && lz > 0 && lz < o.d / 2 + 0.5) this.enter(o) // on foot only: a rider flying over can't drop in
         }
-        // a house between the camera and the player fades to see-through
+        // a house between the camera and the player fades to see-through (never in first person: the eyes are in
+        // front of the body, so walking up to a door read as the house standing between)
         const ax = camera.position.x
         const az = camera.position.z
         const bx = p.x - ax
@@ -1786,7 +1787,7 @@ var village
         for (const v of built.values())
           for (const o of v.houses) {
             const t = Math.min(1, Math.max(0, ((o.x - ax) * bx + (o.z - az) * bz) / (bx * bx + bz * bz)))
-            const hide = t < 0.98 && Math.hypot(ax + bx * t - o.x, az + bz * t - o.z) < Math.max(o.w, o.d) / 2 + 0.6
+            const hide = !fpNow() && t < 0.98 && Math.hypot(ax + bx * t - o.x, az + bz * t - o.z) < Math.max(o.w, o.d) / 2 + 0.6
             o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
           }
       }
