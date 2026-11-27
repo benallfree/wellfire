@@ -1235,7 +1235,7 @@ function herd(dt) {
       m.sta = Math.min(1, Math.max(0, m.sta + dt * (m.alt > 3 && r ? -1 / v.tire : 1 / v.rest)))
       m.fy = Math.max(g, m.fy + (g + m.alt - m.fy) * Math.min(1, dt * 3))
       m.floor = m.alt ? m.fy : null
-      if (r == player && m.alt > 3) m.flew = 1
+      if (r == player && m.alt > 0.3) m.flew = 1 // any take-off counts, even a hop that lands again before climbing high
       // one call, one flight: once it has flown you and lands, it sets you down and leaves (tired or not)
       if (m.flew && !m.alt) say(v.name + (m.out ? ' is worn out and flies off' : ' flies off')), (m.flew = m.out = 0), (m.leave = 1), unseat(player, player.pos)
     }
