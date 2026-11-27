@@ -615,8 +615,8 @@ const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
-      .map((k, i) => `<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
-      .join('') + `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>`
+      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
+      .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
       .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${k} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
@@ -644,7 +644,7 @@ function gain(k, n) {
   keep('warriorBag', bag)
   ITEMS[player.item] == k && !bag[k] ? equip(arm) : tray()
   hud()
-  ;$('tray').children[k == 'sunstone' ? belt.length + 1 : belt.indexOf(k)]?.animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
+  ;$('tray').children[k == 'sunstone' ? belt.length : belt.indexOf(k)]?.animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)
 }
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
 $('tray').onpointerdown = (e) => {
