@@ -1937,7 +1937,7 @@ function boating(dt) {
 // locks within LOCK radians. Beams are drawn from anywhere: a far one is moved toward the camera and shrunk by the same
 // factor, which leaves its picture unchanged but keeps it inside the camera's range (it is also fattened, to be seen). Parallel beams all meet at their
 // vanishing point, the star. The fifth lock starts the light show and the end screen.
-const LOCK = 0.05
+const LOCK = 0.12 // the snap zone: a beam within ~7 degrees of the eye snaps onto it and locks
 const STAR = new THREE.Vector3().setFromSphericalCoords(1, (50 + hash(3, 4, SEED + 9) * 25) * DEG, hash(5, 6, SEED + 9) * 7)
 // a locked beam points exactly at the eye, not merely within LOCK of it (older saves too)
 const onStar = (b) => ((b[0] = Math.atan2(STAR.x, STAR.z)), (b[1] = Math.acos(STAR.y)), (b[2] = 1))
@@ -2015,7 +2015,7 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
 function aiming(dt, ix, iz) {
   const b = beacon[aim.k]
   b[0] -= ix * dt * 0.6 + drag * 0.3
-  b[1] = Math.min(1.5, Math.max(0.1, b[1] + iz * dt * 0.4))
+  b[1] = Math.min(1.5, Math.max(0.1, b[1] + iz * dt * 0.4 + tilt * 0.3)) // W/S, a touch drag or a mouse drag up and down
   player.dir = b[0] // the warrior, and so the minimap, face the way the beam points
   player.move(0, 0, dt)
   player.speed = 0
@@ -2057,8 +2057,8 @@ function shine(dt) {
     mesh.position.copy(c).lerp(base, s)
     mesh.scale.set(w, 400, w) // (long enough to run out past the camera's range at any distance)
     mesh.quaternion.setFromUnitVectors(UP, dir(b))
-    const heat = b[2] ? 1 : (1 - ray.angleTo(STAR) / Math.PI) ** 6
-    mesh.material.color.setHSL(show ? (t * 0.4 + d * 0.002) % 1 : 0.13, heat, 0.85 - heat * 0.3)
+    // white until it snaps onto the eye, gold once locked: gold always means locked
+    mesh.material.color.setHSL(show ? (t * 0.4 + d * 0.002) % 1 : 0.13, b[2], 0.85 - b[2] * 0.3)
     mesh.material.opacity = b[2] ? 0.7 : 0.45
     if (d < 150 && !o.m) scene.add((o.m = make(lib, 'beacon')).root)
     if (d > 170 && o.m) scene.remove(o.m.root), o.m.root.traverse((g) => g.geometry?.dispose()), o.m.mat.dispose(), (o.m = null)
@@ -2217,7 +2217,8 @@ addEventListener('keydown', (e) => {
 })
 let chase = 1
 let drag = 0 // mouse-drag turning, in radians, used up each frame
-addEventListener('pointermove', (e) => e.buttons && e.pointerType == 'mouse' && (drag += e.movementX * 0.006))
+let tilt = 0 // and up and down, for tilting a beam
+addEventListener('pointermove', (e) => e.buttons && e.pointerType == 'mouse' && ((drag += e.movementX * 0.006), (tilt += e.movementY * 0.006)))
 addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
 addEventListener('touchstart', (e) => {
@@ -2605,7 +2606,7 @@ function frame() {
   const back = player.seat ? 1.35 + player.seat.alt / 15 : 1 * (camera.aspect < 1 ? 1.3 : 1) // and on a tall phone screen
   const snap = clock.elapsedTime < 0.2 || inRoom != !!player.room
   inRoom = !!player.room
-  drag = 0
+  drag = tilt = 0
   if (tank) {
     let a = player.dir + Math.PI - camYaw
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
