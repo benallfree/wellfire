@@ -38,7 +38,7 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 |---|---|
 | W/S or ↑/↓ | walk forward and back (on a mount: run and back up; holding a beam: tilt it) |
 | A/D or ←/→ | turn; in first person, A/D strafe |
-| C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Click to lock the mouse: it then looks too and a click attacks; Esc lets go. Caves are always first person |
+| C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Click to lock the mouse: it then looks too and a click attacks; Esc lets go. Dragging with the mouse button held looks too (for browsers that won't lock). Caves are always first person |
 | Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood, flint or the boat; at a well, set or take the beam |
 | F or Tab | swap to the next item |
 | 1–8 | pick a tray slot (sword, axe, torch, wood, flint, boat, potion, whistle) |
@@ -70,6 +70,11 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
 - **Getting around.** Steeds and drakes roam the wilds to be ridden (a drake breathes fire); the boat crosses water;
   the whistle calls a roc that flies high and fast on its stamina, out of every creature's reach, and leaves after
   each flight.
+- **The hint line**, just above the tray. In yellow, the move you can make right here (ride, board, talk, crack the
+  boulder, go into the cave, eat berries, break a rock, set or aim at a well, buy a potion), each gone for good once
+  you've made it. In white, the mission, with an arrow that turns to point the way: step by step until your first beam
+  is on the star (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat its guard, take
+  it out and back to the well, set it, aim), and after that only the next cave once you're near it.
 - **The end.** Five beams on the star start a light show and the end screen; the world goes on after.
 
 Progress (the map, felled trees and rocks, opened caves, sunstones, beams, the bag) is saved in `localStorage`.

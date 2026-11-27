@@ -1056,7 +1056,7 @@ function mountUp() {
   if (player.seat) return player.seat.alt ? say('Land first: Space') : unseat(player)
   if (nearBoat()) return board()
   const m = player.hp > 0 && !village.in && nearMount()
-  if (m) seat(player, m)
+  if (m) seat(player, m), learn('ride')
   hud()
 }
 // the attack button while riding: the mount's own attack, with damage, reach and cooldown from its model vars
@@ -1255,8 +1255,8 @@ function herd(dt) {
     }
   }
   if (player.seat) torchLight.intensity *= 1 - Math.min(1, dt * 6) // the breath's flash fades
-  // HUD: the mount's name and health while riding, or a prompt beside a free one
-  const t = player.seat || (player.hp > 0 && !village.in && nearMount())
+  // HUD: the mount's name and health while riding (the hint line by the tray says "R · ride" beside a free one)
+  const t = player.seat
   $('rider').hidden = !t
   if (t) {
     $('mbar').hidden = !player.seat
@@ -1610,6 +1610,7 @@ var village
     chat: 0,
     speak() {
       const [v, f] = this.chat
+      learn('talk')
       $('say').hidden = false
       $('say').innerHTML = `<small>${f == v.sage ? 'Sage' : 'Townsfolk'} of ${v.T.name}</small><p>${talk(v, f)}</p><small>Space or tap</small>`
     },
@@ -1957,6 +1958,7 @@ if (docked) dock(...docked)
 addEventListener('pagehide', () => boat && keep('warriorBoat', [boat.g.position.x, boat.g.position.z, boat.g.rotation.y]))
 const nearBoat = () => boat && !player.boat && player.hp > 0 && !village.in && Math.hypot(boat.g.position.x - player.pos.x, boat.g.position.z - player.pos.z) < 4.5
 function board() {
+  learn('board')
   player.boat = 1
   player.once = null
   village.stow(1)
@@ -2001,7 +2003,7 @@ function boating(dt) {
     player.pos.set(b.position.x, 0, b.position.z)
     player.floor = b.position.y + 0.3 - player.m.bones.hip.position.y * player.m.root.scale.y
   }
-  if (!player.seat && (player.boat || nearBoat())) {
+  if (!player.seat && player.boat) {
     $('rider').hidden = 0
     $('mbar').hidden = 1
     $('mname').textContent = player.boat ? 'R · get out at a shore' : 'R · board the boat'
@@ -2046,6 +2048,7 @@ function craft(k = 'torch') {
   place(k)
   keep('warriorSlots', belt)
   gain(k, 1)
+  if (k == 'potion') learn('buy')
   if (k == 'torch') fuel = FUEL
   say(`+1 ${k}`)
 }
@@ -2068,6 +2071,7 @@ function setTorch() {
   fuel = FUEL
   gain('torch', -1)
   gain('sunstone', -1)
+  learn('set')
   equip(player.item)
   beep(200, 0.5, 'sawtooth', 0.05, 3)
   aim = well
@@ -2084,6 +2088,7 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
         burst(p.clone().setY(p.y + 1), '#9a948a', 10)
         beep(70, 0.3, 'square', 0.08, 0.4)
         c.rock.rotation.z = (R() - 0.5) * 0.15 // it rocks
+        learn('crack')
         if (--c.hp > 0) return say(`The boulder cracks · ${c.hp} more`)
         ch.mesh.remove(c.rock)
         c.rock = c.col[2] = 0
@@ -2096,6 +2101,7 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
       if (!g.done && ahead(g.position)) {
         const p = g.position
         g.done = 1
+        learn('rock')
         ch.mesh.remove(g) // it breaks up and is gone, and grows back after REGROW like a tree
         g.col[2] = 0
         ;(felled[ch.key] ||= {})[g.k] = Date.now()
@@ -2184,6 +2190,7 @@ function berry() {
         }
         if (player.cave || player.hp <= 0 || player.hp >= player.maxHp || Math.hypot(b.x - p.x, b.z - p.z) > BERRY.reach) continue
         const n = Math.min(player.maxHp - player.hp, Math.ceil(player.maxHp * BERRY.heal))
+        learn('berries')
         player.hp += n
         b.eaten = (felled[cx + i + ',' + (cz + j)] ||= {})['b' + b.i] = Date.now()
         keep('warriorFelled', felled)
@@ -2293,6 +2300,7 @@ function enter(c) {
   daylit.position.set(X, y + 1.5, Z - S / 2 - 0.5)
   scene.add(g)
   const K = (player.cave = { c, x: X, z: Z, y, walls, g })
+  learn('goIn')
   for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
   player.floor = y
   player.pos.set(X, y, Z - S / 2 + 0.6)
@@ -2367,6 +2375,83 @@ const clear = (ax, az, bx, bz) =>
     }
     return true
   })
+// ---------- the hint line, by the tray, always on: what you can do right here (ride, talk, crack the boulder, set the
+// sunstone...) or, with nothing at hand, the mission (models.json "hints" holds the words)
+const HINT = lib.hints
+const far = (o) => Math.hypot(o.x - player.pos.x, o.z - player.pos.z)
+const within = (r, f) => [...chunks.values()].some((c) => f(c).some((o) => far(o.position || o) < r))
+// the mission, from the save: [what to do, where (for the line's arrow), or nothing]. Until the first beam is on the
+// star it goes step by step (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat its
+// guard, take it out and back to the village's well, a torch, set them, aim); after that a cave is only named once
+// you're near it (the sage tells the way)
+function goal() {
+  const p = player.pos
+  const K = player.cave
+  const T = sites(p.x, p.z, 2)
+    .filter((t) => !beacon[t.k]?.[2])
+    .sort((a, b) => far(a) - far(b))[0]
+  if (done() >= GOAL) return []
+  for (const k in beacon) if (!beacon[k][2]) return [HINT.aim.replace('$', siteAt(k).name), top(siteAt(k))]
+  if (K) return K.gem ? [foes.some((e) => e.guard && e.hp > 0) && far(K.gem.position) < 12 ? HINT.guard : HINT.find, K.gem.position] : [HINT.leave, { x: K.x, z: K.z - CAVE.cell / 2 }]
+  if (bag.sunstone) return [bag.torch ? HINT.well.replace('$', T?.name) : HINT.torchFirst, T && top(T)]
+  const V = sites(p.x, p.z, 2)
+    .filter((t) => den(t.gi, t.gj) && !got(t))
+    .sort((a, b) => far(a) - far(b))[0]
+  if (!V) return [HINT.explore]
+  const [x, z] = den(V.gi, V.gj)
+  const ry = Math.atan2(V.x - x, V.z - z)
+  const at = { x: x + Math.sin(ry) * 1.5, z: z + Math.cos(ry) * 1.5 }
+  const d = far(at)
+  if (done() && d > 60) return [HINT.sage.replace('$', V.name)]
+  if (!felled.caves?.[V.k]) return [d > 12 ? HINT.findCave.replace('$', V.name) : HINT.boulder, at]
+  return [lit ? HINT.goIn : bag.torch ? HINT.light : HINT.torchCave, at]
+}
+// a move once made (rode, talked, cracked the boulder...) retires its prompt for good
+const learned = kept('warriorLearned', {})
+function learn(k) {
+  if (!learned[k]) (learned[k] = 1), keep('warriorLearned', learned)
+}
+// what you can do right where you stand, if you haven't yet: [the move, its words]
+function act() {
+  const axe = ITEMS[player.item] == 'axe'
+  const b = well && beacon[well.k]
+  const m = !village.in && nearMount()
+  const c = !player.cave && [...chunks.values()].flatMap((c) => c.caves).find((c) => (c.rock ? far(c.rock.position) : far({ x: c.mouth[0], z: c.mouth[1] })) < 4)
+  if (player.seat || player.boat || aim) return []
+  return (
+    [
+      player.room?.shop && ['buy', HINT.buy.replace('$', RECIPES.potion.gold)],
+      well && b && !b[2] && ['aimHere', HINT.aimHere],
+      well && !b && bag.sunstone && ['set', bag.torch ? HINT.set : HINT.torchFirst],
+      village.chat && ['talk', HINT.talk],
+      m && ['ride', HINT.ride.replace('$', m.m.vars.name)],
+      nearBoat() && ['board', HINT.board],
+      c && (c.rock ? ['crack', axe ? HINT.crack : HINT.crackAxe] : ['goIn', lit ? HINT.goIn : HINT.lightUp]),
+      player.hp < player.maxHp && within(4, (c) => c.berries.filter((b) => !b.eaten)) && ['berries', HINT.berries],
+      within(2.5, (c) => c.rocks.filter((r) => !r.done)) && ['rock', axe ? HINT.rock : HINT.rockAxe],
+    ].find((h) => h && !learned[h[0]]) || []
+  )
+}
+let hintT = 0
+let way = null // where the mission's arrow points
+const look = new THREE.Vector3()
+function hinting(dt) {
+  if ((hintT -= dt) < 0) {
+    hintT = 0.25
+    const live = !title && player.hp > 0
+    const [, a] = live ? act() : []
+    const [g = '', at] = live ? goal() : []
+    $('hx').textContent = a || g
+    $('hint').className = a ? 'act' : ''
+    way = !a && g && at
+  }
+  // the arrow turns to point the way, relative to where the camera looks (up the screen is straight ahead)
+  $('way').style.visibility = way ? '' : 'hidden'
+  if (way) {
+    camera.getWorldDirection(look)
+    $('way').style.transform = `rotate(${Math.atan2(look.x, look.z) - Math.atan2(way.x - player.pos.x, way.z - player.pos.z)}rad)`
+  }
+}
 blockers.push((x, z, w) => {
   if (!w.cave) return [x, z]
   for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
@@ -2386,6 +2471,7 @@ function aiming(dt, ix, iz) {
   player.speed = 0
   if (dir(b).angleTo(STAR) > LOCK) return
   onStar(b)
+  learn('aimHere')
   keep('warriorBeacons', beacon)
   const n = done()
   for (let i = 0; i < (n < GOAL ? 4 : 8); i++) setTimeout(() => beep(523 * 1.26 ** (i % 4) * (i > 3 ? 2 : 1), 0.6, 'triangle', 0.06, 1), i * 130)
@@ -2441,10 +2527,6 @@ function shine(dt) {
   }
   // the well you stand at, and what it wants
   const T = village.in && !player.room && sites(p.x, p.z).find((t) => Math.hypot(p.x - t.x, p.z - t.z) < 3.5)
-  if (T && T != well) {
-    const b = beacon[T.k]
-    say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'Space: aim the beam at the star') : !bag.sunstone ? 'A beacon needs a sunstone: ask the townsfolk where one sleeps' : bag.torch ? 'Space: set a torch and the sunstone in the beacon' : 'A beacon needs a torch: craft one in the pack (0)')
-  }
   if (well && !T && beacon[well.k] && !beacon[well.k][2]) say(`${well.name}'s beam is not on the star yet: come back and aim it`) // a lit but unaimed beam doesn't count
   well = T || null
   if (!well) aim = null
@@ -2593,7 +2675,8 @@ let pitch = 0
 const fpNow = () => (first || player.cave) && !player.room && !title
 let drag = 0 // turning from the locked mouse, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
-addEventListener('pointermove', (e) => document.pointerLockElement && ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (tilt += e.movementY * 0.0025)))
+// first person looks with the locked pointer, or by dragging with the button held where the browser won't lock it
+addEventListener('pointermove', (e) => (document.pointerLockElement || (e.buttons && e.pointerType == 'mouse' && fpNow())) && ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (tilt += e.movementY * 0.0025)))
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (document.pointerLockElement) return attack()
   if (fpNow() && e.pointerType == 'mouse') renderer.domElement.requestPointerLock()
@@ -2942,6 +3025,7 @@ function frame() {
   pickups(dt)
   caves()
   berry()
+  hinting(dt)
   for (const b of [...bits]) {
     b.life -= dt
     b.v.y -= 15 * dt
