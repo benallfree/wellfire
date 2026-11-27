@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Font lab</title>
+<style>body{margin:0;background:#0b0f18;color:#ccc;font:12px system-ui}</style>
+<canvas id="c" width="1000" height="560"></canvas>
+<script src="out/preview-data.js"></script>
+<script>
+const ctx = document.getElementById('c').getContext('2d')
+const lines = ['ABCDEFGHIJKLMNOPQRSTUVWXYZ', '0123456789 .,!?:\'-/+', 'WELLFIRE  YOU FOUND 12 GOLD!']
+const strokeText = (font, text, x, y, size, w) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(size / 8, size / 8)
+  ctx.lineWidth = w; ctx.lineCap = ctx.lineJoin = 'round'
+  for (const ch of text) {
+    ctx.beginPath()
+    for (const s of font[ch] || []) s.split(' ').forEach((p, i) => { const [a, b] = p.split(','); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b) })
+    ctx.stroke(); ctx.translate(6, 0)
+  }
+  ctx.restore()
+}
+const pixelText = (text, x, y, size) => {
+  const px = size / 8
+  for (const ch of text) { FONTS.bitmap[ch]?.forEach((r, j) => [...r].forEach((c, i) => c == '#' && ctx.fillRect(x + i * px, y + j * px, px, px))); x += 6 * px }
+}
+let y = 20
+const label = (t) => { ctx.fillStyle = '#888'; ctx.fillText(t, 10, y); y += 10 }
+label('grid strokes (= SVG paths, chess, Hershey: same shapes)')
+ctx.strokeStyle = '#fd4'
+lines.forEach((l) => { strokeText(FONTS.strokes, l, 10, y, 32, 1.1); y += 40 })
+label('14-segment')
+ctx.strokeStyle = '#7cf'
+lines.forEach((l) => { strokeText(FONTS.segments, l, 10, y, 32, 1); y += 40 })
+label('5x7 bitmap (rasterised from the strokes)')
+ctx.fillStyle = '#e8e8e8'
+lines.forEach((l) => { pixelText(l, 10, y, 32); y += 40 })
+label('strokes, small (HUD size 12px and 16px)')
+ctx.strokeStyle = '#fff'
+strokeText(FONTS.strokes, 'HEALTH 7/10  GOLD 42  PRESS SPACE TO USE', 10, y, 12, 1.4); y += 18
+strokeText(FONTS.strokes, 'HEALTH 7/10  GOLD 42  PRESS SPACE TO USE', 10, y, 16, 1.2)
+</script>
