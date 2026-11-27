@@ -923,21 +923,22 @@ wells, turn each beam until it meets the star, and the five beams start a light 
 design discussion and the other options weighed are in [docs/goal-ideas.md](docs/goal-ideas.md).
 
 - **Setting a beacon.** At a well (within 3.5 units), Space sets a torch and a sunstone in it (see
-  [Thunder eggs and sunstones](#thunder-eggs-and-sunstones)). Both leave the bag (the torch slot has a count; the
+  [Rocks, caves and sunstones](#rocks-caves-and-sunstones)). Both leave the bag (the torch slot has a count; the
   first one is free), a fire bowl with a sunstone turning over it (the `beacon` model) appears on the well's roof, a
   pale beam rises, and you're aiming at once. Tips at the well say what it needs.
 - **Aiming.** Setting the beacon takes the beam; Space at a lit, unfinished well takes it again; R or walking off
   lets go. The camera stands behind the sunstone and looks
   along the beam. Turning (A/D, drag) swings it round, W/S tilt it, and the warrior and the minimap turn with it. A
-  `✦` on the minimap rim always shows the star's way. The beam warms from white to gold as it nears the star and
-  locks within 3° (0.05 rad) with a chime and a burst. A locked beacon stays locked.
-- **A new torch.** Flint comes from thunder eggs (below). With a wood and a flint, slot 3 (or tapping the flint)
+  `✦` on the minimap rim always shows the star's way. Mouse drag up and down tilts it too. The beam is white until it comes within
+  about 7° (`LOCK`, 0.12 rad) of the star; there it snaps exactly onto the star, turns gold and locks, with a chime and a
+  burst. Gold always means locked, and a locked beacon stays locked. A saved beam already inside that zone locks on load.
+- **A new torch.** Flint comes from rocks (below). With a wood and a flint, slot 3 (or tapping the flint)
   makes a torch.
 - **Beams from anywhere.** Every beam is drawn wherever you are, not only near its village. A far beam is moved
   toward the camera and shrunk by the same factor (12 / distance), which leaves its picture unchanged but keeps it
   inside the camera's 200-unit range. It is drawn long enough to run out past that range and fattened with distance
-  so it stays visible. Because the beams are parallel, they all meet at their vanishing point, the star: the locked
-  beams are guides that your new beam has to join. At night they are the brightest things in the world.
+  so it stays visible. A locked beam is drawn from its well to the star itself, so its tip sits on the star from any
+  viewpoint (the star is drawn a fixed way off the camera, so a beam merely parallel to it would end beside it). At night they are the brightest things in the world.
 - **Progress.** `✦ n/5` in the info line, and village rings on the minimap turn orange when lit and gold when on the
   star.
 - **The light show.** The fifth lock turns the camera up to the star. The beams pulse and cycle colours, the star
@@ -945,27 +946,36 @@ design discussion and the other options weighed are in [docs/goal-ideas.md](docs
   villages in the order you set them, your gold, kills and distance from the start. A tap dismisses it and the world
   goes on.
 
-### Thunder eggs and sunstones
+### Rocks, caves and sunstones
 
-Every beacon needs a sunstone, and sunstones sleep in thunder eggs: round, rust-banded stones, about knee high, that
-replace the old glinting flint rocks. Tuning is in models.json `"eggs"`.
+Every beacon needs a sunstone, and each village's sunstone lies at the end of a dark maze in a cave out in its wilds,
+guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and `"caves"`.
 
-- **Where.** About `perChunk` (2.4) eggs per 40-unit chunk, weighted by region (`region`: meadow, forest, rocky
-  hills, lakes), never in water, villages or roads. Positions and contents are seeded per chunk: the same seed gives
-  the same eggs with the same contents.
-- **What's inside.** Swing the axe at one: it splits into two crystal-lined halves and spills its contents through
-  the drop system. `flint` (0.2) gives a flint, `gold` (0.15) gives 5-15 gold (`coins`, times the stage's pay), and the
-  rest are hollow.
-- **One sunstone per village.** Each village hides exactly one sunstone egg at a seeded dry spot `gemNear`-`gemFar`
-  (40-200) units out in its wilds, among about 100 eggs, so finding it takes about 50 cracks unguided. Any sunstone
-  works at any well. A dropped sunstone never fades.
-- **Cracked for good.** A cracked egg is kept in `warriorFelled` as `"e" + index` (or `"e" + village key` for a
-  sunstone egg) with a far-future time, so the prune keeps it, it never regrows and it reloads cracked. No sunstone
-  can be mined twice.
-- **The sage.** One townsperson in each village (`folk[seed % count]`) knows which way the sunstone sleeps. Talk to them
-  (Space) and they say which quarter of the wilds (north, east, south or west of the village) holds it. Once it's cracked, they
-  say it's found.
-- **The HUD** shows `n sunstone` in the info line while you carry any.
+- **Rocks.** About `perChunk` (2.4) breakable rocks per 40-unit chunk, weighted by region, never in water, villages or
+  roads, drawn with the scenery `rock` model. Swing the axe at one: it breaks into rubble and spills what it held
+  through the drop system: `flint` (0.4) gives a flint, `gold` (0) would give coins, the rest nothing. A whole rock is
+  in the way; rubble isn't. Broken rocks are kept in `warriorFelled` as `"e" + index` with a far-future time, so they
+  never come back.
+- **The cave.** Each village has one, at a seeded dry spot `near`-`far` (40-200) units out (`den()`): a rocky mound
+  whose dark mouth faces the village, sealed by a boulder. The boulder takes `hits` (8) axe blows (a ridden mount's
+  attack counts), saying how many are left, then shatters. It stays open (`warriorFelled.caves`).
+- **Going in.** Walk into the open mouth on foot with a lit torch (without one: "Pitch dark in there"). The screen
+  fades and you're underground: the maze is built `depth` (80) units below the entrance, so the world above carries on
+  unseen. Everyone inside stands on the cave floor and meets only its walls; the surface's creatures are gone, nothing
+  spawns, and swimming, the minimap, the big map, mounts, the roc and the villages don't reach you. There's no sun or
+  sky, only your torch (and the sunstone's glow), and the fog closes in at 18 units.
+- **The maze.** A perfect maze on a `size` x `size` grid (6 x 6) of `cell`-unit cells (5), carved by a recursive
+  backtracker seeded by the village, so it's the same every visit and full of dead ends. Walls are `wall` (3.2) high,
+  one instanced mesh. You start in the corner cell; the way out is the gap behind you.
+- **The sunstone.** It waits in the cell most steps from the mouth (often 20-30 steps of winding), glowing, with
+  `guards` (6) plus one per locked beam goblins, spiders and slimes set two to a cell back along the way to it. It can
+  only be taken once every guardian is dead; then it's the usual sunstone celebration. Taken, it's kept in
+  `warriorFelled.gems` (an older save's cracked sunstone egg counts), and the cave is empty from then on. Guardians you
+  leave alive come back next visit.
+- **Coming out.** Walk out through the gap: you're back a few steps in front of the mouth, facing the village.
+- **The sage.** One townsperson in each village knows the cave: which quarter of the wilds it's in and that a boulder
+  seals it, then that it's open and its sunstone is past the guardians, then that it's found.
+- **The tray** shows the sunstones you carry, after the pack.
 - **Saved.** `localStorage.warriorBeacons` holds `{ siteKey: [azimuth, angle from straight up, locked] }`. Torches and
   flint are in the bag.
 

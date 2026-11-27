@@ -8454,176 +8454,230 @@
       }
     ]
   },
-  "egg": {
+  "rubble": {
     "vars": {
-      "name": "Thunder egg"
+      "name": "Rubble"
     },
     "parts": [
       {
         "shape": "ball",
         "bone": "root",
-        "color": "9a5a32",
+        "color": "8a857c",
         "position": [
-          0,
-          0.18,
-          0
+          -0.3,
+          0.08,
+          0.1
         ],
         "size": [
-          0.34,
-          0.3,
-          0.31
+          0.32,
+          0.16,
+          0.28
         ],
-        "segments": 7
+        "segments": 5
       },
       {
         "shape": "ball",
         "bone": "root",
-        "color": "5e3420",
+        "color": "7a756e",
         "position": [
-          0,
-          0.2,
-          0
-        ],
-        "size": [
-          0.355,
-          0.07,
-          0.325
-        ],
-        "segments": 7
-      },
-      {
-        "shape": "ball",
-        "bone": "root",
-        "color": "b8834e",
-        "position": [
-          0.12,
-          0.34,
-          0.08
-        ],
-        "size": [
-          0.1,
+          0.28,
           0.06,
-          0.09
+          -0.15
+        ],
+        "size": [
+          0.25,
+          0.12,
+          0.22
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "9a948a",
+        "position": [
+          0.05,
+          0.05,
+          0.32
+        ],
+        "size": [
+          0.18,
+          0.09,
+          0.16
         ],
         "segments": 5
       }
     ]
   },
-  "cracked": {
+  "boulder": {
     "vars": {
-      "name": "Cracked egg"
+      "name": "Boulder"
     },
     "parts": [
       {
         "shape": "ball",
         "bone": "root",
-        "color": "9a5a32",
+        "color": "8a857c",
         "position": [
-          -0.24,
-          0.02,
+          0,
+          0.95,
           0
         ],
         "size": [
-          0.3,
-          0.14,
-          0.28
+          1.25,
+          1.15,
+          1.05
         ],
         "segments": 7
       },
       {
-        "shape": "cyl",
+        "shape": "ball",
         "bone": "root",
-        "color": "d8cfee",
+        "color": "75706a",
         "position": [
-          -0.24,
-          0.13,
-          0
+          0.5,
+          1.5,
+          0.3
         ],
         "size": [
-          0.25,
-          0.03,
-          0.25
+          0.55,
+          0.45,
+          0.5
         ],
-        "segments": 8
+        "segments": 5
       },
       {
-        "shape": "cyl",
+        "shape": "box",
         "bone": "root",
-        "color": "7a5aa8",
+        "color": "4a4640",
         "position": [
-          -0.24,
-          0.145,
-          0
+          -0.2,
+          1.1,
+          0.95
         ],
         "size": [
-          0.12,
-          0.03,
+          0.08,
+          0.9,
           0.12
+        ]
+      }
+    ]
+  },
+  "cave": {
+    "vars": {
+      "name": "Cave"
+    },
+    "parts": [
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "7a756e",
+        "position": [
+          0,
+          0.4,
+          -1.2
+        ],
+        "size": [
+          3.2,
+          2.6,
+          2.4
+        ],
+        "segments": 7
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "6e6a63",
+        "position": [
+          -2.1,
+          0.3,
+          0.2
+        ],
+        "size": [
+          1.5,
+          1.4,
+          1.4
         ],
         "segments": 6
       },
       {
         "shape": "ball",
         "bone": "root",
-        "color": "9a5a32",
+        "color": "6e6a63",
         "position": [
-          0.26,
-          0.02,
-          0.06
-        ],
-        "size": [
+          2.1,
           0.3,
-          0.14,
-          0.28
-        ],
-        "rotation": [
-          0,
-          0,
-          12
-        ],
-        "segments": 7
-      },
-      {
-        "shape": "cyl",
-        "bone": "root",
-        "color": "d8cfee",
-        "position": [
-          0.25,
-          0.13,
-          0.06
+          0.2
         ],
         "size": [
-          0.25,
-          0.03,
-          0.25
-        ],
-        "rotation": [
-          0,
-          0,
-          12
-        ],
-        "segments": 8
-      },
-      {
-        "shape": "cyl",
-        "bone": "root",
-        "color": "7a5aa8",
-        "position": [
-          0.25,
-          0.145,
-          0.06
-        ],
-        "size": [
-          0.12,
-          0.03,
-          0.12
-        ],
-        "rotation": [
-          0,
-          0,
-          12
+          1.5,
+          1.4,
+          1.4
         ],
         "segments": 6
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "837d74",
+        "position": [
+          0,
+          2.3,
+          0.1
+        ],
+        "size": [
+          1.9,
+          0.9,
+          1.4
+        ],
+        "segments": 6
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "080605",
+        "position": [
+          0,
+          1,
+          0.95
+        ],
+        "size": [
+          1.6,
+          2,
+          0.3
+        ]
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "5e5a54",
+        "position": [
+          -0.95,
+          0.6,
+          1.2
+        ],
+        "size": [
+          0.5,
+          0.9,
+          0.5
+        ],
+        "segments": 5
+      },
+      {
+        "shape": "ball",
+        "bone": "root",
+        "color": "5e5a54",
+        "position": [
+          0.95,
+          0.6,
+          1.2
+        ],
+        "size": [
+          0.5,
+          0.9,
+          0.5
+        ],
+        "segments": 5
       }
     ]
   },
@@ -8833,7 +8887,7 @@
     ],
     "materials": {
       "wood": "fell a tree with the axe",
-      "flint": "crack thunder eggs with the axe",
+      "flint": "crack rocks with the axe",
       "gold": "slay monsters"
     },
     "recipes": {
@@ -8938,7 +8992,7 @@
     "payRamp": 100,
     "spawnPad": 22
   },
-  "eggs": {
+  "rocks": {
     "perChunk": 2.4,
     "region": [
       0.8,
@@ -8946,15 +9000,25 @@
       1.6,
       0.6
     ],
-    "flint": 0.2,
-    "gold": 0.15,
+    "flint": 0.4,
+    "gold": 0,
     "coins": [
       5,
       15
     ],
-    "gemNear": 40,
-    "gemFar": 200,
     "talk": 1.8
+  },
+  "caves": {
+    "near": 40,
+    "far": 200,
+    "hits": 8,
+    "depth": -80,
+    "size": 6,
+    "cell": 5,
+    "wall": 3.2,
+    "wallColor": "4a443e",
+    "floorColor": "231e1a",
+    "guards": 6
   },
   "talk": {
     "roles": [
@@ -8965,7 +9029,7 @@
       "greet"
     ],
     "mission": [
-      "Crack thunder eggs with the axe: each village's wilds hide a sunstone",
+      "Each village has a cave in its wilds: crack the boulder at its mouth, then find the sunstone in the dark",
       "A torch and a sunstone in any well light its beacon. Aim the beam at the star ✦",
       "When five beams meet the star, the night goes blind"
     ],

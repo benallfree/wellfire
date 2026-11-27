@@ -124,7 +124,7 @@ function terrain(x, z) {
 const shore = (h, d = WATER - h) => (d > 0 ? WATER - d * (0.7 + smooth(0.8, 2.5, d) * 1.5) : h)
 // how deep the water is at a point (0 on dry land); swimming starts past 1 (SWIM), eels live past 1.1
 const depth = (x, z) => Math.max(0, WATER - height(x, z))
-const wade = (a) => (a.swim ? 1 : 1 - Math.min(0.45, depth(a.pos.x, a.pos.z) * 0.4)) // wading slows you, up to about half speed
+const wade = (a) => (a.swim || a.cave ? 1 : 1 - Math.min(0.45, depth(a.pos.x, a.pos.z) * 0.4)) // wading slows you, up to about half speed
 // water colour by depth: light over the shallows, dark over the deep (bed tint under the water, minimap)
 const sea = (c, d) => c.setRGB(0.5, 0.75, 0.7).lerp(mix.setRGB(0.03, 0.12, 0.28), smooth(0, 4, d))
 // height difference across 2 units in x and in z: the slope (and, for the minimap, which way the ground faces)
@@ -347,20 +347,21 @@ for (const k in felled) {
   for (const i in felled[k]) if (Date.now() - felled[k][i] > REGROW) delete felled[k][i]
   if (!Object.keys(felled[k]).length) delete felled[k]
 }
-// item models, each baked once and shared: tray icons, drops and thunder eggs
+// item models, each baked once and shared: tray icons, drops, rocks and caves
 const geos = {}
 const geo = (k) => (geos[k] ||= bake(make(lib, k, 1)))
 const itemMat = glow(new THREE.MeshLambertMaterial({ vertexColors: true }))
-// thunder eggs (models.json "eggs"): about perChunk a chunk, weighted by region. A seeded roll fills each with flint,
-// gold or nothing, and every village hides one sunstone egg gemNear-gemFar units out (gem()). Struck with the axe an
-// egg splits for good: its id goes in `felled` with a far-future time, so the prune keeps it and it never regrows.
-const EGG = lib.eggs
-const gem = memo((gi, gj) => {
+// rocks (models.json "rocks"): about perChunk a chunk, weighted by region. A seeded roll gives each flint, gold or
+// nothing, and struck with the axe a rock breaks for good: its id goes in `felled` with a far-future time, so the prune
+// keeps it and it never comes back. Every village has a cave CAVE.near-CAVE.far units out (den()), sealed by a boulder.
+const ROCK = lib.rocks
+const CAVE = lib.caves
+const den = memo((gi, gj) => {
   const T = site(gi, gj)
   const R = rng((h2(gi, gj, SEED + 12) * 4294967296) | 0)
   for (let i = 0; T && i < 20; i++) {
     const a = R() * 7
-    const d = EGG.gemNear + R() * (EGG.gemFar - EGG.gemNear)
+    const d = CAVE.near + R() * (CAVE.far - CAVE.near)
     const x = T.x + Math.cos(a) * d
     const z = T.z + Math.sin(a) * d
     if (height(x, z) > WATER + 0.5 && !inTown(x, z, 3) && road(x, z)[0] > RW + 1.5) return [x, z]
@@ -410,27 +411,50 @@ function grow(cx, cz) {
     inst[k * 4 + v].push(m)
     if (KINDS[k][1]) trees.push(k < 2 ? [x, z, KINDS[k][1] * s, i, k * 4 + v, m, key] : [x, z, KINDS[k][1] * s]) // pines and oaks can be felled (see wood)
   }
-  const eggs = []
+  const rocks = [] // the ones you can break
   const E = rng((hash(cx, cz, SEED + 13) * 4294967296) | 0)
-  const egg = (x, z, id, c) => {
-    const g = new THREE.Mesh(geo(felled[key]?.[id] ? 'cracked' : 'egg'), itemMat)
-    g.position.set(x, height(x, z), z)
-    g.rotation.y = x * 7
-    Object.assign(g, { k: id, c, done: felled[key]?.[id] })
-    mesh.add(g) // goes when the chunk's ground does
-    eggs.push(g)
-  }
-  for (let i = 0, n = EGG.perChunk * EGG.region[region(x0 + CH / 2, z0 + CH / 2)] + E(); i < n - 1; i++) {
+  for (let i = 0, n = ROCK.perChunk * ROCK.region[region(x0 + CH / 2, z0 + CH / 2)] + E(); i < n - 1; i++) {
     const x = x0 + E() * CH
     const z = z0 + E() * CH
     const c = E()
-    if (height(x, z) > WATER + 0.5 && Math.hypot(x - home.x, z - home.z) > 6 && !inTown(x, z, 3) && road(x, z)[0] > RW + 1.5) egg(x, z, 'e' + i, c < EGG.flint ? 'flint' : c < EGG.flint + EGG.gold ? 'gold' : 0)
+    if (height(x, z) < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3) || road(x, z)[0] < RW + 1.5) continue
+    const id = 'e' + i
+    const done = felled[key]?.[id]
+    const g = new THREE.Mesh(geo(done ? 'rubble' : 'rock'), itemMat)
+    g.position.set(x, height(x, z) - 0.1, z)
+    g.rotation.y = x * 7
+    g.scale.setScalar(done ? 1 : 0.75)
+    trees.push((g.col = [x, z, done ? 0 : 0.6])) // whole, it's in the way
+    Object.assign(g, { k: id, c: c < ROCK.flint ? 'flint' : c < ROCK.flint + ROCK.gold ? 'gold' : 0, done })
+    mesh.add(g) // goes when the chunk's ground does
+    rocks.push(g)
   }
+  // a village's cave: a rocky mound whose mouth faces the village, a boulder in it until broken
+  const caves = []
   for (const T of sites(x0, z0)) {
-    const p = gem(T.gi, T.gj)
-    if (p && Math.floor(p[0] / CH) == cx && Math.floor(p[1] / CH) == cz) egg(...p, 'e' + T.k, 'sunstone')
+    const p = den(T.gi, T.gj)
+    if (!p || Math.floor(p[0] / CH) != cx || Math.floor(p[1] / CH) != cz) continue
+    const [x, z] = p
+    const ry = Math.atan2(T.x - x, T.z - z)
+    const fx = Math.sin(ry)
+    const fz = Math.cos(ry)
+    const c = { T, x, z, ry, mouth: [x + fx * 1.5, z + fz * 1.5] }
+    const m = new THREE.Mesh(geo('cave'), itemMat)
+    m.position.set(x, height(x, z) - 0.3, z)
+    m.rotation.y = ry
+    mesh.add(m)
+    trees.push([x - fx * 1.2, z - fz * 1.2, 2.2])
+    if (!felled.caves?.[T.k]) {
+      c.rock = new THREE.Mesh(geo('boulder'), itemMat)
+      c.rock.position.set(x + fx * 1.9, height(x + fx * 1.9, z + fz * 1.9) - 0.2, z + fz * 1.9)
+      c.rock.rotation.y = ry
+      mesh.add(c.rock)
+      c.hp = CAVE.hits
+      trees.push((c.col = [x + fx * 1.9, z + fz * 1.9, 1.1]))
+    }
+    caves.push(c)
   }
-  chunks.set(key, { cx, cz, mesh, inst, trees, eggs, key })
+  chunks.set(key, { cx, cz, mesh, inst, trees, rocks, caves, key })
   dirty = true
 }
 function drop(key) {
@@ -503,7 +527,7 @@ class Actor {
     const w = up || wade(this)
     let x = this.pos.x + dx * w + this.vel.x * dt
     let z = this.pos.z + dz * w + this.vel.y * dt
-    if (!up) for (const trees of around(x, z))
+    if (!up && !this.cave) for (const trees of around(x, z))
       for (const [tx, tz, r] of trees) {
         const ex = x - tx
         const ez = z - tz
@@ -564,7 +588,7 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${player.cave ? 'cave of ' + player.cave.c.T.name : village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
 // weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). The last slot (key 0) opens crafting: recipes (tap one; only in a village; a recipe's
@@ -714,7 +738,7 @@ const trail = []
 const hint = []
 const mapc = $('map').getContext('2d')
 const bigc = $('big').getContext('2d')
-const bigMap = () => ($('big').hidden ^= 1)
+const bigMap = () => player.cave || ($('big').hidden ^= 1) // underground there's no map
 $('map').onpointerdown = $('big').onpointerdown = bigMap
 $('say').onpointerdown = () => ($('say').hidden = true)
 const FLAT = document.createElement('canvas') // world-aligned, big enough to cover the map at any turn
@@ -855,6 +879,8 @@ function reveal(x, z, R) {
 }
 let lastCell
 function minimap() {
+  $('nav').style.visibility = player.cave ? 'hidden' : '' // underground there's no map, and nothing is revealed
+  if (player.cave) return
   const { x, z } = player.pos
   const pi = Math.floor(x / CELL)
   const pj = Math.floor(z / CELL)
@@ -1004,9 +1030,10 @@ function unseat(r, from) {
     m.from = [from.x, from.z]
   }
 }
-const nearMount = () => mounts.find((m) => !m.rider && !m.leave && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
+const nearMount = () => !player.cave && mounts.find((m) => !m.rider && !m.leave && m.hp > 0 && Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) < 2.2 + m.m.root.scale.x)
 function mountUp() {
   if (aim) return (aim = null)
+  if (player.cave) return
   if (player.boat) return ashore()
   if (player.seat) return player.seat.alt ? say('Land first: Space') : ((player.seat.leave = player.seat.m.vars.fly), unseat(player)) // a roc leaves when you get off
   if (nearBoat()) return board()
@@ -1069,7 +1096,7 @@ blockers.push((x, z, w) => (mounts.includes(w) && height(x, z) < WATER - 0.2 ? [
 // you get off, it flies away, and only the whistle brings it back
 function whistle() {
   const v = lib.roc.vars
-  if (player.seat || player.boat) return
+  if (player.seat || player.boat || player.cave) return
   voice([[0, 1500], [0.12, 2300], [0.24, 2150]], 0.07)
   voice([[0, 2300], [0.12, 2700], [0.42, 1600]], 0.07, { vib: [9, 50], at: 0.3 })
   let m = mounts.find((m) => m.m.vars.fly && !m.leave)
@@ -1226,13 +1253,28 @@ const { nearPay, farPay, payRamp, spawnPad } = lib.wilds
 let seedNext = 100
 // More monsters roam at night: 12 by day, up to 22 in the dark, scaled by the region the player is in.
 const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)] * st.crowd)
+function foe(kind, x, z) {
+  const e = new Actor(kind, seedNext++)
+  e.pos.set(x, 0, z)
+  e.fits = HABITAT[kind] || onLand
+  if (kind == 'eel') e.swim = 0.1
+  const s = e.m.root.scale.x
+  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6) * st.hp)
+  e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5, eel: 4.8 }[kind] * st.run
+  e.dmg = Math.round({ slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind] * st.dmg)
+  e.reach = 1.2 + s * 0.4
+  e.wander = 0
+  e.cool = 1
+  foes.push(e)
+  return e
+}
 function spawn(f) {
   if (f) {
     scene.remove(f.g)
     f.m.root.traverse((o) => o.geometry?.dispose()) // each monster's mesh is its own; the bar's is shared
     f.m.mat.dispose()
     foes.splice(foes.indexOf(f), 1)
-    if (foes.length >= crowd()) return
+    if (player.cave || foes.length >= crowd()) return // underground, nothing comes from the surface
   }
   // pick a spot first, then a kind that lives there: eels in deep water (a few at most), the region's mix on dry
   // land; shallows and the village are skipped
@@ -1252,18 +1294,7 @@ function spawn(f) {
     }
   }
   if (!kind) return
-  const e = new Actor(kind, seedNext++)
-  e.pos.set(x, 0, z)
-  e.fits = HABITAT[kind] || onLand
-  if (kind == 'eel') e.swim = 0.1
-  const s = e.m.root.scale.x
-  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6) * st.hp)
-  e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5, eel: 4.8 }[kind] * st.run
-  e.dmg = Math.round({ slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind] * st.dmg)
-  e.reach = 1.2 + s * 0.4
-  e.wander = 0
-  e.cool = 1
-  foes.push(e)
+  foe(kind, x, z)
   if (kind == 'goblin' && R() < 0.2) seat(e, addMount(MOUNTS[region(x, z)], seedNext++, x, z)) // a goblin rider
 }
 for (let i = 0; i < 14; i++) spawn()
@@ -1427,8 +1458,8 @@ var village
   const told = {}
   const talk = (v, f) => {
     const T = v.T
-    const q = gem(T.gi, T.gj)
-    if (f == v.sage) return !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? 'The sunstone of these wilds is found. Any well will take it!' : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`
+    const q = den(T.gi, T.gj)
+    if (f == v.sage) return !q ? 'No cave lies near here, friend' : got(T) ? 'The sunstone of our cave is found. Any well will take it!' : felled.caves?.[T.k] ? 'The cave is open. Its sunstone lies at the end of the maze, past its guardians. Take a lit torch!' : `A cave lies out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}. A great boulder seals it: crack it with your axe`
     const k = T.seed + f.i
     const pick = (a, name) => a[k % a.length].replace('@', name)
     if (told[k]) return told[k]
@@ -1469,6 +1500,7 @@ var village
     return r == d ? [x, z] : [T.x + (dx / d) * r, T.z + (dz / d) * r]
   }
   blockers.push((x, z, who) => {
+    if (who.cave) return [x, z]
     const h = who.room
     if (h) {
       const gap = Math.abs(x - h.x) < 0.8
@@ -1536,6 +1568,8 @@ var village
   let yaw = 0 // the outdoor camera angle, kept while indoors
 
   village = {
+    fade,
+    glow,
     built,
     stow,
     sling,
@@ -1579,7 +1613,7 @@ var village
       const here = [...built.values()].find((v) => Math.hypot(p.x - v.T.x, p.z - v.T.z) < v.T.r)
       const was = this.in
       const named = this.name
-      this.in = player.hp > 0 && !!here && !player.seat
+      this.in = player.hp > 0 && !!here && !player.seat && !player.cave
       this.name = here?.T.name
       if (this.in != was) stow(this.in)
       if (this.in != was || this.name != named) hud()
@@ -1596,9 +1630,9 @@ var village
         scene.fog.far = 1e3
         scene.background = BLACK
       } else {
-        glow.intensity = 0
+        if (!player.cave) glow.intensity = 0 // (underground it's the sunstone's glow)
         scene.background = sky
-        if (here) hemi.intensity = Math.max(hemi.intensity, 0.4) // lamplight: a village needs no torch
+        if (here && !player.cave) hemi.intensity = Math.max(hemi.intensity, 0.4) // lamplight: a village needs no torch
         for (const o of here?.houses || []) {
           // pressed against the front wall, within the door's width
           const c = Math.cos(o.ry)
@@ -1619,7 +1653,7 @@ var village
             o.m.mat.opacity += ((hide ? 0.25 : 1) - o.m.mat.opacity) * Math.min(1, dt * 8)
           }
       }
-      let near = EGG.talk + 1
+      let near = ROCK.talk + 1
       this.chat = 0
       for (const v of built.values())
         for (const f of v.folk) {
@@ -1628,7 +1662,7 @@ var village
           const d = Math.hypot(dx, dz)
           f.speed = 0
           const n = Math.hypot(p.x - f.pos.x, p.z - f.pos.z)
-          if (n < near && !f.keep && player.hp > 0 && !player.seat && !title) (near = n), (this.chat = [v, f])
+          if (n < near && !f.keep && player.hp > 0 && !player.seat && !player.cave && !title) (near = n), (this.chat = [v, f])
           if ((f.wait -= dt) > 0) f.keep || f.move(0, 0, dt)
           else if (d < 0.6) {
             f.wait = 2 + v.VR() * 5
@@ -1934,7 +1968,7 @@ function boating(dt) {
 
 // ---------- beacons: the goal. Set a torch in five villages' wells and aim each beam at the star ----------
 // The star hangs at one fixed direction, as if infinitely far, so the same aim is right from every village. At a
-// well, Space sets a torch and a sunstone (from a thunder egg) in the beacon, and you hold the beam at once (Space takes it
+// well, Space sets a torch and a sunstone (from a cave) in the beacon, and you hold the beam at once (Space takes it
 // again later, R lets go): turning swings it, W/S tilt it, and the camera looks along it. The beam warms from white to gold as it nears the star and
 // locks within LOCK radians. Beams are drawn from anywhere: a far one is moved toward the camera and shrunk by the same
 // factor, which leaves its picture unchanged but keeps it inside the camera's range (it is also fattened, to be seen). Parallel beams all meet at their
@@ -1997,26 +2031,187 @@ function setTorch() {
   aim = well
   say(`${well.name}'s beacon burns · turn and tilt the beam onto the star · R lets go`)
 }
-// strike a thunder egg in front with the axe (or a ridden mount's attack: o, reach, arc): it splits for good and spills what it held
+// strike what's in front with the axe (or a ridden mount's attack: o, reach, arc): a rock breaks for good and spills
+// what it held; a cave's boulder takes CAVE.hits blows, then shatters and opens the cave
 function crack(o = player, reach = item.reach + 1, arc = 1.16) {
-  for (const ch of chunks.values())
-    for (const g of ch.eggs) {
-      const p = g.position
-      const dx = p.x - o.pos.x
-      const dz = p.z - o.pos.z
-      if (!g.done && Math.hypot(dx, dz) < reach && Math.cos(Math.atan2(dx, dz) - o.dir) > Math.cos(arc)) {
-        g.done = g.geometry = geo('cracked')
+  const ahead = (p, r = 0) => Math.hypot(p.x - o.pos.x, p.z - o.pos.z) < reach + r && Math.cos(Math.atan2(p.x - o.pos.x, p.z - o.pos.z) - o.dir) > Math.cos(arc)
+  for (const ch of chunks.values()) {
+    for (const c of ch.caves)
+      if (c.rock && ahead(c.rock.position, 1.1)) {
+        const p = c.rock.position
+        burst(p.clone().setY(p.y + 1), '#9a948a', 10)
+        beep(70, 0.3, 'square', 0.08, 0.4)
+        c.rock.rotation.z = (R() - 0.5) * 0.15 // it rocks
+        if (--c.hp > 0) return say(`The boulder cracks · ${c.hp} more`)
+        ch.mesh.remove(c.rock)
+        c.rock = c.col[2] = 0
+        ;(felled.caves ||= {})[c.T.k] = 9e15
+        keep('warriorFelled', felled)
+        burst(p, '#8a857c', 40)
+        return say('The boulder shatters: the cave is open. Light your torch and go in')
+      }
+    for (const g of ch.rocks)
+      if (!g.done && ahead(g.position)) {
+        const p = g.position
+        g.done = g.geometry = geo('rubble')
+        g.scale.setScalar(1)
+        g.col[2] = 0
         ;(felled[ch.key] ||= {})[g.k] = 9e15
         keep('warriorFelled', felled)
-        burst(p, '#b8834e', 12)
+        burst(p, '#9a948a', 12)
         beep(110, 0.25, 'square', 0.06, 0.5)
-        const [lo, hi] = EGG.coins
+        const [lo, hi] = ROCK.coins
         if (g.c) spill(g.c, g.c == 'gold' ? Math.round((lo + R() * (hi - lo)) * st.pay) : 1, p)
-        if (g.c == 'sunstone') burst(p, '#fb4', 30)
         return
       }
-    }
+  }
 }
+
+// ---------- caves: in at an opened mouth with a lit torch; inside, a dark seeded maze, its sunstone at the far end ----------
+// The maze is built at CAVE.depth under the entrance, so the world above carries on unseen: everyone in it stands on
+// its floor and meets its walls only, and the surface's spawning, swimming, map, mounts and villages leave them be.
+const caveRock = new THREE.MeshLambertMaterial({ color: '#' + CAVE.wallColor })
+const caveFloor = new THREE.MeshLambertMaterial({ color: '#' + CAVE.floorColor })
+const brick = new THREE.BoxGeometry(1, 1, 1)
+// the sunstone taken (or, in an older save, its thunder egg cracked)
+const got = (T) => {
+  const p = den(T.gi, T.gj)
+  return felled.gems?.[T.k] || (p && felled[Math.floor(p[0] / CH) + ',' + Math.floor(p[1] / CH)]?.['e' + T.k])
+}
+let dark // said once per visit to a mouth without a lit torch
+function caves() {
+  const p = player.pos
+  const K = player.cave
+  if (!K) {
+    let c
+    for (const ch of chunks.values()) for (const o of ch.caves) if (!o.rock && Math.hypot(p.x - o.mouth[0], p.z - o.mouth[1]) < 0.9) c = o
+    if (!c || player.seat || player.boat || player.swim || player.hp <= 0 || title) return c || (dark = 0)
+    if (lit) return village.fade(() => enter(c))
+    dark ||= say('Pitch dark in there: light your torch first') || 1
+    return
+  }
+  if (p.z < K.z - CAVE.cell / 2 - 0.2) return village.fade(leave) // out through the mouth
+  const g = K.gem
+  if (!g) return
+  g.rotation.y += 0.03
+  village.glow.intensity = 14 * (1 + Math.sin(clock.elapsedTime * 3) * 0.2)
+  if (Math.hypot(p.x - g.position.x, p.z - g.position.z) > 1.4) return (K.said = 0)
+  if (foes.some((e) => e.cave && e.hp > 0)) return K.said ||= say('Its guardians must fall before you can take the sunstone') || 1
+  K.g.remove(g)
+  K.gem = 0
+  village.glow.intensity = 0
+  ;(felled.gems ||= {})[K.c.T.k] = 9e15
+  keep('warriorFelled', felled)
+  gain('sunstone', 1)
+  sunstone()
+}
+// a perfect maze on a size x size grid (recursive backtracker, seeded by the village), the mouth at cell 0,0
+function enter(c) {
+  const n = CAVE.size
+  const S = CAVE.cell
+  const H = CAVE.wall
+  const R = rng(c.T.seed + 77)
+  const L = {} // 'i,j' -> 1 open to the east, 2 open to the south
+  const vis = new Set(['0,0'])
+  const path = [[0, 0]]
+  while (path.length) {
+    const [i, j] = path[path.length - 1]
+    const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => i + a >= 0 && i + a < n && j + b >= 0 && j + b < n && !vis.has(i + a + ',' + (j + b)))
+    if (!nb.length) {
+      path.pop()
+      continue
+    }
+    const [a, b] = nb[(R() * nb.length) | 0]
+    const lo = a + b > 0 ? [i, j] : [i + a, j + b]
+    L[lo] = (L[lo] || 0) | (a ? 1 : 2)
+    vis.add(i + a + ',' + (j + b))
+    path.push([i + a, j + b])
+  }
+  // the far end: the cell most steps from the mouth, and the way there (for the guardians)
+  const from = { '0,0': null }
+  const q = [[0, 0]]
+  let end = [0, 0]
+  while (q.length) {
+    const [i, j] = (end = q.shift())
+    for (const [a, b, open] of [[1, 0, L[[i, j]] & 1], [-1, 0, L[[i - 1, j]] & 1], [0, 1, L[[i, j]] & 2], [0, -1, L[[i, j - 1]] & 2]])
+      if (open && !([i + a, j + b] in from)) (from[[i + a, j + b]] = [i, j]), q.push([i + a, j + b])
+  }
+  const X = c.x
+  const Z = c.z
+  const y = CAVE.depth
+  const at = ([i, j]) => [X + i * S, Z + j * S]
+  // walls: [x, z, half width, half depth]; none north of cell 0,0, the way out
+  const walls = []
+  for (let k = 0; k < n; k++) {
+    walls.push([X - S / 2, Z + k * S, 0.3, S / 2 + 0.3])
+    if (k) walls.push([X + k * S, Z - S / 2, S / 2 + 0.3, 0.3])
+  }
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      if (!(L[[i, j]] & 1)) walls.push([X + i * S + S / 2, Z + j * S, 0.3, S / 2 + 0.3])
+      if (!(L[[i, j]] & 2)) walls.push([X + i * S, Z + j * S + S / 2, S / 2 + 0.3, 0.3])
+    }
+  const g = new THREE.Group()
+  const w = new THREE.InstancedMesh(brick, caveRock, walls.length)
+  const o = new THREE.Object3D()
+  walls.forEach(([x, z, hw, hd], k) => {
+    o.position.set(x, y + H / 2, z)
+    o.scale.set(hw * 2, H, hd * 2)
+    o.updateMatrix()
+    w.setMatrixAt(k, o.matrix)
+  })
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(n * S + 1, n * S + S).rotateX(-90 * DEG), caveFloor)
+  floor.position.set(X + ((n - 1) * S) / 2, y, Z + ((n - 2) * S) / 2)
+  g.add(w, floor)
+  scene.add(g)
+  const K = (player.cave = { c, x: X, z: Z, y, walls, g })
+  for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
+  player.floor = y
+  player.pos.set(X, y, Z - S / 2 + 0.6)
+  player.vel.set(0, 0)
+  player.dir = 0
+  camYaw = Math.PI
+  // the sunstone and its guardians, at the far end and on the way to it
+  if (!got(c.T)) {
+    const [ex, ez] = at(end)
+    K.gem = new THREE.Mesh(geo('sunstone'), itemMat)
+    K.gem.position.set(ex, y + 0.9, ez)
+    K.gem.scale.setScalar(2)
+    g.add(K.gem)
+    village.glow.position.set(ex, y + 1.8, ez)
+    const kinds = ['goblin', 'spider', 'slime'] // a mixed guard, whatever lives up top
+    for (let k = 0, cell = end; k < CAVE.guards + done(); k++) {
+      const [gx, gz] = at(cell)
+      const e = foe(kinds[k % 3], gx + R() * 2 - 1, gz + R() * 2 - 1)
+      Object.assign(e, { cave: K, floor: y, fits: () => 1, wander: 9 })
+      if (k % 2 && from[cell]) cell = from[cell] // two to a cell, back along the way
+    }
+  }
+  hud()
+}
+function leave() {
+  const K = player.cave
+  const { mouth, ry } = K.c
+  scene.remove(K.g)
+  K.g.children[1].geometry.dispose()
+  player.cave = player.floor = null
+  for (const e of [...foes]) e.cave && spawn(e) // the guardians stay down there; the surface fills up again
+  village.glow.intensity = 0
+  player.pos.set(mouth[0] + Math.sin(ry) * 7, 0, mouth[1] + Math.cos(ry) * 7) // a few steps out: clear of the mouth (or you'd walk straight back in), and the camera behind you clears the mound
+  player.vel.set(0, 0)
+  player.dir = ry
+  camYaw = ry + Math.PI
+  hud()
+}
+blockers.push((x, z, w) => {
+  if (!w.cave) return [x, z]
+  for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
+    const ax = hw + 0.35 - Math.abs(x - cx)
+    const az = hd + 0.35 - Math.abs(z - cz)
+    if (ax > 0 && az > 0) ax < az ? (x = cx + Math.sign(x - cx) * (hw + 0.35)) : (z = cz + Math.sign(z - cz) * (hd + 0.35))
+  }
+  return [x, z]
+})
 // holding the beam: turn and tilt it
 function aiming(dt, ix, iz) {
   const b = beacon[aim.k]
@@ -2380,7 +2575,7 @@ function frame() {
     player.speed = 0
   }
   // swimming: deep water sinks the warrior to his shoulders, stows the weapon and costs breath
-  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.seat && !player.boat
+  const deep = height(player.pos.x, player.pos.z) < SWIM && !player.room && !player.cave && !player.seat && !player.boat
   if (deep != !!player.swim) {
     if (deep && lit) (lit = 0), say('The water put out your torch')
     player.swim = deep ? 1.25 : 0
@@ -2417,7 +2612,7 @@ function frame() {
         if (fire) e.burn = item.burn
       }
     }
-    if (item.chop) chop(), crack()
+    if (item.chop && !player.cave) chop(), crack()
   }
   herd(dt)
   boating(dt)
@@ -2446,7 +2641,7 @@ function frame() {
   }
 
   // monsters: wander, chase, attack, die, respawn
-  if (foes.length < crowd() && R() < dt) spawn()
+  if (!player.cave && foes.length < crowd() && R() < dt) spawn()
   for (const e of [...foes]) {
     if (e.hp <= 0) {
       e.dead += dt
@@ -2559,6 +2754,7 @@ function frame() {
   }
 
   pickups(dt)
+  caves()
   for (const b of [...bits]) {
     b.life -= dt
     b.v.y -= 15 * dt
@@ -2602,6 +2798,8 @@ function frame() {
   hemi.color.set('#dfefff').multiply(LITE)
   sun.intensity = 0.2 + 2.2 * day
   hemi.intensity = 0.03 + day * 1.27
+  // underground: no sun, no sky, only your torch (and the sunstone's glow); the dark closes in fast
+  if (player.cave) (day = 0), (sun.intensity = 0), (hemi.intensity = 0.05), sky.setRGB(0, 0, 0), scene.fog.color.setRGB(0, 0, 0), (scene.fog.near = 3), (scene.fog.far = 18)
 
   // music: each monster kind within 14 units brings in its own part (fast in, slow out); night darkens the rest
   const close = {}
@@ -2620,7 +2818,7 @@ function frame() {
     let a = player.dir + Math.PI - camYaw
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
     fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
-    fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
+    fwd.y = player.cave ? target.y + 4.8 * back : Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
   if (title) {
     const r = 30 / Math.min(1, camera.aspect)
