@@ -2774,8 +2774,7 @@ function hurt(e, dmg, from, push) {
       loot(e)
       beep(330, 0.3, 'square', 0.05, 0.3)
     } else {
-      beep(110, 0.8, 'sawtooth', 0.08, 0.3)
-      if (e == player) earn(-Math.floor(gold * 0.1)) // falling costs a tenth of your purse (a mount's fall doesn't)
+      beep(110, 0.8, 'sawtooth', 0.08, 0.3) // falling costs no gold (it used to take a tenth of the purse)
     }
   } else {
     if (!((e == player || e == player.seat) && e.busy)) e.play('hit') // a hit doesn't cancel the player's swing or mount's attack

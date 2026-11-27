@@ -637,7 +637,8 @@ each pickup.
 
 The purse is kept in `localStorage` (`warriorGold`, every access in try/catch), so it survives a reload. **Falling costs
 a tenth of your purse** (rounded down; the counter flashes red). It's enough that dying matters, and mild because you
-also lose your ground and walk back from the start. `game.gold` reads or sets it from the console, and `game.coins`
+also lose your ground and walk back from the start. (Later dropped: players couldn't tell why gold vanished, since
+nothing said so, and a fall already sends you home. Falling now costs no gold.) `game.gold` reads or sets it from the console, and `game.coins`
 lists the live coins.
 
 **Spending it later** (not built; villages are still changing):
