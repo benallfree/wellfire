@@ -2072,6 +2072,8 @@ function setTorch() {
   gain('torch', -1)
   gain('sunstone', -1)
   learn('set')
+  delete felled.carry
+  keep('warriorFelled', felled)
   equip(player.item)
   beep(200, 0.5, 'sawtooth', 0.05, 3)
   aim = well
@@ -2221,6 +2223,7 @@ function caves() {
   g.rotation.y += 0.03
   village.glow.intensity = 14 * (1 + Math.sin(clock.elapsedTime * 3) * 0.2)
   if (Math.hypot(p.x - g.position.x, p.z - g.position.z) > 1.4) return (K.said = 0)
+  if (bag.sunstone) return K.said ||= say('You can carry only one sunstone: set yours in a well first') || 1 // no hoarding them to keep the world easy
   if (foes.some((e) => e.guard && e.hp > 0)) return K.said ||= say("The sunstone's guard must fall first") || 1
   K.g.remove(g)
   K.gem = 0
@@ -2228,6 +2231,7 @@ function caves() {
   for (const e of foes) if (e.cave) e.hunt = 1 // taking it wakes the cave: every creature left, near or far, comes hunting you
   village.glow.intensity = 0
   ;(felled.gems ||= {})[K.c.T.k] = 9e15
+  felled.carry = K.c.T.k // whose it is, so a fall can send it home
   keep('warriorFelled', felled)
   gain('sunstone', 1)
   sunstone()
@@ -2893,6 +2897,8 @@ function frame() {
   $('fuel').style.width = (fuel / FUEL) * 100 + '%'
   $('fuelbar').style.opacity = lit ? 1 : 0
   if (!alive && (player.dead += dt) > 3) {
+    // fall with a sunstone and it's lost: it goes back to its cave, guard and all, to be won again
+    if (bag.sunstone) gain('sunstone', -bag.sunstone), delete felled.gems?.[felled.carry], delete felled.carry, keep('warriorFelled', felled), setTimeout(() => say('You fell, and the sunstone went back to its cave'), 1500) // (after the well's own tip at home)
     player.hp = player.maxHp
     player.air = 1
     player.once = null
@@ -2959,9 +2965,9 @@ function frame() {
       tx /= l
       tz /= l
       sp = e.run * 0.7
-    } else if (alive && (e.hunt || d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight * e.fierce) && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
+    } else if (alive && (e.hunt || d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight * e.fierce * (bag.sunstone ? 2 : 1)) && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
       // slimes and spiders shy from a lit torch, circling its edge, but dare a rush every few seconds
-      if (!st.bold && !e.boss && !e.hunt && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
+      if (!st.bold && !e.boss && !e.hunt && !bag.sunstone && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
         const k = d < 5 ? -1 : 0
         tx = (dx / d) * k + (dz / d) * 0.7
         tz = (dz / d) * k - (dx / d) * 0.7
