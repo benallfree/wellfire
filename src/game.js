@@ -2215,14 +2215,17 @@ function caves() {
     return
   }
   if (p.z < K.z - CAVE.cell / 2 - 0.2) return village.fade(leave) // out through the mouth
+  if (K.wake && $('say').hidden) (K.wake = 0), say('The cave wakes: everything left down here is coming for you') // once the sunstone box is closed
   const g = K.gem
   if (!g) return
   g.rotation.y += 0.03
   village.glow.intensity = 14 * (1 + Math.sin(clock.elapsedTime * 3) * 0.2)
   if (Math.hypot(p.x - g.position.x, p.z - g.position.z) > 1.4) return (K.said = 0)
-  if (foes.some((e) => e.guard && e.hp > 0)) return K.said ||= say('Its guardians must fall before you can take the sunstone') || 1
+  if (foes.some((e) => e.guard && e.hp > 0)) return K.said ||= say("The sunstone's guard must fall first") || 1
   K.g.remove(g)
   K.gem = 0
+  K.wake = 1
+  for (const e of foes) if (e.cave) e.hunt = 1 // taking it wakes the cave: every creature left, near or far, comes hunting you
   village.glow.intensity = 0
   ;(felled.gems ||= {})[K.c.T.k] = 9e15
   keep('warriorFelled', felled)
@@ -2956,9 +2959,9 @@ function frame() {
       tx /= l
       tz /= l
       sp = e.run * 0.7
-    } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight * e.fierce && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
+    } else if (alive && (e.hunt || d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight * e.fierce) && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
       // slimes and spiders shy from a lit torch, circling its edge, but dare a rush every few seconds
-      if (!st.bold && !e.boss && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
+      if (!st.bold && !e.boss && !e.hunt && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
         const k = d < 5 ? -1 : 0
         tx = (dx / d) * k + (dz / d) * 0.7
         tz = (dz / d) * k - (dx / d) * 0.7

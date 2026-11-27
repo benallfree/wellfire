@@ -59,7 +59,8 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   alight and scares slimes and spiders back (bats are drawn to it), and it burns down.
 - **Caves.** Each village has a cave out in its wilds, sealed by a boulder that takes 8 axe blows. Inside, with a lit
   torch, is a seeded 6×6 maze of dead ends with roamers, and in its farthest cell a sunstone guarded by six
-  creatures and a boss. The sunstone is yours once the whole guard is dead. A village's sage says where its cave is.
+  creatures and a boss. The sunstone is yours once its guard is dead (roamers don't count), and taking it wakes the cave: every creature
+  left comes hunting you on the way out. A village's sage says where its cave is.
 - **Wells and beams.** At a village well, Space sets a torch and a sunstone in its beacon and hands you the beam: turn
   and tilt it until it snaps gold onto the star. A `✦` on the minimap rim shows the star's way.
 - **Sky stages.** Each locked beam turns the sky a new colour (green, violet, orange, red) and makes the wilds harder:
