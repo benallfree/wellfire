@@ -331,10 +331,12 @@ const kept = (k, d) => {
 }
 let refused
 const keep = (k, v) => {
+  const j = JSON.stringify(v)
   try {
-    localStorage[k] = JSON.stringify(v)
+    localStorage[k] = j
+    if (localStorage[k] != j) throw 0 // read back: some browsers drop a write without an error
   } catch {
-    refused ||= setTimeout(() => say("Can't save: the browser's storage is full or blocked"))
+    refused ||= setTimeout(() => (($('say').hidden = false), ($('say').innerHTML = "<h2>Can't save</h2><p>The browser's storage is full or blocked, so progress since then is lost on reload</p><small>Space or tap</small>")))
   }
 }
 // felled trees: chunk key -> { candidate index: when it fell }. A tree regrows after REGROW; old entries are pruned
@@ -2670,6 +2672,7 @@ let title = 1
 const hide = (o) => ['ui', 'nav', 'tray', 'help', 'mute'].map((k) => ($(k).style.opacity = o))
 hide(0)
 $('tip').textContent = 'press any key or tap to begin'
+document.body.insertAdjacentHTML('beforeend', '<small style="position:fixed;right:6px;bottom:3px;opacity:.5;font:10px system-ui">build BUILD_ID</small>') // the build fills in its commit, to tell a cached page from the latest
 $('tip').style.opacity = 1
 for (const ev of ['keydown', 'pointerdown'])
   addEventListener(
