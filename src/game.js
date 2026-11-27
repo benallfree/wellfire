@@ -2173,7 +2173,7 @@ function berry() {
       }
 }
 let dark // said once per visit to a mouth without a lit torch
-const lens = (fov, near) => ((camera.fov = fov), (camera.near = near), camera.updateProjectionMatrix()) // a little wider and closer underground
+const lens = (fov, near) => ((camera.fov = fov), (camera.near = near), camera.updateProjectionMatrix())
 function caves() {
   const p = player.pos
   const K = player.cave
@@ -2266,7 +2266,6 @@ function enter(c) {
   }
   scene.add(g)
   const K = (player.cave = { c, x: X, z: Z, y, walls, g })
-  lens(60, 0.1)
   for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
   player.floor = y
   player.pos.set(X, y, Z - S / 2 + 0.6)
@@ -2315,7 +2314,6 @@ function leave() {
   scene.remove(K.g)
   K.g.traverse((o) => o != K.gem && o.geometry?.dispose()) // (the sunstone's model is shared)
   player.cave = player.floor = null
-  lens(45, 0.5)
   for (const e of [...foes]) e.cave && spawn(e) // the guardians stay down there; the surface fills up again
   village.glow.intensity = 0
   player.pos.set(mouth[0] + Math.sin(ry) * 7, 0, mouth[1] + Math.cos(ry) * 7) // a few steps out: clear of the mouth (or you'd walk straight back in), and the camera behind you clears the mound
@@ -2558,13 +2556,25 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyN' || (e.code == 'Escape' && !$('big').hidden)) bigMap()
   if (e.code == 'KeyR') mountUp()
-  if (e.code == 'KeyC') low = !low // the chase camera, high or low over the shoulder
+  if (e.code == 'KeyC') first = !first // the chase camera or first person
 })
 const chase = 1 // (tank controls always; the old free camera is gone)
-let low = 0
+// first person: C on the surface, always in a cave (never in a house's room). Click to lock the pointer; then the
+// mouse or trackpad looks around (left-right turns you, up-down tilts the view) and a click attacks. Esc lets go.
+let first = 0
+let pitch = 0
+const fpNow = () => (first || player.cave) && !player.room && !title
 let drag = 0 // mouse-drag turning, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
-addEventListener('pointermove', (e) => e.buttons && e.pointerType == 'mouse' && ((drag += e.movementX * 0.006), (tilt += e.movementY * 0.006)))
+addEventListener('pointermove', (e) =>
+  document.pointerLockElement
+    ? ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (tilt += e.movementY * 0.0025))
+    : e.buttons && e.pointerType == 'mouse' && ((drag += e.movementX * 0.006), (tilt += e.movementY * 0.006))
+)
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (document.pointerLockElement) return attack()
+  if (fpNow() && e.pointerType == 'mouse') renderer.domElement.requestPointerLock()
+})
 addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
 addEventListener('touchstart', (e) => {
@@ -2608,7 +2618,7 @@ function attack() {
   // chase mode: the swing turns toward the nearest monster in front, so you needn't line up exactly
   let best = 4
   let to = player.dir
-  if (chase)
+  if (chase && !fpNow()) // (in first person you aim yourself)
     for (const e of foes) {
       const d = Math.hypot(e.pos.x - player.pos.x, e.pos.z - player.pos.z)
       const t = Math.atan2(e.pos.x - player.pos.x, e.pos.z - player.pos.z)
@@ -2672,12 +2682,15 @@ const clock = new THREE.Clock()
 const near = { slime: 0, goblin: 0, spider: 0, bat: 0 } // how present each monster kind is, for the music
 const fwd = new THREE.Vector3()
 let inRoom = false
+let wasFp = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
   const open = !$('big').hidden
   if (open && !player.seat?.alt) return bigDraw(), requestAnimationFrame(frame) // paused, unless flying
   if (!$('say').hidden) return requestAnimationFrame(frame)
   const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
+  const fps = fpNow()
+  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 70 : 45, fps ? 0.05 : 0.5), fps || document.exitPointerLock?.() // first person: a wider, closer lens
   const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
   if (!tank) camYaw += q * dt * 2
 
@@ -2693,9 +2706,10 @@ function frame() {
     steer(dt, ix, iz, il)
     player.dir = player.seat.dir
   } else if (tank && alive) {
-    player.dir -= ix * 2.8 * dt + drag
+    // first person: A/D strafe and Q/E turn; otherwise A/D turn and Q/E strafe
+    player.dir -= (fps ? -q * 2.2 : ix * 2.8) * dt + drag
     const f = Math.max(-1, Math.min(1, -iz)) * (iz > 0 ? 0.6 : 1) // backing up is slower
-    const r = q * 0.8
+    const r = fps ? -ix : q * 0.8
     const k = run * (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
     const c = Math.cos(player.dir)
     const s = Math.sin(player.dir)
@@ -2964,28 +2978,8 @@ function frame() {
   if (tank) {
     let a = player.dir + Math.PI - camYaw
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
-    // high: a three-quarter view from 7 back; low (C): 3.5 back at head height and over the right shoulder, looking
-    // far ahead so the horizon and sky open up
-    // underground: always close over the shoulder (2.5 back, 1.8 up, under the roof, C or not), so you see only your
-    // own passage, and a wall between you and the camera pulls it in toward you
-    const K = player.cave
-    const r = K ? 2.5 : (low ? 3.5 : 7) * back
-    const sh = K ? 0.5 : low ? 0.7 : 0
-    fwd.set(Math.sin(camYaw) * r - Math.cos(camYaw) * sh, 0, Math.cos(camYaw) * r + Math.sin(camYaw) * sh).add(target)
-    fwd.y = K ? target.y + 1.8 : Math.max(target.y + (low ? 2 : 4.8) * back, height(fwd.x, fwd.z) + (low ? 0.8 : 1.5), WATER + 0.6)
-    if (K)
-      for (let k = 1, x = target.x, z = target.z; k <= 20; k++) {
-        const u = k / 20
-        const wx = target.x + (fwd.x - target.x) * u
-        const wz = target.z + (fwd.z - target.z) * u
-        if (K.walls.some(([cx, cz, hw, hd]) => Math.abs(wx - cx) < hw + 0.25 && Math.abs(wz - cz) < hd + 0.25)) {
-          fwd.x = x
-          fwd.z = z
-          break
-        }
-        x = wx
-        z = wz
-      }
+    fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
+    fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
   if (title) {
     const r = 30 / Math.min(1, camera.aspect)
@@ -3000,11 +2994,19 @@ function frame() {
     bits.slice(-2).map((b) => b.v.multiply({ x: 0.5, y: 2.4, z: 0.5 }))
     torchLight.position.copy(word.position).lerp(camera.position, 0.15).y -= 3
     torchLight.intensity = 90 * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
+  } else if (fps && !aim && !show) {
+    // first person: just in front of the warrior's face, following his head (he's still drawn, so his arms and
+    // weapon swing into view), looking along his facing, tilted by pitch
+    const fx = Math.sin(player.dir)
+    const fz = Math.cos(player.dir)
+    player.m.bones.head.getWorldPosition(camera.position)
+    camera.position.x += fx * 0.3
+    camera.position.z += fz * 0.3
+    camera.lookAt(camera.position.x + fx * Math.cos(pitch), camera.position.y + Math.sin(pitch), camera.position.z + fz * Math.cos(pitch))
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
-    camera.position.lerp(fwd, snap || player.cave ? 1 : Math.min(1, dt * (tank ? 8 : 5))) // (underground it never trails into a wall)
-    if (player.cave) camera.lookAt(target.x - Math.sin(camYaw) * 6, target.y + 1.2, target.z - Math.cos(camYaw) * 6)
-    else if (tank) low ? camera.lookAt(target.x - Math.sin(camYaw) * 14 - Math.cos(camYaw) * 0.7, target.y + 1.9, target.z - Math.cos(camYaw) * 14 + Math.sin(camYaw) * 0.7) : camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
+    camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
+    if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
     else camera.lookAt(target.x, target.y + 1, target.z)
   }
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)

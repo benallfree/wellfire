@@ -22,7 +22,7 @@ slot (7 potion, 8 whistle), 0 crafting · the torch is a weapon: taking it in ha
 at a well sets a torch and a sunstone in the beacon, then aims the beam (turn, W/S tilt; R lets go) · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
-or let go of a beam · C switches between the high chase camera and a low one over the shoulder that shows more of the horizon and sky · M or the ♪ button toggles sound.
+or let go of a beam · C switches between the chase camera and first person (in first person A/D strafe and Q/E turn; click to lock the pointer, then the mouse or trackpad looks around in every direction and a click attacks; Esc lets go; caves are always first person) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
 [Chase camera](#chase-camera).
 
@@ -972,10 +972,10 @@ guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and
   fades and you're underground: the maze is built `depth` (80) units below the entrance, so the world above carries on
   unseen. Everyone inside stands on the cave floor and meets only its walls; the surface's creatures are gone, nothing
   spawns, and swimming, the minimap, the big map, mounts, the roc and the villages don't reach you. There's no sun or
-  sky, only your torch (and the sunstone's glow), and the fog closes in at 18 units. The camera stays close over
-  the shoulder (2.5 back, 1.8 up, under the roof) whatever C is set to, so you see only your own passage; a wall
-  between you and the camera pulls it in toward you, so it never ends up in or behind a wall. A/D or a drag turn, W/S
-  walk. Beacon beams and the eye aren't drawn underground (they'd cut through the walls). Walls,
+  sky, only your torch (and the sunstone's glow), and the fog closes in at 18 units. The view is always first person
+  underground (whatever C says): the camera rides just in front of the warrior's face, following his head, and the
+  model is drawn as everywhere else, so his arms and weapon swing into view; a wider lens (70°, near plane 0.05).
+  Beacon beams and the eye aren't drawn underground (they'd cut through the walls). Walls,
   floor and roof are rough rock, each a 64-pixel texture drawn in code at load (`rock()`: mottled patches, grit,
   hairline cracks) and tiled every 2 units on every face (`slab()`), so nothing stretches. A fall underground wakes
   you at home, the cave left behind.
