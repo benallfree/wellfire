@@ -2716,7 +2716,7 @@ const chase = 1 // (tank controls always; the old free camera is gone)
 // first person: C, anywhere (going in or out of a house or a cave keeps the view). Click to lock the pointer (in the
 // chase camera too); then the mouse or trackpad turns you (in first person up-down also tilts the view) and a click
 // attacks. Esc lets go.
-let first = 0
+let first = false // (a boolean: three.js hides only on false, and fpNow() sets the room lid's visible)
 let pitch = 0
 const free = () => !title // the mouse can turn you (in a house's room too)
 const fpNow = () => first && free() // C picks the view everywhere: on the surface, in a house's room, underground
