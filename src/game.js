@@ -320,7 +320,8 @@ scene.add(water)
 
 const chunks = new Map() // live chunks only, "cx,cz" -> { mesh, inst, trees }
 let dirty = false
-// localStorage, wrapped: private windows and blocked storage just start fresh
+// localStorage, wrapped: private windows and blocked storage just start fresh, and a refused save (storage full or
+// blocked) says so once instead of losing progress silently
 const kept = (k, d) => {
   try {
     return JSON.parse(localStorage[k]) || d
@@ -328,10 +329,13 @@ const kept = (k, d) => {
     return d
   }
 }
+let refused
 const keep = (k, v) => {
   try {
     localStorage[k] = JSON.stringify(v)
-  } catch {}
+  } catch {
+    refused ||= setTimeout(() => say("Can't save: the browser's storage is full or blocked"))
+  }
 }
 // felled trees: chunk key -> { candidate index: when it fell }. A tree regrows after REGROW; old entries are pruned
 // on load, so the record stays small however far you roam.
@@ -663,11 +667,30 @@ const MAP = 160 // canvas pixels
 const UPP = 2 // world units per map pixel
 const CELL = 8 // reveal cell, in units
 const SIGHT = 36 // reveal radius, in units
-const seen = new Set(kept('warriorSeen', '').split(' ')) // kept as one space-separated string of cell keys
-let saved = seen.size
-let savedAt = 0
-// writing every cell is slow once a lot is explored, so it saves at most every 30 s, and when the page goes away
-const saveSeen = () => (keep('warriorSeen', [...seen].join(' ')), (saved = seen.size), (savedAt = performance.now()))
+// kept as one string: per explored chunk "cx,cz,mask", the mask's 25 bits its 5x5 cells, in base 36. (Older saves listed
+// every cell as "i,j", which filled the browser's storage after an hour or so on the roc; they still load.)
+const seen = new Set()
+const N = CH / CELL
+let old = 0
+for (const w of kept('warriorSeen', '').split(' ')) {
+  const [a, b, m] = w.split(',')
+  if (m == null) w && seen.add(w) && (old = 1)
+  else for (let q = parseInt(m, 36), n = 0; q; q >>= 1, n++) q & 1 && seen.add(a * N + ((n / N) | 0) + ',' + (b * N + (n % N)))
+}
+let saved = old ? -1 : seen.size // an old-style save is rewritten at once
+let savedAt = -3e4
+// writing it costs more as you explore, so it saves at most every 30 s, and when the page goes away
+function saveSeen() {
+  const m = {}
+  for (const w of seen) {
+    const [i, j] = w.split(',')
+    const k = Math.floor(i / N) + ',' + Math.floor(j / N)
+    m[k] = (m[k] || 0) | (1 << ((i - Math.floor(i / N) * N) * N + (j - Math.floor(j / N) * N)))
+  }
+  keep('warriorSeen', Object.entries(m).map(([k, q]) => k + ',' + q.toString(36)).join(' '))
+  saved = seen.size
+  savedAt = performance.now()
+}
 addEventListener('pagehide', saveSeen)
 document.addEventListener('visibilitychange', () => document.hidden && saveSeen())
 const tiles = new Map()
