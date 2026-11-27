@@ -74,7 +74,7 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   strength 400 units out.
 - **Getting around.** Steeds and drakes roam the wilds to be ridden (a drake breathes fire); the boat crosses water;
   the whistle calls a roc that flies high and fast on its stamina, out of every creature's reach, and leaves after
-  each flight.
+  each flight, or a minute after the call, ridden or not (a ridden roc comes down and sets you off).
 - **The hint line**, just above the tray. In yellow, the move you can make right here (ride, board, talk, crack the
   boulder, go into the cave, eat berries, break a rock, set or aim at a well, buy a potion), each gone for good once
   you've made it. In white, the mission, with an arrow that turns to point the way: step by step until your first beam

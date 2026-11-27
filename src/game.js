@@ -1118,7 +1118,7 @@ function whistle() {
   voice([[0, 1500], [0.12, 2300], [0.24, 2150]], 0.07)
   voice([[0, 2300], [0.12, 2700], [0.42, 1600]], 0.07, { vib: [9, 50], at: 0.3 })
   let m = mounts.find((m) => m.m.vars.fly && !m.leave)
-  if (!m) ((m = addMount('roc', SEED, player.pos.x - Math.sin(player.dir) * 60, player.pos.z - Math.cos(player.dir) * 60)).alt = v.alt / 2), gain('whistle', -1) // each new roc costs a whistle (calling one already on its way is free)
+  if (!m) ((m = addMount('roc', SEED, player.pos.x - Math.sin(player.dir) * 60, player.pos.z - Math.cos(player.dir) * 60)).alt = v.alt / 2), (m.stay = v.stay), gain('whistle', -1) // each new roc costs a whistle (calling one already on its way is free) and stays `stay` seconds from the call
   m.come = m.sta = 1 // a call always brings it fully rested
   voice([[0, 2200], [0.2, 3100], [0.6, 2800], [2.2, 1200]], 0.12, { vib: [6, 40], hiss: 1.2, at: 1 })
   setTimeout(() => say(m.m.vars.name + ' the roc answers'), 1000)
@@ -1230,7 +1230,9 @@ function herd(dt) {
     if (v.fly) {
       // altitude: climb to `alt` while ridden and rested (skim low over water when landed by hand), glide in when called
       const g = Math.max(WATER - 0.9, height(m.pos.x, m.pos.z))
-      if (m.sta <= 0) (m.up = 0), (m.out = r == player) // worn out: it comes down, throws you off and leaves
+      // its time is up, ridden or not (calling it again doesn't add any): riderless it flies off, ridden it comes down and sets you off
+      if ((m.stay -= dt) < 0 && !r && !m.leave) say(v.name + ' grows restless and flies off'), (m.leave = 1)
+      if (m.sta <= 0 || m.stay < 0) (m.up = 0), (m.out = r == player) // worn out: it comes down, throws you off and leaves
       const want = r == player ? (m.up ? v.alt : g < WATER && !m.out ? 4 : 0) : m.come ? m.speed : m.leave ? v.alt : 0
       m.alt = Math.max(0, m.alt + Math.max(-v.lift * dt, Math.min(v.lift * dt, want - m.alt)))
       m.sta = Math.min(1, Math.max(0, m.sta + dt * (m.alt > 3 && r ? -1 / v.tire : 1 / v.rest)))
@@ -1238,7 +1240,7 @@ function herd(dt) {
       m.floor = m.alt ? m.fy : null
       if (r == player && m.alt > 0.3) m.flew = 1 // any take-off counts, even a hop that lands again before climbing high
       // one call, one flight: once it has flown you and lands, it sets you down and leaves (tired or not)
-      if (m.flew && !m.alt) say(v.name + (m.out ? ' is worn out and flies off' : ' flies off')), unseat(player, player.pos)
+      if ((m.flew || m.stay < 0) && r == player && !m.alt) say(v.name + (m.stay < 0 ? ' grows restless and flies off' : m.out ? ' is worn out and flies off' : ' flies off')), unseat(player, player.pos)
     }
     m.update(dt, v.run)
     if (m.rider) {

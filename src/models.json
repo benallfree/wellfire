@@ -7450,7 +7450,8 @@
       "alt": 40,
       "lift": 14,
       "tire": 25,
-      "rest": 10
+      "rest": 10,
+      "stay": 60
     },
     "scale": "s",
     "bones": [
