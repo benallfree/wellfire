@@ -2686,7 +2686,9 @@ function frame() {
   if (!$('say').hidden) return requestAnimationFrame(frame)
   const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
   const fps = fpNow()
-  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 70 : 45, fps ? 0.05 : 0.5), fps || document.exitPointerLock?.() // first person: a wider, closer lens
+  // first person: a wide (90 degree), close lens, and the left arm and shield hidden so they don't fill the view (the
+  // weapon arm stays, so swings show)
+  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = !fps), fps || document.exitPointerLock?.()
 
   // on foot or riding: A/D turn and W/S walk along the facing (Q/E strafe), or, in free mode, move relative to the camera
   let ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + stick.x

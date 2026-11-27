@@ -975,7 +975,7 @@ guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and
   spawns, and swimming, the minimap, the big map, mounts, the roc and the villages don't reach you. There's no sun or
   sky, only your torch (and the sunstone's glow), and the fog closes in at 18 units. The view is always first person
   underground (whatever C says): the camera rides just in front of the warrior's face, following his head, and the
-  model is drawn as everywhere else, so his arms and weapon swing into view; a wider lens (70°, near plane 0.05).
+  model is drawn as everywhere else, so his arms and weapon swing into view; a wide lens (90°, near plane 0.05), with the left arm and shield hidden so they don't fill the view.
   Beacon beams and the eye aren't drawn underground (they'd cut through the walls). Walls,
   floor and roof are rough rock, each a 64-pixel texture drawn in code at load (`rock()`: mottled patches, grit,
   hairline cracks) and tiled every 2 units on every face (`slab()`), so nothing stretches. A fall underground wakes
