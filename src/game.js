@@ -1118,7 +1118,7 @@ function whistle() {
   voice([[0, 1500], [0.12, 2300], [0.24, 2150]], 0.07)
   voice([[0, 2300], [0.12, 2700], [0.42, 1600]], 0.07, { vib: [9, 50], at: 0.3 })
   let m = mounts.find((m) => m.m.vars.fly && !m.leave)
-  if (!m) (m = addMount('roc', SEED, player.pos.x - Math.sin(player.dir) * 60, player.pos.z - Math.cos(player.dir) * 60)).alt = v.alt / 2
+  if (!m) ((m = addMount('roc', SEED, player.pos.x - Math.sin(player.dir) * 60, player.pos.z - Math.cos(player.dir) * 60)).alt = v.alt / 2), gain('whistle', -1) // each new roc costs a whistle (calling one already on its way is free)
   m.come = m.sta = 1 // a call always brings it fully rested
   voice([[0, 2200], [0.2, 3100], [0.6, 2800], [2.2, 1200]], 0.12, { vib: [6, 40], hiss: 1.2, at: 1 })
   setTimeout(() => say(m.m.vars.name + ' the roc answers'), 1000)
