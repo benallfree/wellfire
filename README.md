@@ -205,7 +205,11 @@ its place at night). Twelve to twenty-odd monsters at a time wander, chase withi
 back, flash, and burst into little cubes. The sword is quick, the axe is slow and heavy with big knockback, the torch
 does little damage but sets monsters alight; burning monsters flee and take damage over time. Steeds and drakes can be
 found and ridden (see Mounts). Dead monsters shrink away
-and respawn somewhere around you; you regenerate slowly, and if you fall you get back up at the start.
+and respawn somewhere around you. Health comes back fast in a village (`townRegen`) and not at all in the wilds
+(`fieldRegen` 0); out there you heal from potions and berries. About 40% of bushes carry a cluster of red berries
+(`berrybush.chance`, seeded per bush, glowing faintly so they show at night): walk into one while hurt to eat it for a
+tenth of your health (`heal` 0.1, 3 of 30), and it grows back after 4 minutes (`regrow` 240 s; kept in
+`warriorFelled` as `"b" + index`). A full-health warrior leaves them alone. If you fall you get back up at the start.
 
 ## Music
 

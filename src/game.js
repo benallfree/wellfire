@@ -320,6 +320,17 @@ scene.add(water)
 
 const chunks = new Map() // live chunks only, "cx,cz" -> { mesh, inst, trees }
 let dirty = false
+// berries (models.json "berrybush", the cluster is the "berries" model): a seeded share of bushes carries a cluster, one more shared InstancedMesh drawn on
+// the bush's own matrix. Walk into one while hurt to eat it (heal of your health); it grows back after regrow seconds.
+const BERRY = lib.berrybush
+const berryKit = (() => {
+  const m = make(lib, 'berries', 1)
+  const k = new THREE.InstancedMesh(bake(m), m.mat, 900)
+  k.frustumCulled = false
+  k.count = 0
+  scene.add(k)
+  return k
+})()
 // localStorage, wrapped: private windows and blocked storage just start fresh, and a refused save (storage full or
 // blocked) says so once instead of losing progress silently
 const kept = (k, d) => {
@@ -390,6 +401,7 @@ function grow(cx, cz) {
   scene.add(mesh)
   const inst = kit.map(() => [])
   const trees = [] // colliders: [x, z, radius]
+  const berries = [] // { m: the bush's matrix, x, z, i, eaten: when (0: ripe) }
   const o = new THREE.Object3D()
   for (let i = 0; i < 70; i++) {
     const x = x0 + R() * CH
@@ -410,6 +422,10 @@ function grow(cx, cz) {
     const m = o.matrix.clone()
     inst[k * 4 + v].push(m)
     if (KINDS[k][1]) trees.push(k < 2 ? [x, z, KINDS[k][1] * s, i, k * 4 + v, m, key] : [x, z, KINDS[k][1] * s]) // pines and oaks can be felled (see wood)
+    if (k == 3 && hash(cx * 71 + i, cz, SEED + 21) < BERRY.chance) {
+      const t = felled[key]?.['b' + i] || 0
+      berries.push({ m, x, z, i, eaten: Date.now() - t < BERRY.regrow * 1e3 ? t : 0 })
+    }
   }
   const rocks = [] // the ones you can break
   const E = rng((hash(cx, cz, SEED + 13) * 4294967296) | 0)
@@ -455,7 +471,7 @@ function grow(cx, cz) {
     }
     caves.push(c)
   }
-  chunks.set(key, { cx, cz, mesh, inst, trees, rocks, caves, key })
+  chunks.set(key, { cx, cz, mesh, inst, trees, rocks, caves, berries, key })
   dirty = true
 }
 function drop(key) {
@@ -483,6 +499,10 @@ function stream(x, z, n = 2) {
       mesh.count = k
       mesh.instanceMatrix.needsUpdate = true
     })
+    let k = 0
+    for (const ch of chunks.values()) for (const b of ch.berries) if (!b.eaten && k < 900) berryKit.setMatrixAt(k++, b.m)
+    berryKit.count = k
+    berryKit.instanceMatrix.needsUpdate = true
   }
   water.position.set(x, WATER, z)
 }
@@ -2127,6 +2147,30 @@ const got = (T) => {
   const p = den(T.gi, T.gj)
   return felled.gems?.[T.k] || (p && felled[Math.floor(p[0] / CH) + ',' + Math.floor(p[1] / CH)]?.['e' + T.k])
 }
+// walking into a ripe bush while hurt eats its berries; eaten ones grow back after BERRY.regrow seconds
+function berry() {
+  const p = player.pos
+  const cx = Math.floor(p.x / CH)
+  const cz = Math.floor(p.z / CH)
+  for (let i = -1; i <= 1; i++)
+    for (let j = -1; j <= 1; j++)
+      for (const b of chunks.get(cx + i + ',' + (cz + j))?.berries || []) {
+        if (b.eaten) {
+          if (Date.now() - b.eaten > BERRY.regrow * 1e3) (b.eaten = 0), (dirty = true)
+          continue
+        }
+        if (player.cave || player.hp <= 0 || player.hp >= player.maxHp || Math.hypot(b.x - p.x, b.z - p.z) > BERRY.reach) continue
+        const n = Math.min(player.maxHp - player.hp, Math.ceil(player.maxHp * BERRY.heal))
+        player.hp += n
+        b.eaten = (felled[cx + i + ',' + (cz + j)] ||= {})['b' + b.i] = Date.now()
+        keep('warriorFelled', felled)
+        dirty = true
+        burst({ x: b.x, y: p.y, z: b.z }, '#c2183a', 10)
+        beep(880, 0.12, 'triangle', 0.04, 1.3)
+        say(`Berries · +${n} health`)
+        hud()
+      }
+}
 let dark // said once per visit to a mouth without a lit torch
 const lens = (fov, near) => ((camera.fov = fov), (camera.near = near), camera.updateProjectionMatrix()) // a little wider and closer underground
 function caves() {
@@ -2837,6 +2881,7 @@ function frame() {
 
   pickups(dt)
   caves()
+  berry()
   for (const b of [...bits]) {
     b.life -= dt
     b.v.y -= 15 * dt
