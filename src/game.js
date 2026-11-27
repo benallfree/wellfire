@@ -3041,7 +3041,7 @@ function frame() {
     }
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat) && !(player.seat?.alt > 3) && clear(e.pos.x, e.pos.z, player.pos.x, player.pos.z)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow; no blow lands through a cave wall
+      if (d < e.reach + 0.6 && alive && !village.in && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat) && !(player.seat?.alt > 3) && clear(e.pos.x, e.pos.z, player.pos.x, player.pos.z)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow; no blow lands through a cave wall, or through the fence (monsters never get inside)
     }
     e.update(dt, e.run)
   }
