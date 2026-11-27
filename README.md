@@ -87,6 +87,11 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   eye opens somewhere else in the sky. The sky clears to the first stage, and you keep everything you carry. The old
   beams stay lit, pointing where the dead eye hung, and their wells and caves are spent, so each eye takes five new
   villages. Each eye's creatures are a quarter tougher and richer than the last (models.json `eye.harder`).
+- **Names.** A village's name comes from its map cell alone (models.json `towns`): a first part, an optional middle and
+  an ending, each stepping along its list by a fixed amount per cell. So about 4,000 names never repeat within 24 cells
+  either way, and neighbours never share a first or last part. One village in six also gets a first word (Upper, Lower,
+  Great, Little, Old, New, East, West). Each mount's name is two halves rolled from its seed (its `name` var is a list
+  of option strings, one of each joined), 256 per kind.
 
 Progress (the map, felled trees and rocks, opened caves, sunstones, beams, the eye you're on, the bag) is saved in `localStorage`.
 

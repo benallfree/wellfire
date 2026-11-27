@@ -140,7 +140,10 @@ for (let a = 0; terrain(home.x, home.z) < 2; a += 0.5) home.set(Math.cos(a) * a 
 // Every answer is a pure function of the cell, cached in maps that are simply cleared when they grow large.
 const G = 280
 const RW = 2 // road half-width
-const SYL = ['Oak', 'Ash', 'Mill', 'Brook', 'Thorn', 'Elm', 'Stone', 'Fox', 'Wil', 'Red', 'wick', 'by', 'ford', 'ham', 'stead', 'well', 'ton', 'dale', 'mere', 'field']
+// a village's name, from its cell alone (models.json towns): each part steps along its list by a fixed amount per cell,
+// so no name repeats within 24 cells either way and neighbours never share a first or last part; 1 in 6 gets a first word
+const TOWN = lib.towns
+const part = (l, gi, gj, a, b) => l[(((gi * a + gj * b) % l.length) + l.length) % l.length]
 const memo = (f, max = 3000, m = new Map()) => (...a) => {
   const k = a.join()
   if (!m.has(k)) {
@@ -158,7 +161,9 @@ const site = memo((gi, gj) => {
   const R = rng((h2(gi, gj, SEED + 5) * 4294967296) | 0)
   const first = !gi && !gj
   const r = 12 + R() * 6
-  const name = SYL[(R() * 10) | 0] + SYL[10 + ((R() * 10) | 0)]
+  const f = R() < 1 / 6 // (two draws, always, as the old names took: the village stays where it was)
+  const w = TOWN.first[(R() * 8) | 0]
+  const name = (f ? w + ' ' : '') + part(TOWN.pre, gi, gj, 19, 20) + part(TOWN.mid, gi, gj, 4, 6) + part(TOWN.end, gi, gj, 22, 21)
   const seed = (R() * 1e6) | 0
   if (!first && R() > 0.6) return null
   let best

@@ -5751,7 +5751,10 @@
       "mane": "2a2018|e8e0d0|6a3a20|1a1a1a",
       "blanket": "9b2f2f|2f5a9b|2f7a4a|c09030",
       "c": "coat",
-      "name": "Dashmane|Galeheart|Thistlerun|Brightfoot|Copperhoof",
+      "name": [
+        "Dash|Gale|Thistle|Bright|Copper|Swift|Silver|Storm|Amber|Dusk|Clover|Bramble|Flint|Oat|Rush|Wind",
+        "mane|heart|run|foot|hoof|tail|stride|flank|step|dancer|spark|star|blaze|mist|flick|song"
+      ],
       "kind": "steed",
       "run": "10.5~12.5",
       "turn": "3.4~4",
@@ -6476,7 +6479,10 @@
       "spine": "e0d0a0|2a2a2a|c04020",
       "blanket": "8a2a2a|2a4a8a|4a6a2a",
       "c": "sc",
-      "name": "Emberjaw|Cinderling|Smokeback|Ashwhistle|Kindlecrest",
+      "name": [
+        "Ember|Cinder|Smoke|Ash|Kindle|Scorch|Char|Blaze|Soot|Brand|Sear|Coal|Pyre|Flare|Glow|Spark",
+        "jaw|ling|back|whistle|crest|scale|fang|maw|tail|claw|horn|snout|belly|tooth|wing|breath"
+      ],
       "kind": "drake",
       "run": "6.5~8",
       "turn": "2.4~3",
@@ -7228,7 +7234,10 @@
       "belly": "d8c8a8|b0a080|f0ece0",
       "blanket": "8a2a2a|2a4a8a|4a6a2a",
       "c": "plume",
-      "name": "Skyclaw|Galewing|Stormcrest|Highsoar|Cloudtalon",
+      "name": [
+        "Sky|Gale|Storm|High|Cloud|Wind|Sun|Thunder|Far|Swift|Dawn|Frost|Rain|Mist|Crag|Peak",
+        "claw|wing|crest|soar|talon|feather|beak|eye|plume|cry|shriek|glide|dive|hook|quill|gust"
+      ],
       "kind": "roc",
       "run": "5~6",
       "fly": 58,
@@ -8584,6 +8593,12 @@
     "townRegen": 3,
     "fieldRegen": 0,
     "potionHeal": 30
+  },
+  "towns": {
+    "first": ["Upper", "Lower", "Great", "Little", "Old", "New", "East", "West"],
+    "pre": ["Oak", "Ash", "Mil", "Brook", "Thorn", "Elm", "Stan", "Fox", "Wil", "Red", "Black", "Whit", "Holt", "Hazel", "Wolf", "Rook", "King", "Bram", "Hart", "Cold", "Har", "Wind", "Marsh", "Ald"],
+    "mid": ["", "", "en", "ing", "er", "mar", "ley", "wyn"],
+    "end": ["wick", "by", "ford", "ham", "stead", "well", "ton", "dale", "mere", "field", "bury", "wood", "gate", "hollow", "combe", "thorpe", "hurst", "cross", "worth", "moor", "bridge", "holm", "stow", "fell"]
   },
   "eye": {
     "harder": 1.25

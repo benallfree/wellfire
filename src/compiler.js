@@ -92,7 +92,7 @@ export function make(lib, name, seed = 1, mat) {
     for (const k in m.vars) {
       let v = m.vars[k]
       try {
-        v = v.includes('|') ? pick(v) : num(v)
+        v = Array.isArray(v) ? v.map(pick).join('') : v.includes('|') ? pick(v) : num(v) // ["a|b", "c|d"]: one of each, joined (a name's halves)
       } catch {}
       V[k] = v
     }
