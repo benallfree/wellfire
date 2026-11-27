@@ -1,20 +1,23 @@
 // Builds the game, packs the js13k baseline (terser -> roadroller -> advzip, tools/roadroll.mjs), then compresses
-// with surprisal at -3 by default (--compare), the level the size history is measured at, and compares the two.
-//   npm run ship                      build, baseline, surprisal -3
+// with surprisal at the saved level (package.json "size".level, kept current by `npm run fit`) with --compare, and
+// compares the two.
+//   npm run ship                      build, baseline, surprisal at the saved level
 //   npm run ship -9                   the same at another level (-0..-9; npm hands it over as npm_config_9)
 //   npm run ship -- -9                the same, passed as an argument
 //   npm run ship -- --baseline        build and baseline only (no surprisal; also `npm run baseline`)
 //   SURPRISAL=/path/to/surprisal npm run ship
 // Output streams straight through (stdio inherit): surprisal's progress line and the --compare table show live.
-// Writes dist/index.13k (overwritten each run) and dist/roadroller/, and prints sizes against the 13,312-byte budget.
+// Writes dist/index.13k (overwritten each run) and dist/roadroller/, and prints sizes against the budget
+// (package.json "size".budget, default 13,312).
 import { spawnSync } from 'node:child_process'
-import { existsSync, rmSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { roadroll } from './roadroll.mjs'
 
 const SURPRISAL = process.env.SURPRISAL || '/Volumes/Code/repos/surprisal/bin/surprisal'
-const BUDGET = 13312
 const root = fileURLToPath(new URL('..', import.meta.url))
+const size_ = JSON.parse(readFileSync(root + 'package.json', 'utf8')).size || {}
+const BUDGET = size_.budget ?? 13312
 const input = 'dist/index.html'
 const out = 'dist/index.13k'
 const baselineOnly = process.argv.includes('--baseline')
@@ -27,7 +30,7 @@ if (new Set(levels).size > 1) {
   console.error(`more than one level given: -${[...new Set(levels)].join(' -')}`)
   process.exit(1)
 }
-const level = '-' + (levels[0] ?? '3')
+const level = '-' + (levels[0] ?? size_.level ?? 3)
 
 // A bare name (e.g. "surprisal") is looked up on PATH by spawn; a path must exist.
 if (!baselineOnly && SURPRISAL.includes('/') && !existsSync(SURPRISAL)) {

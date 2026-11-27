@@ -108,9 +108,18 @@ Last measured on `main` at `ee8a327` with `npm run ship -- -6`:
 | surprisal `-6` (`dist/index.13k`) | **13,090** | 98.3% |
 | terser + roadroller + advzip (`dist/roadroller/index.zip`) | 38,099 | 286% |
 
-To re-measure, run `npm run ship` (level `-3`) or `npm run ship -- -N` for level N. The surprisal step takes a few
-minutes on the GPU; the baseline about 15 seconds. `ROADROLLER_O` and `ADVZIP_ITER` tune the baseline. `npm run size`
-prints a fuller report across formats.
+The compression level is saved in `package.json` under `"size"`, together with the budget (13,312) and the headroom
+(200 bytes) the build should keep below it.
+
+- `npm run ship` builds, packs the roadroller baseline and compresses at the saved level. `npm run ship -- -N` (or
+  `npm run ship -N`) uses level N for that run only.
+- `npm run fit` builds and compresses at the saved level. While the archive is over budget minus headroom, it steps
+  up one level at a time, up to `-9`. It saves the first level that fits and prints a table of every level it tried.
+  If even `-9` is over, it leaves `package.json` unchanged and exits 1. Pass `npm run fit -- --down` to also step
+  down while lower (faster) levels still fit. `fit` skips the baseline.
+
+Higher levels are slower. `-6` takes a few minutes on the GPU, and `-9` much longer. The baseline takes about 15
+seconds. `ROADROLLER_O` and `ADVZIP_ITER` tune the baseline. `npm run size` prints a fuller report across formats.
 
 ## Deploy
 

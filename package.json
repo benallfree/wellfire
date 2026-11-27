@@ -6,10 +6,16 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "ship": "node tools/ship.mjs",
+    "fit": "node tools/fit.mjs",
     "baseline": "node tools/ship.mjs --baseline",
     "size": "node tools/size.mjs",
     "formats": "node tools/formats.mjs",
     "start": "node tools/build.mjs && node tools/serve.mjs"
+  },
+  "size": {
+    "level": 6,
+    "headroom": 200,
+    "budget": 13312
   },
   "devDependencies": {
     "roadroller": "^2.1.0",
