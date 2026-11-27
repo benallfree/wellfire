@@ -13,7 +13,7 @@
     "start": "node tools/build.mjs && node tools/serve.mjs"
   },
   "size": {
-    "level": 6,
+    "level": 8,
     "headroom": 200,
     "budget": 13312
   },
