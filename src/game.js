@@ -1722,7 +1722,7 @@ var village
         player.floor = h.y
         player.pos.set(h.x, h.y, h.z + h.rd / 2 - 0.9)
         player.vel.set(0, 0)
-        player.dir = Math.PI
+        player.dir -= h.ry // he goes in facing the way he faced outside (the house's door side is the room's), as leaving does
         glow.position.set(h.x, h.y + 1.2, h.z - h.rd / 2 + 1.2)
         if (h.shop) say('Apothecary · ' + wares())
       })
@@ -1775,7 +1775,7 @@ var village
           const s = Math.sin(o.ry)
           const lx = (p.x - o.x) * c - (p.z - o.z) * s
           const lz = (p.x - o.x) * s + (p.z - o.z) * c
-          if (this.in && Math.abs(lx) < 0.6 && lz > 0 && lz < o.d / 2 + 0.5 && Math.cos(player.dir - o.ry) < 0) this.enter(o) // on foot only (a rider flying over can't drop in), and facing the door: backing out of a room and holding the key doesn't back you straight in again
+          if (this.in && Math.abs(lx) < 0.6 && lz > 0 && lz < o.d / 2 + 0.5) this.enter(o) // on foot only: a rider flying over can't drop in
         }
         // a house between the camera and the player fades to see-through
         const ax = camera.position.x
