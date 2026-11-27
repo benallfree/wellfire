@@ -952,10 +952,10 @@ Every beacon needs a sunstone, and each village's sunstone lies at the end of a 
 guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and `"caves"`.
 
 - **Rocks.** About `perChunk` (2.4) breakable rocks per 40-unit chunk, weighted by region, never in water, villages or
-  roads, drawn with the scenery `rock` model. Swing the axe at one: it breaks into rubble and spills what it held
-  through the drop system: `flint` (0.4) gives a flint, `gold` (0) would give coins, the rest nothing. A whole rock is
-  in the way; rubble isn't. Broken rocks are kept in `warriorFelled` as `"e" + index` with a far-future time, so they
-  never come back.
+  roads, drawn with the scenery `rock` model, and in the way. Swing the axe at one and, like a felled tree, it breaks up
+  and is gone, spilling what it held through the drop system: mostly a coin or two (`gold` 0.9, `coins` 1-2, times the
+  stage's pay), rarely a flint (`flint` 0.1). Broken rocks are kept in `warriorFelled` as `"e" + index` with the time
+  and grow back after 30 minutes (`REGROW`), as trees do.
 - **The cave.** Each village has one, at a seeded dry spot `near`-`far` (40-200) units out (`den()`): a rocky mound
   whose dark mouth faces the village, sealed by a boulder. The boulder takes `hits` (8) axe blows (a ridden mount's
   attack counts), saying how many are left, then shatters. It stays open (`warriorFelled.caves`).

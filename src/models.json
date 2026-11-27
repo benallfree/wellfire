@@ -8454,61 +8454,6 @@
       }
     ]
   },
-  "rubble": {
-    "vars": {
-      "name": "Rubble"
-    },
-    "parts": [
-      {
-        "shape": "ball",
-        "bone": "root",
-        "color": "8a857c",
-        "position": [
-          -0.3,
-          0.08,
-          0.1
-        ],
-        "size": [
-          0.32,
-          0.16,
-          0.28
-        ],
-        "segments": 5
-      },
-      {
-        "shape": "ball",
-        "bone": "root",
-        "color": "7a756e",
-        "position": [
-          0.28,
-          0.06,
-          -0.15
-        ],
-        "size": [
-          0.25,
-          0.12,
-          0.22
-        ],
-        "segments": 5
-      },
-      {
-        "shape": "ball",
-        "bone": "root",
-        "color": "9a948a",
-        "position": [
-          0.05,
-          0.05,
-          0.32
-        ],
-        "size": [
-          0.18,
-          0.09,
-          0.16
-        ],
-        "segments": 5
-      }
-    ]
-  },
   "boulder": {
     "vars": {
       "name": "Boulder"
@@ -9000,11 +8945,11 @@
       1.6,
       0.6
     ],
-    "flint": 0.4,
-    "gold": 0,
+    "flint": 0.1,
+    "gold": 0.9,
     "coins": [
-      5,
-      15
+      1,
+      2
     ],
     "talk": 1.8
   },

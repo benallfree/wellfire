@@ -351,9 +351,9 @@ for (const k in felled) {
 const geos = {}
 const geo = (k) => (geos[k] ||= bake(make(lib, k, 1)))
 const itemMat = glow(new THREE.MeshLambertMaterial({ vertexColors: true }))
-// rocks (models.json "rocks"): about perChunk a chunk, weighted by region. A seeded roll gives each flint, gold or
-// nothing, and struck with the axe a rock breaks for good: its id goes in `felled` with a far-future time, so the prune
-// keeps it and it never comes back. Every village has a cave CAVE.near-CAVE.far units out (den()), sealed by a boulder.
+// rocks (models.json "rocks"): about perChunk a chunk, weighted by region. A seeded roll gives each a coin or two
+// (stage pay) or, rarely, a flint. Struck with the axe a rock breaks up and is gone: its id goes in `felled` with the
+// time, like a felled tree, and it grows back after REGROW. Every village has a cave CAVE.near-CAVE.far units out (den()), sealed by a boulder.
 const ROCK = lib.rocks
 const CAVE = lib.caves
 const den = memo((gi, gj) => {
@@ -419,13 +419,14 @@ function grow(cx, cz) {
     const c = E()
     if (height(x, z) < WATER + 0.5 || Math.hypot(x - home.x, z - home.z) < 6 || inTown(x, z, 3) || road(x, z)[0] < RW + 1.5) continue
     const id = 'e' + i
-    const done = felled[key]?.[id]
-    const g = new THREE.Mesh(geo(done ? 'rubble' : 'rock'), itemMat)
+    const t = felled[key]?.[id]
+    if (t < 9e15 && Date.now() - t < REGROW) continue // broken: gone until it grows back, like a tree (an older save's 9e15 has grown back)
+    const g = new THREE.Mesh(geo('rock'), itemMat)
     g.position.set(x, height(x, z) - 0.1, z)
     g.rotation.y = x * 7
-    g.scale.setScalar(done ? 1 : 0.75)
-    trees.push((g.col = [x, z, done ? 0 : 0.6])) // whole, it's in the way
-    Object.assign(g, { k: id, c: c < ROCK.flint ? 'flint' : c < ROCK.flint + ROCK.gold ? 'gold' : 0, done })
+    g.scale.setScalar(0.75)
+    trees.push((g.col = [x, z, 0.6])) // it's in the way
+    Object.assign(g, { k: id, c: c < ROCK.flint ? 'flint' : c < ROCK.flint + ROCK.gold ? 'gold' : 0 })
     mesh.add(g) // goes when the chunk's ground does
     rocks.push(g)
   }
@@ -2053,10 +2054,10 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
     for (const g of ch.rocks)
       if (!g.done && ahead(g.position)) {
         const p = g.position
-        g.done = g.geometry = geo('rubble')
-        g.scale.setScalar(1)
+        g.done = 1
+        ch.mesh.remove(g) // it breaks up and is gone, and grows back after REGROW like a tree
         g.col[2] = 0
-        ;(felled[ch.key] ||= {})[g.k] = 9e15
+        ;(felled[ch.key] ||= {})[g.k] = Date.now()
         keep('warriorFelled', felled)
         burst(p, '#9a948a', 12)
         beep(110, 0.25, 'square', 0.06, 0.5)
