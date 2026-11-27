@@ -117,8 +117,15 @@ Progress (the map, felled trees and rocks, opened caves, sunstones, beams, the e
   `berrybush`, `caves`, `tray` (slots and recipes), `talk`.
 - **Music is text too.** `src/score.json` is compiled and synthesized with WebAudio by `src/music.js`. There are no
   binary assets: no textures, meshes or audio files.
+- **Fonts are text.** `src/fonts.json` holds the game's two stroke fonts, capitals only: each glyph is a few polylines
+  on a small grid, so one definition draws at any size. **readable** (5×7 grid, monospaced) draws every bit of text on
+  screen: every text node in the page, including whatever the game sets later, becomes inline SVG words, sized and
+  coloured by the page's CSS. It also draws the map labels in canvas. **display** (5×9 grid) is carved into the world as
+  3D beams, each as wide as a 45° broad pen would draw it: the title over the home well and the APOTHECARY sign over the
+  shop door. The build ships only the glyphs the game can show (`display` keeps just the letters of words passed to
+  `carve('…')`).
 - **One file.** `tools/build.mjs` concatenates `compiler.js`, `music.js` and `game.js`, strips comments
-  (`tools/strip.mjs`; they stay in the source), and inlines both JSON files into `dist/index.html`.
+  (`tools/strip.mjs`; they stay in the source), and inlines the JSON files into `dist/index.html`.
 - **Data as pretty JSON**, not a custom DSL: it packs smaller under surprisal despite being bigger raw
   ([docs/json-vs-dsl.md](docs/json-vs-dsl.md)).
 - **Build tag.** The build stamps its commit (plus `+` for uncommitted changes in `src/`) in the page's bottom-right

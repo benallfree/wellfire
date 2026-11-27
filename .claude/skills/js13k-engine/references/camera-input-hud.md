@@ -106,6 +106,17 @@ let iz = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 
 
 HTML and CSS are cheaper and crisper than drawing text in WebGL.
 
+- **Its own font, still in the DOM** (Wellfire, `src/fonts.json` and the fonts block in `game.js`). A stroke font is
+  stored as pretty JSON: each glyph is a list of `"x,y x,y"` polylines on a 5×7 grid. A `MutationObserver` on `body`
+  turns every text node into a span of inline `<svg>` words. Each word is one `<path>` with `stroke: currentColor` and
+  is `1em` tall, so the CSS font size and colour still apply. Real spaces between the words keep line wrapping. A
+  `drop-shadow` filter stands in for `text-shadow`. The game code still just sets `textContent` and `innerHTML`.
+- The same path data draws in a 2D canvas via `new Path2D(d)` (map labels), and in 3D as one box per segment
+  (`carve()`).
+- Under surprisal, glyph coordinates cost about 3.7 packed bytes per glyph at `-1`, however they're spelled: strings,
+  SVG paths, or nested arrays pretty-printed to 12 KB all came out the same. A 5×7 bitmap as `0`/`1` rows was about 25%
+  cheaper, but it can't scale.
+
 - `const $ = (id) => document.getElementById(id)`.
 - Health (and breath, fuel, speed) as bars: a container with a coloured child whose `style.width` is a percentage;
   hide a bar with opacity (and a CSS transition) when full or unused.

@@ -606,6 +606,78 @@ class Actor {
 
 // ---------- HUD ----------
 const $ = (id) => document.getElementById(id)
+
+// ---------- fonts ----------
+// The game's own two stroke fonts (fonts.json), capitals only, every glyph a few polylines on a small grid, y down:
+// "readable" (x 0-4, capitals y 0-6 on the baseline at 6) for all the text on screen, and "display" (x 0-4, y 0-8)
+// carved into the world: the title and the apothecary's sign. One definition scales to any size. The build ships only
+// the glyphs the game can show (tools/build.mjs).
+const FONTS = JSON.parse($('fonts').textContent)
+// a line of text as SVG path data, in grid units, monospaced: each character steps step units to the right
+const ink = (t, font = FONTS.readable, step = 6) =>
+  [...t.toUpperCase()]
+    .map((ch, i) =>
+      (font[ch] || [])
+        .map((stroke) => 'M' + stroke.split(' ').map((p) => p.split(',').map((v, j) => (j ? +v : +v + i * step)).join(' ')).join('L'))
+        .join('')
+    )
+    .join('')
+// a word as an inline SVG one em tall: it takes the font size and colour of the text around it (index.html styles svg)
+const word = (w) => w && `<svg viewBox="-1 -1 ${w.length * 6} 9" width="${(w.length * 6) / 9}em" height="1em"><path d="${ink(w)}"/></svg>`
+// All the page's text is drawn in the readable font: every text node, the page's own and any the game sets later
+// (textContent, innerHTML), turns into a span of word SVGs, with real spaces between them so lines still wrap.
+function letter(n) {
+  if (n.nodeType != 3) return n.nodeName != 'SCRIPT' && [...n.childNodes].forEach(letter)
+  if (!n.data.trim() || !n.parentNode) return
+  const s = document.createElement('span')
+  s.innerHTML = n.data.split(' ').map(word).join(' ')
+  n.replaceWith(s)
+}
+new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach(letter))).observe(document.body, { childList: true, subtree: true })
+letter(document.body)
+// text in a 2D canvas, in the readable font: centred on x, sitting on y, capitals size pixels tall, in the canvas's
+// fill colour with a dark edge
+function letters(g, t, x, y, size) {
+  const d = new Path2D(ink(t))
+  g.save()
+  g.translate(x - ((t.length * 3 - 1) * size) / 6, y - size)
+  g.scale(size / 6, size / 6)
+  g.lineCap = g.lineJoin = 'round'
+  g.strokeStyle = '#000a'
+  g.lineWidth = 3
+  g.stroke(d)
+  g.strokeStyle = g.fillStyle
+  g.lineWidth = 1.2
+  g.stroke(d)
+  g.restore()
+}
+// a word in the display font as 3D beams, one per stroke segment, each as wide as a broad pen held at 45° draws it
+// (thin running up to the right, thick running down to the right), shaded gold at the top to amber at the bottom.
+// size is world units per grid unit; centred on the origin, facing +z. mat should be white (the beams carry colours).
+function carve(t, size, depth, mat) {
+  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, t.length * 20)
+  const o = new THREE.Object3D()
+  let n = 0
+  for (const stroke of ink(t, FONTS.display, 7).split('M').slice(1)) {
+    const p = stroke.split('L').map((q) => q.split(' ').map(Number))
+    for (let i = 1; i < p.length; i++) {
+      const [x0, y0] = p[i - 1]
+      const [x1, y1] = p[i]
+      const l = Math.hypot(x1 - x0, y1 - y0)
+      const w = 0.4 + (1.1 * Math.abs(x1 - x0 + y1 - y0)) / l
+      o.position.set(((x0 + x1) / 2 - t.length * 3.5 + 1) * size, (4 - (y0 + y1) / 2) * size, 0)
+      o.rotation.z = -Math.atan2(y1 - y0, x1 - x0)
+      o.scale.set((l + w) * size, w * size, depth)
+      o.updateMatrix()
+      mesh.setMatrixAt(n, o.matrix)
+      mesh.setColorAt(n++, new THREE.Color().setHSL(0.15 - (y0 + y1) * 0.008, 1, 0.55))
+    }
+  }
+  mesh.count = n
+  return mesh
+}
+const signMat = new THREE.MeshLambertMaterial()
+
 let gold = 0 // kept in localStorage across reloads
 try {
   gold = +localStorage.warriorGold || 0
@@ -885,8 +957,6 @@ function marks(g, ox, oy, rot, k, R, towns, q = 1e9, rx = ox, ry = oy) {
   g.fill()
   g.restore()
   g.fillStyle = '#fff'
-  g.font = 'bold 11px system-ui'
-  g.textAlign = 'center'
   const c = Math.cos(rot)
   const s = Math.sin(rot)
   for (const t of towns) {
@@ -894,12 +964,12 @@ function marks(g, ox, oy, rot, k, R, towns, q = 1e9, rx = ox, ry = oy) {
     let dz = (t.z - z) * u
     const l = Math.hypot(dx, dz) / q
     if (l > 1) (dx /= l), (dz /= l)
-    g.fillText(t.name, Math.max(ox - q + 10, Math.min(ox + q - 10, ox + dx * c - dz * s)), oy + dx * s + dz * c + (l > 1 ? 4 : -t.r * u - 3))
+    letters(g, t.name, Math.max(ox - q + 10, Math.min(ox + q - 10, ox + dx * c - dz * s)), oy + dx * s + dz * c + (l > 1 ? 4 : -t.r * u - 3), 7)
   }
-  g.fillText('N', rx + s * R, ry - c * R + 4) // north, on the rim round (rx, ry)
+  letters(g, 'N', rx + s * R, ry - c * R + 4, 7) // north, on the rim round (rx, ry)
   const sl = Math.hypot(STAR.x, STAR.z) / R
   g.fillStyle = '#fd4'
-  g.fillText('✦', rx + (STAR.x * c - STAR.z * s) / sl, ry + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
+  letters(g, '✦', rx + (STAR.x * c - STAR.z * s) / sl, ry + (STAR.x * s + STAR.z * c) / sl + 4, 7) // the star's way
 }
 function reveal(x, z, R) {
   const pi = Math.floor(x / CELL)
@@ -1445,6 +1515,18 @@ var village
     // house's collider margin (0.4) and clear of the door's trigger (0.6 either side).
     const h = houses[0]
     h.shop = 1
+    {
+      // over the door, a dark board with APOTHECARY carved on it in the display font, standing on the wall's top beam
+      // and low in the gable, where the roof's eaves don't hide its ends from the camera above
+      const { w, h: y, d } = h.m.vars
+      const board = new THREE.Mesh(new THREE.BoxGeometry(w * 0.55, w * 0.04, 0.03), new THREE.MeshLambertMaterial({ color: '#3a2416' }))
+      board.position.set(0, y + 0.12, d / 2 + 0.07)
+      const word = carve('APOTHECARY', (w * 0.55 - 0.15) / 68, 0.03, signMat)
+      word.position.z = 0.03 // standing proud of the board, not flush with its face (they'd z-fight)
+      board.add(word)
+      h.m.root.add(board)
+      parts.push({ root: board, mat: board.material })
+    }
     h.wares = POTS.map((k, i) => {
       const m = add(k, 1, h.x + i * 1.8 - 0.9, h.y, h.z - h.rd / 2 + 0.9).root
       m.scale.setScalar(2.2)
@@ -3069,14 +3151,14 @@ function frame() {
     const r = 30 / Math.min(1, camera.aspect)
     camera.position.set(W.x + Math.sin(t / 9) * r, W.y + 4, W.z + Math.cos(t / 9) * r)
     camera.lookAt(W.x, W.y + 7, W.z)
-    word.position.set(W.x, W.y + 8, W.z).lerp(camera.position, 0.1)
-    word.lookAt(camera.position)
-    word.rotateY(Math.sin(t / 2) * 0.4)
+    banner.position.set(W.x, W.y + 8, W.z).lerp(camera.position, 0.1)
+    banner.lookAt(camera.position)
+    banner.rotateY(Math.sin(t / 2) * 0.4)
     fire.children.map((f, i) => (f.scale.y = (5 + i * 0.7) * (0.8 + 0.3 * Math.sin(t * (9 + i) + i * 7))))
     fire.rotation.y = t * 3
     burst(W, new THREE.Color().setHSL(R() * 0.1, 1, 0.55), 2)
     bits.slice(-2).map((b) => b.v.multiply({ x: 0.5, y: 2.4, z: 0.5 }))
-    torchLight.position.copy(word.position).lerp(camera.position, 0.15).y -= 3
+    torchLight.position.copy(banner.position).lerp(camera.position, 0.15).y -= 3
     torchLight.intensity = 90 * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
   } else if (fps && !aim && !show) {
     // first person: just in front of the warrior's face, following his head (he's still drawn, so his arms and
@@ -3116,7 +3198,7 @@ function frame() {
   renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }
-const word = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.3, 1.2), new THREE.MeshLambertMaterial({ emissive: '#310', fog: false }), 999)
+const banner = carve('WELLFIRE', 0.45, 0.8, new THREE.MeshLambertMaterial({ emissive: '#310', fog: false })) // the title, over the home well
 const fire = new THREE.Group()
 for (let i = 0; i < 12; i++) {
   const f = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1, 5).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(i * 0.011, 1, 0.5), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }))
@@ -3125,17 +3207,8 @@ for (let i = 0; i < 12; i++) {
 }
 fire.position.set(W.x, W.y + 3, W.z)
 scene.add(fire)
-{
-  const c = document.createElement('canvas').getContext('2d')
-  c.font = '900 13px serif'
-  c.fillText('WELLFIRE', 0, 12)
-  const d = c.getImageData(0, 0, 80, 14).data
-  let n = 0
-  for (let y = 0; y < 14; y++) for (let x = 0; x < 80; x++) if (d[(y * 80 + x) * 4 + 3] > 99) word.setMatrixAt(n, new THREE.Matrix4().makeTranslation(x * 0.3 - 11, 2 - y * 0.3, 0)), word.setColorAt(n++, new THREE.Color().setHSL(0.15 - y * 0.011, 1, 0.55))
-  word.count = n
-  word.position.set(W.x, W.y + 8, W.z)
-  scene.add(word)
-}
+banner.position.set(W.x, W.y + 8, W.z)
+scene.add(banner)
 let dawn = 0.15
 let morn = 0
 let title = 1
@@ -3151,7 +3224,7 @@ for (const ev of ['keydown', 'pointerdown'])
       if (!title) return
       title = 0
       morn = clock.elapsedTime
-      scene.remove(word, fire)
+      scene.remove(banner, fire)
       hide('')
       $('tip').style.opacity = ''
       audio.start()
