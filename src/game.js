@@ -939,7 +939,7 @@ let item
 // damage and the burn) and lights the night. Unlit, it's a weak club. A torch burns for FUEL seconds (the orange bar),
 // then it's spent and leaves the bag; take another from the slot, or craft one (a wood and a flint). Water douses it.
 // In the boat the lit torch stands in the bow post.
-const FUEL = 150
+const FUEL = 90 // a minute and a half: enough for a cave run (the 6×6 maze and its guard) if lit at the mouth
 let lit = 0
 let arm = 0 // the weapon last in hand: it goes on his back while he holds an item (wood, flint) up in both hands
 let fuel = FUEL

@@ -58,7 +58,7 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   breaks rocks for coins and, rarely, flint. In a village you craft: a torch from a wood and a flint, plus wood,
   flint, a boat, potions and the roc's whistle for gold and wood. Townsfolk talk.
 - **Night.** A 3-minute day. Nights are near-black, so the torch matters: lit, it lights the way, sets monsters
-  alight and scares slimes and spiders back (bats are drawn to it), and it burns down.
+  alight and scares slimes and spiders back (bats are drawn to it), and it burns down in 90 seconds.
 - **Caves.** Each village has a cave out in its wilds, sealed by a boulder that takes 8 axe blows. Inside, with a lit
   torch, is a seeded 6×6 maze of dead ends with roamers, and in its farthest cell a sunstone guarded by six
   creatures and a boss. The sunstone is yours once its guard is dead (roamers don't count), and taking it wakes the cave: every creature
