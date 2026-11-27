@@ -1700,7 +1700,6 @@ var village
   const glow = new THREE.PointLight('#ffb070', 0, 16, 1.2)
   scene.add(glow)
   const BLACK = new THREE.Color(0)
-  let yaw = 0 // the outdoor camera angle, kept while indoors
 
   village = {
     fade,
@@ -1721,7 +1720,6 @@ var village
       fade(() => {
         player.room = h
         player.floor = h.y
-        yaw = camYaw
         player.pos.set(h.x, h.y, h.z + h.rd / 2 - 0.9)
         player.vel.set(0, 0)
         player.dir = Math.PI
@@ -1733,10 +1731,10 @@ var village
       const h = player.room
       fade(() => {
         player.room = player.floor = null
-        camYaw = yaw
         player.pos.set(h.out[0], h.ty, h.out[1])
         player.vel.set(0, 0)
-        player.dir = h.ry
+        player.dir += h.ry // he comes out facing the way he faced inside (the room's door side is the house's): backing out faces the house
+        camYaw = player.dir + Math.PI
         camera.position.set(h.out[0] + Math.sin(camYaw) * 7, h.ty + 7.5, h.out[1] + Math.cos(camYaw) * 7)
       })
     },
