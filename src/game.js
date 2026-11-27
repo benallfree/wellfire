@@ -830,8 +830,14 @@ function saveSeen() {
 addEventListener('pagehide', saveSeen)
 // a tab out of sight also gives back its WebGL context (a retina canvas with antialiasing and the shadow map holds a few
 // hundred MB of GPU memory, and every open game tab held it until closed), and takes it again when shown: three.js
-// uploads everything afresh. Leaving or reloading the page hides it first, so that frees it at once too
-document.addEventListener('visibilitychange', () => (document.hidden && saveSeen(), renderer[document.hidden ? 'forceContextLoss' : 'forceContextRestore']()))
+// uploads everything afresh. Leaving or reloading the page hides it first, so that frees it at once too.
+// Loss and restore land later as events, so a quick hide/show can cross them (a restore asked for before the loss
+// arrived is refused, and so is one asked for inside the loss event, and the canvas stays blank): whenever the tab or
+// the context changes, bring the context in line with the tab, lost when hidden and live when shown
+const glSync = () => document.hidden == renderer.getContext().isContextLost() || renderer[document.hidden ? 'forceContextLoss' : 'forceContextRestore']()
+document.addEventListener('visibilitychange', () => (document.hidden && saveSeen(), glSync()))
+renderer.domElement.addEventListener('webglcontextlost', () => setTimeout(glSync))
+renderer.domElement.addEventListener('webglcontextrestored', glSync)
 const tiles = new Map()
 // explored chunks (key -> [cx, cz]): the maps walk these instead of every chunk in view, so empty ground costs nothing
 const known = new Map()
