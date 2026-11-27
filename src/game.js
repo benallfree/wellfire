@@ -1756,9 +1756,12 @@ var village
       const h = player.room
       if (h) {
         if (p.z > h.z + h.rd / 2 - 0.3) this.leave()
-        // a fixed room camera, warm firelight, no sky
-        camera.position.set(h.x + (p.x - h.x) * 0.3, h.y + 5.5, h.z + h.rd / 2 + 3.2)
-        camera.lookAt(h.x + (p.x - h.x) * 0.3, h.y + 0.6, h.z - 0.4)
+        // the room turns with him: the camera swings round behind his facing (camYaw, eased as outdoors), high over
+        // the open-topped room and kept over its floor so no wall gets between; warm firelight, no sky
+        const sx = Math.sin(camYaw)
+        const sz = Math.cos(camYaw)
+        camera.position.set(Math.max(h.x - h.rw / 2, Math.min(h.x + h.rw / 2, p.x + sx * 2.6)), h.y + 5.5, Math.max(h.z - h.rd / 2, Math.min(h.z + h.rd / 2 + 2, p.z + sz * 2.6)))
+        camera.lookAt(p.x - sx, h.y + 0.6, p.z - sz)
         glow.intensity = 30 * (1 + Math.sin(clock.elapsedTime * 13) * 0.08)
         sun.intensity = 0
         hemi.intensity = 0.7
