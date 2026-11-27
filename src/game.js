@@ -2728,7 +2728,7 @@ function hurt(e, dmg, from, push) {
 function bigDraw() {
   const c = $('big')
   if (player.cave) return (c.hidden = true) // walking into a cave shuts it: underground there's no map
-  if (c.width != innerWidth || c.height != innerHeight) (c.width = innerWidth), (c.height = innerHeight) // resizing clears and reallocates it
+  if (c.width != c.clientWidth || c.height != c.clientHeight) (c.width = c.clientWidth), (c.height = c.clientHeight) // resizing clears and reallocates it
   const W = c.width
   const H = c.height
   // everything explored, you, the start and the guides' hints, all on one screen, centred on the lot
