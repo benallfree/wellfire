@@ -42,7 +42,7 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood or flint; at a well, set or take the beam |
 | F or Tab | swap to the next item (the torch isn't in the swap: it has its own hand) |
 | 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle). The torch slot (3) lights the torch in the left hand, or puts it out, and leaves the weapon in the right |
-| 0 | crafting (in a village) |
+| 0 | crafting (in a village); while it is open, 1–8 (or a tap on a slot) crafts that slot's item instead of taking it in hand |
 | R | ride or leave a mount, let go of a beam |
 | N | the big map (Esc closes it) |
 | M or ♪ | sound on and off |

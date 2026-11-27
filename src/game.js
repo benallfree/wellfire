@@ -617,7 +617,8 @@ function hud() {
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
 // weapon swings, wood and flint are thrown, a potion is drunk, the whistle is blown). The last slot (key 0) opens crafting: recipes (tap one; only in a village; a recipe's
-// inputs can include gold, so buying wood or flint is a gold-only recipe), and tapping two slots swaps them (keys still pick). The game
+// inputs can include gold, so buying wood or flint is a gold-only recipe); while it is open a slot's key or a tap on it crafts
+// that slot's item instead of taking it in hand. The game
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { recipes: RECIPES, materials: MATS } = lib.tray
 // the apothecary's wares: a healing potion and a speed potion (models.json "haste" vars: speed times walking, for time
@@ -653,7 +654,6 @@ const ICON = { pack: 'craft' }
 }
 $('gold').insertAdjacentHTML('afterbegin', ICON.gold)
 const belt = kept('warriorSlots', lib.tray.slots).map((k) => (k == 'boat' ? 'haste' : k)) // the boat's slot went to the speed potion
-let pick = -1
 const place = (k) => belt.includes(k) || belt.push(k)
 lib.tray.slots.map(place)
 const bag = kept('warriorBag', {})
@@ -688,24 +688,20 @@ const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
-      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] || (k == 'torch' && lit) : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
+      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${k == ITEMS[player.item] || (k == 'torch' && lit) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
       .map(([k, r]) => `<b data-r=${k} class=${has(r) && village?.in ? '' : 'off'}>${ICON[k]} ${lib[k].vars.name} = ${Object.entries(r).map(([m, n]) => n + ICON[m]).join(' + ')}</b>`)
       .join('') +
     (village?.in ? '' : '<br>Craft in a village') +
-    '<br>tap two slots to swap'
+    '<br>press a slot\'s number (or tap it) to craft it'
 }
-const pack = () => (($('inv').hidden ^= 1), (pick = -1), tray())
-function slot(i, tap) {
+const pack = () => (($('inv').hidden ^= 1), tray())
+function slot(i) {
   const k = belt[i]
   if (!(i in belt)) return i == belt.length && pack()
-  if (tap && !$('inv').hidden) {
-    if (pick >= 0) [belt[i], belt[pick]] = [belt[pick], belt[i]], keep('warriorSlots', belt), (i = -1)
-    pick = i
-    return tray()
-  }
+  if (!$('inv').hidden) return RECIPES[k] ? craft(k) : say("Can't craft that") // the craft menu is open: the slot crafts its item
   if (k == 'torch') bag.torch ? light() : craft() // the torch isn't held in the weapon hand: its slot lights it or puts it out
   if (POTS.includes(k) && !bag[k]) say('No potion: buy one at the apothecary')
   if (k == 'whistle' && !bag.whistle) craft('whistle')
@@ -721,7 +717,7 @@ function gain(k, n) {
 const say = (t) => (($('tip').textContent = t), $('tip').animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], 2500))
 $('tray').onpointerdown = (e) => {
   const b = e.target.closest('b')
-  if (b) slot(+b.dataset.s, 1)
+  if (b) slot(+b.dataset.s)
 }
 $('inv').onpointerdown = (e) => {
   const b = e.target.closest('b')
