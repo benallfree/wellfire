@@ -8964,8 +8964,9 @@
     "size": 6,
     "cell": 5,
     "wall": 3.2,
-    "wallColor": "4a443e",
-    "floorColor": "231e1a",
+    "wallColor": "6a6058",
+    "floorColor": "3a322a",
+    "roofColor": "2e2a26",
     "guards": 6
   },
   "talk": {

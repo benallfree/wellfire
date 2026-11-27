@@ -2073,15 +2073,62 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
 // ---------- caves: in at an opened mouth with a lit torch; inside, a dark seeded maze, its sunstone at the far end ----------
 // The maze is built at CAVE.depth under the entrance, so the world above carries on unseen: everyone in it stands on
 // its floor and meets its walls only, and the surface's spawning, swimming, map, mounts and villages leave them be.
-const caveRock = new THREE.MeshLambertMaterial({ color: '#' + CAVE.wallColor })
-const caveFloor = new THREE.MeshLambertMaterial({ color: '#' + CAVE.floorColor })
-const brick = new THREE.BoxGeometry(1, 1, 1)
+// rough rock, drawn once into a small tiling texture: a base colour mottled with lighter and darker flecks and a few
+// cracks; walls, floor and roof each get their own shade
+function rock(c) {
+  const v = document.createElement('canvas')
+  v.width = v.height = 64
+  const g = v.getContext('2d')
+  const k = new THREE.Color('#' + c)
+  g.fillStyle = '#' + k.getHexString()
+  g.fillRect(0, 0, 64, 64)
+  g.globalAlpha = 0.25 // soft patches
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = '#' + k.clone().multiplyScalar(0.6 + R() * 0.8).getHexString()
+    g.beginPath()
+    g.arc(R() * 64, R() * 64, 3 + R() * 9, 0, 7)
+    g.fill()
+  }
+  g.globalAlpha = 1 // grit
+  for (let i = 0; i < 500; i++) {
+    g.fillStyle = '#' + k.clone().multiplyScalar(0.7 + R() * 0.6).getHexString()
+    g.fillRect(R() * 64, R() * 64, 1 + R() * 2, 1 + R() * 2)
+  }
+  g.strokeStyle = '#' + k.clone().multiplyScalar(0.45).getHexString()
+  g.lineWidth = 0.6
+  for (let i = 0; i < 6; i++) { // a few short hairline cracks
+    let x = R() * 64
+    let y = R() * 64
+    g.beginPath()
+    g.moveTo(x, y)
+    for (let j = 0; j < 3; j++) g.lineTo((x += R() * 12 - 6), (y += R() * 10))
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(v)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  t.colorSpace = THREE.SRGBColorSpace
+  return new THREE.MeshLambertMaterial({ map: t })
+}
+const caveRock = rock(CAVE.wallColor)
+const caveFloor = rock(CAVE.floorColor)
+const caveRoof = rock(CAVE.roofColor)
+// a box whose texture tiles every 2 units on each face, rather than stretching across it
+function slab(w, h, d) {
+  const b = new THREE.BoxGeometry(w, h, d)
+  const uv = b.attributes.uv
+  for (let i = 0; i < uv.count; i++) {
+    const f = (i / 4) | 0 // faces: +x -x +y -y +z -z
+    uv.setXY(i, (uv.getX(i) * (f < 2 ? d : w)) / 2, (uv.getY(i) * (f > 1 && f < 4 ? d : h)) / 2)
+  }
+  return b
+}
 // the sunstone taken (or, in an older save, its thunder egg cracked)
 const got = (T) => {
   const p = den(T.gi, T.gj)
   return felled.gems?.[T.k] || (p && felled[Math.floor(p[0] / CH) + ',' + Math.floor(p[1] / CH)]?.['e' + T.k])
 }
 let dark // said once per visit to a mouth without a lit torch
+const lens = (fov, near) => ((camera.fov = fov), (camera.near = near), camera.updateProjectionMatrix()) // wide and close in first person
 function caves() {
   const p = player.pos
   const K = player.cave
@@ -2155,19 +2202,24 @@ function enter(c) {
       if (!(L[[i, j]] & 2)) walls.push([X + i * S, Z + j * S + S / 2, S / 2 + 0.3, 0.3])
     }
   const g = new THREE.Group()
-  const w = new THREE.InstancedMesh(brick, caveRock, walls.length)
-  const o = new THREE.Object3D()
-  walls.forEach(([x, z, hw, hd], k) => {
-    o.position.set(x, y + H / 2, z)
-    o.scale.set(hw * 2, H, hd * 2)
-    o.updateMatrix()
-    w.setMatrixAt(k, o.matrix)
-  })
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(n * S + 1, n * S + S).rotateX(-90 * DEG), caveFloor)
-  floor.position.set(X + ((n - 1) * S) / 2, y, Z + ((n - 2) * S) / 2)
-  g.add(w, floor)
+  for (const [x, z, hw, hd] of walls) {
+    const w = new THREE.Mesh(slab(hw * 2, H, hd * 2), caveRock)
+    w.position.set(x, y + H / 2, z)
+    g.add(w)
+  }
+  // floor and roof: one sheet each over the whole maze (and the way out), the roof face down
+  for (const [m, up] of [[caveFloor, 0], [caveRoof, 1]]) {
+    const q = new THREE.PlaneGeometry(n * S + 1, n * S + S).rotateX((up ? 90 : -90) * DEG)
+    const uv = q.attributes.uv
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * n * S) / 2, (uv.getY(i) * n * S) / 2)
+    const f = new THREE.Mesh(q, m)
+    f.position.set(X + ((n - 1) * S) / 2, y + up * H, Z + ((n - 2) * S) / 2)
+    g.add(f)
+  }
   scene.add(g)
   const K = (player.cave = { c, x: X, z: Z, y, walls, g })
+  player.g.visible = false
+  lens(70, 0.05)
   for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
   player.floor = y
   player.pos.set(X, y, Z - S / 2 + 0.6)
@@ -2196,8 +2248,10 @@ function leave() {
   const K = player.cave
   const { mouth, ry } = K.c
   scene.remove(K.g)
-  K.g.children[1].geometry.dispose()
+  K.g.traverse((o) => o != K.gem && o.geometry?.dispose()) // (the sunstone's model is shared)
   player.cave = player.floor = null
+  player.g.visible = true
+  lens(45, 0.5)
   for (const e of [...foes]) e.cave && spawn(e) // the guardians stay down there; the surface fills up again
   village.glow.intensity = 0
   player.pos.set(mouth[0] + Math.sin(ry) * 7, 0, mouth[1] + Math.cos(ry) * 7) // a few steps out: clear of the mouth (or you'd walk straight back in), and the camera behind you clears the mound
@@ -2538,7 +2592,7 @@ function frame() {
   const open = !$('big').hidden
   if (open && !player.seat?.alt) return bigDraw(), requestAnimationFrame(frame) // paused, unless flying
   if (!$('say').hidden) return requestAnimationFrame(frame)
-  const tank = chase && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves
+  const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
   const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
   if (!tank) camYaw += q * dt * 2
 
@@ -2631,6 +2685,7 @@ function frame() {
     player.hp = player.maxHp
     player.air = 1
     player.once = null
+    if (player.cave) leave() // a fall underground wakes you at home, the cave left behind
     player.pos.copy(bed)
     if (player.boat) (player.boat = player.floor = null), village.stow(0)
     hud()
@@ -2838,6 +2893,10 @@ function frame() {
     bits.slice(-2).map((b) => b.v.multiply({ x: 0.5, y: 2.4, z: 0.5 }))
     torchLight.position.copy(word.position).lerp(camera.position, 0.15).y -= 3
     torchLight.intensity = 90 * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
+  } else if (player.cave) {
+    // underground the view is first person: from the warrior's eyes, along the way he faces (he isn't drawn)
+    camera.position.set(target.x, target.y + 1.5, target.z)
+    camera.lookAt(target.x + Math.sin(player.dir), target.y + 1.4, target.z + Math.cos(player.dir))
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
     camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))

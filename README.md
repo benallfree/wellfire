@@ -969,7 +969,11 @@ guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and
   fades and you're underground: the maze is built `depth` (80) units below the entrance, so the world above carries on
   unseen. Everyone inside stands on the cave floor and meets only its walls; the surface's creatures are gone, nothing
   spawns, and swimming, the minimap, the big map, mounts, the roc and the villages don't reach you. There's no sun or
-  sky, only your torch (and the sunstone's glow), and the fog closes in at 18 units.
+  sky, only your torch (and the sunstone's glow), and the fog closes in at 18 units. The view is first person, from
+  the warrior's eyes (he isn't drawn), with a wider lens (70°, near plane 0.05); A/D or a drag turn, W/S walk. Walls,
+  floor and roof are rough rock, each a 64-pixel texture drawn in code at load (`rock()`: mottled patches, grit,
+  hairline cracks) and tiled every 2 units on every face (`slab()`), so nothing stretches. A fall underground wakes
+  you at home, the cave left behind.
 - **The maze.** A perfect maze on a `size` x `size` grid (6 x 6) of `cell`-unit cells (5), carved by a recursive
   backtracker seeded by the village, so it's the same every visit and full of dead ends. Walls are `wall` (3.2) high,
   one instanced mesh. You start in the corner cell; the way out is the gap behind you.
