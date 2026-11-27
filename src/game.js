@@ -1440,15 +1440,19 @@ var village
       houses.push({ m, x, z, ry, w, d, ty: T.y, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d })
     }
 
-    // the first house is the apothecary: a big bottle by its door, a shopkeeper inside with the two potions for sale either side
+    // the first house is the apothecary: a shopkeeper inside with the two potions for sale either side, and outside under
+    // each front window a shelf of samples, speed (teal) left of the door and healing (red) right. They sit inside the
+    // house's collider margin (0.4) and clear of the door's trigger (0.6 either side).
     const h = houses[0]
     h.shop = 1
     h.wares = POTS.map((k, i) => {
       const m = add(k, 1, h.x + i * 1.8 - 0.9, h.y, h.z - h.rd / 2 + 0.9).root
       m.scale.setScalar(2.2)
+      const e = (i * 2 - 1) * (h.w / 4 + 0.25)
+      const f = add('shelf', 1, h.x + Math.cos(h.ry) * e + Math.sin(h.ry) * h.d / 2, T.y, h.z - Math.sin(h.ry) * e + Math.cos(h.ry) * h.d / 2, h.ry).root
+      for (let j = 0; j < 6; j++) f.add(add(k, 1, (j % 3) * 0.26 - 0.26, 0.5 + (j > 2) * 0.5, 0.15).root)
       return [k, m]
     })
-    add('potion', 1, h.out[0] + Math.cos(h.ry) * 1.4, T.y, h.out[1] - Math.sin(h.ry) * 1.4).root.scale.setScalar(4)
 
     // fence ring, open at the gates
     {

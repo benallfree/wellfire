@@ -8536,6 +8536,43 @@
       }
     ]
   },
+  "shelf": {
+    "parts": [
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "6a4428",
+        "position": [
+          0.37,
+          0.6,
+          0.15
+        ],
+        "size": [
+          0.06,
+          1.2,
+          0.3
+        ],
+        "mirror": true
+      },
+      {
+        "shape": "box",
+        "bone": "root",
+        "color": "8a5a3a",
+        "position": [
+          0,
+          "{.47+i*.5}",
+          0.15
+        ],
+        "size": [
+          0.8,
+          0.05,
+          0.3
+        ],
+        "repeat": 2,
+        "var": "i"
+      }
+    ]
+  },
   "tray": {
     "icons": {
       "size": 80,
