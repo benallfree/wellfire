@@ -55,8 +55,8 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
 
 - **Getting by.** Health comes back in villages, not in the wilds; out there you eat berries from bushes (a tenth of
   your health, regrowing in 4 minutes) or drink potions. Kills spill gold; swinging the axe fells trees for wood and
-  breaks rocks for coins and, rarely, flint. In a village you craft: a torch from a wood and a flint, plus wood,
-  flint, a boat, potions and the roc's whistle for gold and wood. Townsfolk talk.
+  breaks rocks for coins or, about one time in three, flint. In a village you craft: a torch from a wood and a
+  flint, plus wood, flint, a boat, potions and the roc's whistle for gold and wood. Townsfolk talk.
 - **Night.** A 3-minute day. Nights are near-black, so the torch matters: lit, it lights the way, sets monsters
   alight and scares slimes and spiders back (bats are drawn to it), and it burns down in 90 seconds.
 - **Caves.** Each village has a cave out in its wilds, sealed by a boulder that takes 8 axe blows. Inside, with a lit
