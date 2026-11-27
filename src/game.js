@@ -1297,7 +1297,7 @@ function spawn(f) {
     }
   }
   if (!kind) return
-  foe(kind, x, z)
+  const e = foe(kind, x, z)
   if (kind == 'goblin' && R() < 0.2) seat(e, addMount(MOUNTS[region(x, z)], seedNext++, x, z)) // a goblin rider
 }
 for (let i = crowd(); i > 0; i--) spawn() // as many as the place calls for: few near home
