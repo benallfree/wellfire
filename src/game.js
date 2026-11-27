@@ -615,9 +615,10 @@ function hud() {
 // keeps running while it is open. The bag (counts) and the slot layout are kept in localStorage.
 const { recipes: RECIPES, materials: MATS } = lib.tray
 // the apothecary's wares: a healing potion and a speed potion (models.json "haste" vars: speed times walking, for time
-// seconds, on foot and swimming, not riding; the teal bar). In the shop Space buys a healing potion, and either
-// potion's tray slot (key or tap) buys one of that kind
+// seconds, on foot and swimming, not riding; the teal bar). In the shop a potion's tray slot (key or tap) picks it
+// (`ware`, lit in the tray) and Space buys one of it; Space with none picked lists the wares
 const POTS = ['haste', 'potion']
+let ware
 const HASTE = lib.haste.vars
 let haste = 0 // seconds of speed left
 const wares = () => POTS.map((k) => `${belt.indexOf(k) + 1} ${lib[k].vars.name} ${RECIPES[k].gold} gold`).join(' · ')
@@ -672,7 +673,7 @@ const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
-      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
+      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == (player.room?.shop ? ware : ITEMS[player.item]) : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
@@ -691,7 +692,7 @@ function slot(i, tap) {
     return tray()
   }
   if (k == 'torch' && !bag.torch) craft()
-  if (POTS.includes(k) && player.room?.shop) return craft(k) // in the apothecary a potion's slot buys one
+  if (POTS.includes(k) && player.room?.shop) return (ware = k), tray(), say(`${lib[k].vars.name} · ${RECIPES[k].gold} gold · Space to buy`)
   if (POTS.includes(k) && !bag[k]) say('No potion: buy one at the apothecary')
   if (k == 'whistle' && !bag.whistle) craft('whistle')
   if (ITEMS.includes(k)) equip(ITEMS.indexOf(k), 1)
@@ -1619,13 +1620,15 @@ var village
         player.vel.set(0, 0)
         player.dir = Math.PI
         glow.position.set(h.x, h.y + 1.2, h.z - h.rd / 2 + 1.2)
-        if (h.shop) say('Apothecary · ' + wares())
+        if (h.shop) (ware = 0), say('Apothecary · ' + wares())
+        tray()
       })
     },
     leave() {
       const h = player.room
       fade(() => {
         player.room = player.floor = null
+        tray()
         camYaw = yaw
         player.pos.set(h.out[0], h.ty, h.out[1])
         player.vel.set(0, 0)
@@ -2624,7 +2627,7 @@ addEventListener('touchend', (e) => {
 // ---------- combat ----------
 function attack() {
   if (player.seat) return buck()
-  if (player.room?.shop) return craft('potion')
+  if (player.room?.shop) return ware ? craft(ware) : say('Pick a potion: ' + wares())
   if (well && !beacon[well.k]?.[2] && (beacon[well.k] || bag.sunstone || !village?.chat)) return beacon[well.k] ? (aim = well) : setTorch() // at a well, Space lights or takes the beam
   if (village?.chat) return village.speak()
   const k = ITEMS[player.item]

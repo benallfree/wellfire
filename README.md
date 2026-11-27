@@ -57,7 +57,7 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   flint, plus wood, flint and the roc's whistle for gold and wood. Townsfolk talk.
 - **The apothecary**, the first house in each village (a big bottle by its door), sells two potions: healing (250
   gold, +30 health) and speed (150 gold: 1.6× walking and swimming speed for 30 s, not on a mount; a teal bar under
-  the torch's counts it down). Inside, its slot (key or tap) buys one of that kind, and Space buys a healing potion.
+  the torch's counts it down). Inside, a potion's slot (key or tap) picks it and Space buys one; Space with none picked lists them.
   Drink either from the tray like any item (Space).
 - **Night.** A 3-minute day. Nights are near-black, so the torch matters: lit, it lights the way, sets monsters
   alight and scares slimes and spiders back (bats are drawn to it), and it burns down in 90 seconds.

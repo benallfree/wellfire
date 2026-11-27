@@ -8722,7 +8722,7 @@
     "aim": "Aim $'s beam at the star ✦",
     "explore": "Explore: find a village and its cave",
     "sage": "Ask $'s sage where its cave lies",
-    "buy": "Buy: $",
+    "buy": "Pick a potion, then Space to buy: $",
     "aimHere": "Space · aim the beam at the star",
     "set": "Space · set the torch and sunstone in the beacon",
     "talk": "Space · talk",
