@@ -2151,6 +2151,10 @@ function rock(c) {
 const caveRock = rock(CAVE.wallColor)
 const caveFloor = rock(CAVE.floorColor)
 const caveRoof = rock(CAVE.roofColor)
+// the way out: the day (or a moonlit blue) beyond the mouth, unfogged so it shows from deep in, and a little of it spilling in
+const mouthMat = new THREE.MeshBasicMaterial({ fog: false, vertexColors: true })
+const daylit = new THREE.PointLight(0, 0, 12, 1)
+scene.add(daylit)
 // a box whose texture tiles every 2 units on each face, rather than stretching across it
 function slab(w, h, d) {
   const b = new THREE.BoxGeometry(w, h, d)
@@ -2282,6 +2286,11 @@ function enter(c) {
     f.position.set(X + ((n - 1) * S) / 2, y + up * H, Z + ((n - 2) * S) / 2)
     g.add(f)
   }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(3 * S, H, 1, 2), mouthMat) // sky down to the horizon, then the ground
+  m.geometry.setAttribute('color', new THREE.Float32BufferAttribute([...Array(12).fill(1), 0.4, 0.6, 0.3, 0.4, 0.6, 0.3], 3))
+  m.position.set(X, y + H / 2, Z - S)
+  g.add(m)
+  daylit.position.set(X, y + 1.5, Z - S / 2 - 0.5)
   scene.add(g)
   const K = (player.cave = { c, x: X, z: Z, y, walls, g })
   for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
@@ -2973,6 +2982,9 @@ function frame() {
   hemi.color.set('#dfefff').multiply(LITE)
   sun.intensity = 0.2 + 2.2 * day
   hemi.intensity = 0.03 + day * 1.27
+  mouthMat.color.lerpColors(MOON, DAY, day).multiplyScalar(0.3 + day * 1.5) // a glare by day, a dim blue by night
+  daylit.color.copy(mouthMat.color)
+  daylit.intensity = player.cave ? 6 : 0
   // underground: no sun, no sky, only your torch (and the sunstone's glow); the dark closes in fast
   if (player.cave) (day = 0), (sun.intensity = 0), (hemi.intensity = 0.05), sky.setRGB(0, 0, 0), scene.fog.color.setRGB(0, 0, 0), (scene.fog.near = 3), (scene.fog.far = 18)
 
