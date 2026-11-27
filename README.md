@@ -17,6 +17,9 @@ mangled, and every model, animation and song is plain text compiled in the page 
 |---|---|
 | ![Riding a drake in first person: its horned head below, fire bursting ahead, a torch in hand](docs/screens/drake-fire.jpg) | ![Soaring on the roc over a lake and its islands](docs/screens/roc-flight.jpg) |
 | ![First person in a cave maze by torchlight: the sunstone glows at the end, its guards close in](docs/screens/cave-guard.jpg) | ![The village by torchlight at night](docs/screens/village-night.jpg) |
+| ![A horde by day: goblins, slimes, a spider and a drake-riding goblin around the warrior, sparks and coins flying](docs/screens/horde-day.jpg) | ![A horde at night, ringed in torchlight](docs/screens/horde-night.jpg) |
+
+![Four villages' sunstone beams meet at the star over a red late-game sky](docs/screens/beams-red-sky.jpg)
 
 ## Quick start
 
