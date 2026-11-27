@@ -665,9 +665,24 @@ const CELL = 8 // reveal cell, in units
 const SIGHT = 36 // reveal radius, in units
 const seen = new Set(kept('warriorSeen', '').split(' ')) // kept as one space-separated string of cell keys
 let saved = seen.size
-const saveSeen = () => (keep('warriorSeen', [...seen].join(' ')), (saved = seen.size))
+let savedAt = 0
+// writing every cell is slow once a lot is explored, so it saves at most every 30 s, and when the page goes away
+const saveSeen = () => (keep('warriorSeen', [...seen].join(' ')), (saved = seen.size), (savedAt = performance.now()))
 addEventListener('pagehide', saveSeen)
+document.addEventListener('visibilitychange', () => document.hidden && saveSeen())
 const tiles = new Map()
+// explored chunks (key -> [cx, cz]): the maps walk these instead of every chunk in view, so empty ground costs nothing
+const known = new Map()
+const know = (key) => {
+  const [i, j] = key.split(',')
+  const cx = Math.floor((i * CELL) / CH)
+  const cz = Math.floor((j * CELL) / CH)
+  known.set(cx + ',' + cz, [cx, cz])
+}
+for (const key of seen) key && know(key)
+const dots = new Map() // a chunk's one colour, for a map too zoomed out for its picture, or while the picture waits
+let built = 0 // pictures made in this draw: a few per draw, so revealing or zooming out never stalls a frame
+let lim = 300 // pictures kept: grows to what a map shows
 const trail = []
 const hint = []
 const mapc = $('map').getContext('2d')
@@ -684,17 +699,20 @@ function paint(t, i, j) {
     for (let b = 0; b < CELL; b += UPP) {
       const x = i * CELL + a + 1
       const z = j * CELL + b + 1
-      const h = height(x, z)
-      const g = slope(x, z)
-      // relief: ground colour (rock and snow already mark the heights), a little brighter higher up, and hillshade
-      // lit from the north-west; water darkens with depth
-      if (h < WATER) sea(tc, WATER - h)
-      else ground(tc, x, z, h, g).multiplyScalar(Math.min(1.35, Math.max(0.5, 0.9 + h * 0.005 + (g[0] + g[1]) * 0.4)) * (region(x, z) == 1 ? 0.75 : 1)) // forest: darker
-      if (h >= WATER && road(x, z)[0] < RW + 1) tc.set('#e0b070') // roads stand out on the map
-      if (h >= WATER && inTown(x, z)) tc.set('#d8c49a')
-      t.ctx.fillStyle = '#' + tc.getHexString(THREE.LinearSRGBColorSpace) // no sRGB lift: keeps the map's contrast
+      t.ctx.fillStyle = col(x, z)
       t.ctx.fillRect((x - 1 - t.cx * CH) / UPP, (z - 1 - t.cz * CH) / UPP, 1, 1)
     }
+}
+function col(x, z) {
+  const h = height(x, z)
+  const g = slope(x, z)
+  // relief: ground colour (rock and snow already mark the heights), a little brighter higher up, and hillshade
+  // lit from the north-west; water darkens with depth
+  if (h < WATER) sea(tc, WATER - h)
+  else ground(tc, x, z, h, g).multiplyScalar(Math.min(1.35, Math.max(0.5, 0.9 + h * 0.005 + (g[0] + g[1]) * 0.4)) * (region(x, z) == 1 ? 0.75 : 1)) // forest: darker
+  if (h >= WATER && road(x, z)[0] < RW + 1) tc.set('#e0b070') // roads stand out on the map
+  if (h >= WATER && inTown(x, z)) tc.set('#d8c49a')
+  return '#' + tc.getHexString(THREE.LinearSRGBColorSpace) // no sRGB lift: keeps the map's contrast
 }
 function tile(cx, cz) {
   const key = cx + ',' + cz
@@ -704,6 +722,7 @@ function tile(cx, cz) {
     tiles.set(key, t)
     return t
   }
+  if (built++ > 3) return
   const n = CH / CELL
   const cells = []
   for (let i = cx * n; i < cx * n + n; i++) for (let j = cz * n; j < cz * n + n; j++) seen.has(i + ',' + j) && cells.push([i, j])
@@ -713,7 +732,7 @@ function tile(cx, cz) {
   t = { cx, cz, cv, ctx: cv.getContext('2d') }
   for (const [i, j] of cells) paint(t, i, j)
   tiles.set(key, t)
-  if (tiles.size > 150) tiles.delete(tiles.keys().next().value)
+  if (tiles.size > lim) tiles.delete(tiles.keys().next().value)
   return t
 }
 // the explored ground north-up on g (W x H pixels) around the player, k map pixels per tile pixel; the minimap and the
@@ -728,13 +747,25 @@ function chart(g, W, H, k) {
   const span = Math.ceil(Math.max(W, H) / u / CH / 2) + 1
   const cx = Math.floor(x / CH)
   const cz = Math.floor(z / CH)
-  for (let i = cx - span; i <= cx + span; i++)
-    for (let j = cz - span; j <= cz + span; j++) {
-      const t = tile(i, j)
-      const a = Math.round(sx(i * CH))
-      const b = Math.round(sz(j * CH))
-      if (t) g.drawImage(t.cv, a, b, Math.round(sx(i * CH + CH)) - a, Math.round(sz(j * CH + CH)) - b)
+  const big = CH * u > 5 // pictures only where a chunk is more than a few pixels across
+  let n = 0
+  built = 0
+  for (const [key, [i, j]] of known) {
+    if (Math.abs(i - cx) > span || Math.abs(j - cz) > span) continue
+    n++
+    const t = big && tile(i, j)
+    const a = Math.round(sx(i * CH))
+    const b = Math.round(sz(j * CH))
+    const w = Math.round(sx(i * CH + CH)) - a
+    const h = Math.round(sz(j * CH + CH)) - b
+    if (t) g.drawImage(t.cv, a, b, w, h)
+    else {
+      if (!dots.has(key)) dots.set(key, col(i * CH + CH / 2, j * CH + CH / 2))
+      g.fillStyle = dots.get(key)
+      g.fillRect(a, b, w, h)
     }
+  }
+  if (big) lim = Math.max(lim, n + 50)
   g.fillStyle = '#fff8'
   for (const [a, b] of trail) g.fillRect(sx(a) - 1, sz(b) - 1, 2, 2)
   g.fillStyle = '#fd4'
@@ -791,6 +822,7 @@ function reveal(x, z, R) {
       const key = i + ',' + j
       if (seen.has(key) || Math.hypot((i + 0.5) * CELL - x, (j + 0.5) * CELL - z) > R) continue
       seen.add(key)
+      know(key)
       const t = tiles.get(Math.floor((i * CELL) / CH) + ',' + Math.floor((j * CELL) / CH))
       if (t) paint(t, i, j)
     }
@@ -803,7 +835,7 @@ function minimap() {
   if (lastCell != pi + ',' + pj) {
     lastCell = pi + ',' + pj
     reveal(x, z, SIGHT + (player.seat?.alt || 0) * 1.5)
-    seen.size > saved + 99 && saveSeen()
+    seen.size > saved && performance.now() - savedAt > 3e4 && saveSeen()
     const last = trail[trail.length - 1]
     if (!last || Math.hypot(last[0] - x, last[1] - z) > 6) trail.push([x, z]) > 300 && trail.shift()
   }
@@ -2245,8 +2277,9 @@ function hurt(e, dmg, from, push) {
 // the big map (N), north-up and zoomed to the trail; see-through while flying, which keeps going under it
 function bigDraw() {
   const c = $('big')
-  const W = (c.width = innerWidth)
-  const H = (c.height = innerHeight)
+  if (c.width != innerWidth || c.height != innerHeight) (c.width = innerWidth), (c.height = innerHeight) // resizing clears and reallocates it
+  const W = c.width
+  const H = c.height
   const { x, z } = player.pos
   let e = 0
   for (const [a, b] of [...trail, ...hint, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
