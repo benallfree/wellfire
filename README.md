@@ -22,8 +22,7 @@ slot (7 potion, 8 whistle), 0 crafting · the torch is a weapon: taking it in ha
 at a well sets a torch and a sunstone in the beacon, then aims the beam (turn, W/S tilt; R lets go) · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
-or let go of a beam · C switches to the old free camera (WASD moves
-relative to the screen, Q/E turn the camera) · M or the ♪ button toggles sound.
+or let go of a beam · C switches between the high chase camera and a low one over the shoulder that shows more of the horizon and sky · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
 [Chase camera](#chase-camera).
 
@@ -979,8 +978,8 @@ guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and
   one instanced mesh. You start in the corner cell; the way out is the gap behind you.
 - **The sunstone.** Every cave has one (checked across the 17 villages around the start), in the cell most steps from
   the mouth (often 20-30 steps of winding), glowing. Its guard is packed into that cell and the one before it:
-  `guards` (6) goblins, spiders and slimes, plus one per locked beam, led by a boss: a great violet spider (1.8x
-  size, tinted; 4x health, 2x damage, longer reach, never shies from a torch). The sunstone can only be taken once the whole guard is dead; then it's the usual sunstone
+  `guards` (6) goblins, spiders and slimes, plus one per locked beam, led by a boss: a great tinted goblin, spider or
+  slime (picked by the cave's seed; 1.8x size, 4x health, 2x damage, longer reach, never shies from a torch). The sunstone can only be taken once the whole guard is dead; then it's the usual sunstone
   celebration. Taken, it's kept in `warriorFelled.gems` (an older save's cracked sunstone egg counts).
 - **Roamers.** The rest of the maze holds `roamers` (8) more, plus one per locked beam, one to a cell, away from the
   mouth and the den. They don't have to die for the sunstone.

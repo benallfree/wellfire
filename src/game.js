@@ -2242,14 +2242,14 @@ function enter(c) {
     const den2 = [end, from[end] || end]
     for (let k = 0; k <= CAVE.guards + done(); k++) {
       const [gx, gz] = at(den2[k % 2])
-      const e = dweller(k ? KINDS3[k % 3] : 'spider', gx + R() * 3 - 1.5, gz + R() * 3 - 1.5)
+      const e = dweller(KINDS3[k ? k % 3 : (R() * 3) | 0], gx + R() * 3 - 1.5, gz + R() * 3 - 1.5)
       e.guard = 1
       if (!k) {
-        // the boss: a great violet spider (just a spider, scaled and tinted), much tougher, hits harder, reaches further,
-        // and never shies from a torch
+        // the boss: a great tinted one of the cave's kinds (picked by the cave's seed), much tougher, hits harder,
+        // reaches further, and never shies from a torch
         e.boss = 1
         e.g.scale.setScalar(1.8)
-        e.m.mat.color.set('#c27aff')
+        e.m.mat.color.set(['#c27aff', '#ff7a6a', '#7affc0'][(R() * 3) | 0])
         e.hp = e.maxHp *= 4
         e.dmg *= 2
         e.reach += 0.8
@@ -2495,9 +2495,10 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyM') $('mute').onclick()
   if (e.code == 'KeyN' || (e.code == 'Escape' && !$('big').hidden)) bigMap()
   if (e.code == 'KeyR') mountUp()
-  if (e.code == 'KeyC') chase = !chase // chase camera (tank controls) or the old free camera
+  if (e.code == 'KeyC') low = !low // the chase camera, high or low over the shoulder
 })
-let chase = 1
+const chase = 1 // (tank controls always; the old free camera is gone)
+let low = 0
 let drag = 0 // mouse-drag turning, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
 addEventListener('pointermove', (e) => e.buttons && e.pointerType == 'mouse' && ((drag += e.movementX * 0.006), (tilt += e.movementY * 0.006)))
@@ -2898,8 +2899,12 @@ function frame() {
   if (tank) {
     let a = player.dir + Math.PI - camYaw
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
-    fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
-    fwd.y = player.cave ? target.y + 4.8 * back : Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
+    // high: a three-quarter view from 7 back; low (C): 3.5 back at head height and over the right shoulder, looking
+    // far ahead so the horizon and sky open up
+    const r = (low ? 3.5 : 7) * back
+    const sh = low ? 0.7 : 0
+    fwd.set(Math.sin(camYaw) * r - Math.cos(camYaw) * sh, 0, Math.cos(camYaw) * r + Math.sin(camYaw) * sh).add(target)
+    fwd.y = player.cave ? target.y + 4.8 * back : Math.max(target.y + (low ? 2 : 4.8) * back, height(fwd.x, fwd.z) + (low ? 0.8 : 1.5), WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
   if (title) {
     const r = 30 / Math.min(1, camera.aspect)
@@ -2921,7 +2926,7 @@ function frame() {
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
     camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
-    if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
+    if (tank) low ? camera.lookAt(target.x - Math.sin(camYaw) * 14 - Math.cos(camYaw) * 0.7, target.y + 1.9, target.z - Math.cos(camYaw) * 14 + Math.sin(camYaw) * 0.7) : camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
     else camera.lookAt(target.x, target.y + 1, target.z)
   }
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
