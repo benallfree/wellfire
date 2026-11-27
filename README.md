@@ -80,12 +80,15 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   each flight, or a minute after the call, ridden or not (a ridden roc comes down and sets you off).
 - **The hint line**, just above the tray. In yellow, the move you can make right here (ride, talk, crack the
   boulder, go into the cave, eat berries, break a rock, set or aim at a well, buy a potion), each gone for good once
-  you've made it. In white, the mission, with an arrow that turns to point the way: step by step until your first beam
-  is on the star (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat its guard, take
-  it out and back to the well, set it, aim), and after that only the next cave once you're near it.
-- **The end.** Five beams on the star start a light show and the end screen; the world goes on after.
+  you've made it. In white, the mission, with an arrow that turns to point the way: step by step until you set your
+  first sunstone in a beacon (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat its
+  guard, take it out and back to the well, set it), and after that you're on your own (the townsfolk still tell the way).
+- **Eyes, without end.** Five beams on the star shatter it in a light show, with a card of what you did. Then another
+  eye opens somewhere else in the sky. The sky clears to the first stage, and you keep everything you carry. The old
+  beams stay lit, pointing where the dead eye hung, and their wells and caves are spent, so each eye takes five new
+  villages. Each eye's creatures are a quarter tougher and richer than the last (models.json `eye.harder`).
 
-Progress (the map, felled trees and rocks, opened caves, sunstones, beams, the bag) is saved in `localStorage`.
+Progress (the map, felled trees and rocks, opened caves, sunstones, beams, the eye you're on, the bag) is saved in `localStorage`.
 
 ## How it's built
 

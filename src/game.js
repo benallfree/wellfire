@@ -660,13 +660,23 @@ bag.haste ||= 0
 bag.whistle ||= 0
 bag.sunstone ||= 0
 bag.torch ??= 1 // torches: one to start; each beacon keeps the one set in it
-// beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star]
+// beacons (see the beacons block): site key -> [beam azimuth, beam angle from straight up, locked on the star, the eye
+// it was locked on (missing: the first)]. Five beams on one eye shatter it and a new eye opens; old beams stay lit.
 const GOAL = 5
 const beacon = kept('warriorBeacons', {})
-const done = () => Object.values(beacon).filter((b) => b[2]).length
-// each locked beam is a stage (models.json stages): the sky tints, the creatures harden; the last is red
+let eye = kept('warriorEye', 1)
+const mine = (b) => b[2] && (b[3] || 1) == eye
+const done = () => Object.values(beacon).filter(mine).length
+if (done() >= GOAL) keep('warriorEye', ++eye) // shattered, but the show was cut short (or a save from before eyes)
+// each locked beam is a stage (models.json stages): the sky tints, the creatures harden; the last is red. Each new eye
+// starts at the first stage again, but its creatures are tougher and richer (models.json eye.harder, per eye)
 const STAGES = lib.stages
-let st = STAGES[Math.min(done(), GOAL - 1)]
+const stage = () => {
+  const s = { ...STAGES[Math.min(done(), GOAL - 1)] }
+  for (const k of ['hp', 'dmg', 'pay']) s[k] *= lib.eye.harder ** (eye - 1)
+  return s
+}
+let st = stage()
 DAY.set(st.day), NIGHT.set(st.night), LITE.set(st.light)
 const own = (m) => (m == 'gold' ? gold : bag[m])
 const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
@@ -1934,9 +1944,12 @@ function fells(dt) {
 // factor, which leaves its picture unchanged but keeps it inside the camera's range (it is also fattened, to be seen). Parallel beams all meet at their
 // vanishing point, the star. The fifth lock starts the light show and the end screen.
 const LOCK = 0.07 // the snap zone: a beam within ~4 degrees of the eye snaps onto it and locks
-const STAR = new THREE.Vector3().setFromSphericalCoords(1, (50 + hash(3, 4, SEED + 9) * 25) * DEG, hash(5, 6, SEED + 9) * 7)
+// each eye hangs somewhere of its own in the sky (the first where it always has, for older saves)
+const STAR = new THREE.Vector3()
+const hang = () => STAR.setFromSphericalCoords(1, (50 + hash(3, 4, SEED + 8 + eye) * 25) * DEG, hash(5, 6, SEED + 8 + eye) * 7)
+hang()
 // a locked beam points exactly at the eye, not merely within LOCK of it (older saves too)
-const onStar = (b) => ((b[0] = Math.atan2(STAR.x, STAR.z)), (b[1] = Math.acos(STAR.y)), (b[2] = 1))
+const onStar = (b) => ((b[0] = Math.atan2(STAR.x, STAR.z)), (b[1] = Math.acos(STAR.y)), (b[2] = 1), (b[3] = eye))
 const star = new THREE.Mesh(new THREE.OctahedronGeometry(1), new THREE.MeshBasicMaterial({ color: '#fff6c0', fog: false }))
 scene.add(star)
 const beamGeo = new THREE.CylinderGeometry(1.5, 0.45, 1, 8, 1, true).translate(0, 0.5, 0)
@@ -1949,10 +1962,11 @@ let show = 0 // seconds into the light show
 const siteAt = (k) => site(...k.split(',').map(Number))
 const top = (T) => new THREE.Vector3(T.x, T.y + 3.5, T.z) // the sunstone, over the well's roof
 const dir = (b) => ray.setFromSphericalCoords(1, b[1], b[0])
-// on load, a saved beam already inside the snap zone locks too (one let go there before the zone grew was saved unlocked)
-for (const b of Object.values(beacon)) (b[2] || dir(b).angleTo(STAR) < LOCK) && onStar(b)
+// on load, a saved beam already inside the snap zone locks too (one let go there before the zone grew was saved unlocked);
+// a beam locked on a shattered eye keeps pointing where that eye hung
+for (const b of Object.values(beacon)) (b[2] ? mine(b) : dir(b).angleTo(STAR) < LOCK) && onStar(b)
 keep('warriorBeacons', beacon)
-st = STAGES[Math.min(done(), GOAL - 1)]
+st = stage()
 DAY.set(st.day), NIGHT.set(st.night), LITE.set(st.light)
 function craft(k = 'torch') {
   const r = RECIPES[k]
@@ -1981,7 +1995,7 @@ function drink(k) {
 function setTorch() {
   if (!bag.sunstone) return say('A beacon needs a sunstone: ask the townsfolk where one sleeps')
   if (!bag.torch) return craft()
-  beacon[well.k] = [player.dir, 1.2, 0]
+  beacon[well.k] = [player.dir, 1.2, 0, eye]
   keep('warriorBeacons', beacon)
   lit = 0
   fuel = FUEL
@@ -2317,18 +2331,17 @@ function ware() {
   return w && far(w[1].position) < 1.8 && w[0]
 }
 const within = (r, f) => [...chunks.values()].some((c) => f(c).some((o) => far(o.position || o) < r))
-// the mission, from the save: [what to do, where (for the line's arrow), or nothing]. Until the first beam is on the
-// star it goes step by step (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat its
-// guard, take it out and back to the village's well, a torch, set them, aim); after that a cave is only named once
-// you're near it (the sage tells the way)
+// the mission, from the save: [what to do, where (for the line's arrow), or nothing]. Until the first sunstone is set
+// in a beacon it goes step by step (find the cave, crack the boulder, go in with a lit torch, find the sunstone and beat
+// its guard, take it out and back to the village's well, a torch, set them); after that you're on your own (the
+// townsfolk still tell the way)
 function goal() {
   const p = player.pos
   const K = player.cave
   const T = sites(p.x, p.z, 2)
     .filter((t) => !beacon[t.k]?.[2])
     .sort((a, b) => far(a) - far(b))[0]
-  if (done() >= GOAL) return []
-  for (const k in beacon) if (!beacon[k][2]) return [HINT.aim.replace('$', siteAt(k).name), top(siteAt(k))]
+  if (Object.keys(beacon).length) return []
   if (K) return K.gem ? [foes.some((e) => e.guard && e.hp > 0) && far(K.gem.position) < 12 ? HINT.guard : HINT.find, route(K, K.end)] : [HINT.leave, route(K)]
   if (bag.sunstone) return [bag.torch ? HINT.well.replace('$', T?.name) : HINT.torchFirst, T && top(T)]
   const V = sites(p.x, p.z, 2)
@@ -2339,7 +2352,6 @@ function goal() {
   const ry = Math.atan2(V.x - x, V.z - z)
   const at = { x: x + Math.sin(ry) * 1.5, z: z + Math.cos(ry) * 1.5 }
   const d = far(at)
-  if (done() && d > 60) return [HINT.sage.replace('$', V.name)]
   if (!felled.caves?.[V.k]) return [d > 12 ? HINT.findCave.replace('$', V.name) : HINT.boulder, at]
   return [lit ? HINT.goIn : bag.torch ? HINT.light : HINT.torchCave, at]
 }
@@ -2428,7 +2440,7 @@ function aiming(dt, ix, iz) {
   burst(top(aim), '#fd4', 24)
   say(`${aim.name}'s beam meets the star · ✦ ${n}/${GOAL}`)
   if (n == GOAL) show = 0.01
-  else (st = STAGES[n]), setTimeout(() => say(st.say), 2600)
+  else (st = stage()), setTimeout(() => say(st.say), 2600)
   aim = null
   hud()
 }
@@ -2444,7 +2456,7 @@ function shine(dt) {
     camera.lookAt(o.addScaledVector(ray, 60))
   }
   star.position.copy(c).addScaledVector(STAR, 150)
-  star.visible = !player.cave // underground there's no sky: no eye and no beams, which would cut through the cave walls
+  star.visible = !player.cave && !(show > 3.5) // underground there's no sky: no eye and no beams, which would cut through the cave walls (and a shattered eye is gone)
   star.scale.setScalar((2.5 + (1 - day) * 1) * (1 + Math.min(show, 3)) * (1 + Math.sin(t * 5) * 0.1))
   star.rotation.y = t
   for (const k in beacon) {
@@ -2458,8 +2470,9 @@ function shine(dt) {
     const w = s * Math.max(1, d / 80) * (1 + Math.min(show, 2) * 0.4 * (1 + Math.sin(t * 8))) // far beams fattened to stay visible
     mesh.position.copy(c).lerp(base, s)
     // a locked beam runs to the eye itself, so its tip sits on it from anywhere (the eye is drawn a fixed way off the
-    // camera, so a beam merely parallel to it ends beside it); a free one runs 400 along its aim, out past the camera's range
-    b[2] ? ray.copy(star.position).sub(mesh.position) : dir(b).multiplyScalar(400)
+    // camera, so a beam merely parallel to it ends beside it); a free one, or one on a shattered eye, runs 400 along its
+    // aim, out past the camera's range
+    mine(b) ? ray.copy(star.position).sub(mesh.position) : dir(b).multiplyScalar(400)
     mesh.scale.set(w, ray.length(), w)
     mesh.quaternion.setFromUnitVectors(UP, ray.normalize())
     // white until it snaps onto the eye, gold once locked: gold always means locked
@@ -2485,14 +2498,20 @@ function shine(dt) {
     sky.setHSL((t * 0.1) % 1, 0.7, 0.2 + day * 0.3)
     scene.fog.color.copy(sky)
     if (R() < dt * 14) burst(ray.copy(STAR).multiplyScalar(16).add(c).add({ x: R() * 16 - 8, y: R() * 8 - 4, z: R() * 16 - 8 }), new THREE.Color().setHSL(R(), 1, 0.6), 14) // fireworks round the star
+    if (show > 3.5 && show - dt <= 3.5) {
+      // the eye shatters
+      for (const c of ['#fff6c0', '#fd4', '#f42']) burst(ray.copy(STAR).multiplyScalar(16).add(camera.position), c, 60)
+      beep(55, 1.5, 'sawtooth', 0.15, 0.2), beep(80, 1, 'square', 0.1, 0.3)
+    }
     if (show > 4 && show - dt <= 4) {
       const e = document.createElement('div')
       e.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;text-align:center;font-size:20px;line-height:2;background:#0007;text-shadow:0 2px 4px #000'
-      e.innerHTML = `<b style="font-size:40px;color:#fd4">✦ The eye is pinned ✦</b>The night goes blind<br>${Object.keys(beacon).filter((k) => beacon[k][2]).map((k) => siteAt(k).name).join(' · ')}<br>${gold} gold · ${player.kills} kills · ${Math.hypot(p.x - home.x, p.z - home.z) | 0} m from where you began<small style="opacity:.7">tap to wander on</small>`
+      e.innerHTML = `<b style="font-size:40px;color:#fd4">✦ The eye is shattered ✦</b>The night goes blind… for now<br>${Object.keys(beacon).filter((k) => mine(beacon[k])).map((k) => siteAt(k).name).join(' · ')}<br>${gold} gold · ${player.kills} kills · ${Math.hypot(p.x - home.x, p.z - home.z) | 0} m from where you began<br>Eyes shattered: ${eye}<small style="opacity:.7">tap to wander on</small>`
       e.onpointerdown = () => e.remove()
       document.body.append(e)
     }
-    if (show > 14) show = 0
+    // the show over, a new eye opens somewhere else: the sky clears to the first stage, and five new villages must light it
+    if (show > 14) (show = 0), keep('warriorEye', ++eye), hang(), (st = stage()), say(`Another eye opens in the ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(STAR.x, -STAR.z) / (Math.PI / 2)) & 3]}`), hud()
   }
 }
 // ---------- sound: music compiled from the score text, plus a few synthesized blips ----------

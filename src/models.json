@@ -8585,6 +8585,9 @@
     "fieldRegen": 0,
     "potionHeal": 30
   },
+  "eye": {
+    "harder": 1.25
+  },
   "stages": [
     {
       "day": "#9cc8e8",
@@ -8684,9 +8687,7 @@
     "reach": 1.3
   },
   "hints": {
-    "aim": "Aim $'s beam at the star ✦",
     "explore": "Explore: find a village and its cave",
-    "sage": "Ask $'s sage where its cave lies",
     "buy": "Space · buy a $ ($ gold)",
     "aimHere": "Space · aim the beam at the star",
     "set": "Space · set the torch and sunstone in the beacon",
