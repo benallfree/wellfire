@@ -1354,7 +1354,7 @@ function bars(dt) {
     }
     const f = Math.max(0, e.hp) / e.maxHp
     b.v += (f - b.v) * Math.min(1, dt * 8) // ease the fill down
-    b.visible = e.hp > 0
+    b.visible = e.hp > 0 && clear(player.pos.x, player.pos.z, e.pos.x, e.pos.z) // (drawn over everything, so hidden behind a cave wall)
     b.fill.scale.x = Math.max(0.001, b.v * b.w)
     b.fill.material = barFills[f > 0.6 ? 2 : f > 0.3 ? 1 : 0]
     b.quaternion.copy(barQ.copy(e.g.quaternion).invert()).multiply(camera.quaternion) // billboard
@@ -2324,6 +2324,24 @@ function leave() {
   camYaw = ry + Math.PI
   hud()
 }
+// underground, can a reach from (ax, az) to (bx, bz) get there, or is a wall in the way? (segment against each wall's box)
+const clear = (ax, az, bx, bz) =>
+  !player.cave?.walls.some(([cx, cz, hw, hd]) => {
+    let t0 = 0
+    let t1 = 1
+    for (const [p, d, c, h] of [[ax, bx - ax, cx, hw], [az, bz - az, cz, hd]]) {
+      if (!d) {
+        if (Math.abs(p - c) > h) return false
+        continue
+      }
+      const u = (c - h - p) / d
+      const v = (c + h - p) / d
+      t0 = Math.max(t0, Math.min(u, v))
+      t1 = Math.min(t1, Math.max(u, v))
+      if (t0 > t1) return false
+    }
+    return true
+  })
 blockers.push((x, z, w) => {
   if (!w.cave) return [x, z]
   for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
@@ -2731,7 +2749,7 @@ function frame() {
       const d = Math.hypot(dx, dz)
       let a = Math.atan2(dx, dz) - player.dir
       a = Math.atan2(Math.sin(a), Math.cos(a))
-      if (d < item.reach + e.m.root.scale.x * 0.4 && Math.abs(a) < 1.2) {
+      if (d < item.reach + e.m.root.scale.x * 0.4 && Math.abs(a) < 1.2 && clear(player.pos.x, player.pos.z, e.pos.x, e.pos.z)) {
         hurt(e, item.dmg + (fire ? 2 : 0), player.pos, item.push)
         if (fire) e.burn = item.burn
       }
@@ -2876,7 +2894,7 @@ function frame() {
     }
     if (e.striking && e.once && e.once[0] == 'attack' && e.once[1] > e.m.clips.attack.d * 0.5) {
       e.striking = false
-      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat) && !(player.seat?.alt > 3)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow
+      if (d < e.reach + 0.6 && alive && (e.kind != 'eel' || wet) && (e.kind == 'bat' || !player.boat) && !(player.seat?.alt > 3) && clear(e.pos.x, e.pos.z, player.pos.x, player.pos.z)) hurt(player.seat || player, e.dmg, e.pos, 5) // a rider's mount takes the blow; no blow lands through a cave wall
     }
     e.update(dt, e.run)
   }
