@@ -678,7 +678,9 @@ const know = (key) => {
   const cx = Math.floor((i * CELL) / CH)
   const cz = Math.floor((j * CELL) / CH)
   known.set(cx + ',' + cz, [cx, cz])
+  box = [Math.min(box[0], cx), Math.min(box[1], cz), Math.max(box[2], cx + 1), Math.max(box[3], cz + 1)]
 }
+let box = [1e9, 1e9, -1e9, -1e9] // the explored chunks' bounds: the big map fits them all on one screen
 for (const key of seen) key && know(key)
 const dots = new Map() // a chunk's one colour, for a map too zoomed out for its picture, or while the picture waits
 let built = 0 // pictures made in this draw: a few per draw, so revealing or zooming out never stalls a frame
@@ -735,10 +737,9 @@ function tile(cx, cz) {
   if (tiles.size > lim) tiles.delete(tiles.keys().next().value)
   return t
 }
-// the explored ground north-up on g (W x H pixels) around the player, k map pixels per tile pixel; the minimap and the
+// the explored ground north-up on g (W x H pixels) around (x, z), the player by default, k map pixels per tile pixel; the minimap and the
 // big map (N) both draw with it. Returns the villages whose centre you've seen.
-function chart(g, W, H, k) {
-  const { x, z } = player.pos
+function chart(g, W, H, k, x = player.pos.x, z = player.pos.z) {
   const u = k / UPP
   const sx = (wx) => (wx - x) * u + W / 2
   const sz = (wz) => (wz - z) * u + H / 2
@@ -781,7 +782,7 @@ function chart(g, W, H, k) {
   return towns
 }
 // player arrow, upright village names, north and the star's way on a rim of radius R, around (ox, oy) turned by rot
-function marks(g, ox, oy, rot, k, R, towns, q = 1e9) {
+function marks(g, ox, oy, rot, k, R, towns, q = 1e9, rx = ox, ry = oy) {
   const { x, z } = player.pos
   const u = k / UPP
   g.save()
@@ -808,10 +809,10 @@ function marks(g, ox, oy, rot, k, R, towns, q = 1e9) {
     if (l > 1) (dx /= l), (dz /= l)
     g.fillText(t.name, Math.max(ox - q + 10, Math.min(ox + q - 10, ox + dx * c - dz * s)), oy + dx * s + dz * c + (l > 1 ? 4 : -t.r * u - 3))
   }
-  g.fillText('N', ox + s * R, oy - c * R + 4) // north, on the rim
+  g.fillText('N', rx + s * R, ry - c * R + 4) // north, on the rim round (rx, ry)
   const sl = Math.hypot(STAR.x, STAR.z) / R
   g.fillStyle = '#fd4'
-  g.fillText('✦', ox + (STAR.x * c - STAR.z * s) / sl, oy + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
+  g.fillText('✦', rx + (STAR.x * c - STAR.z * s) / sl, ry + (STAR.x * s + STAR.z * c) / sl + 4) // the star's way
 }
 function reveal(x, z, R) {
   const pi = Math.floor(x / CELL)
@@ -2281,12 +2282,16 @@ function bigDraw() {
   if (c.width != innerWidth || c.height != innerHeight) (c.width = innerWidth), (c.height = innerHeight) // resizing clears and reallocates it
   const W = c.width
   const H = c.height
+  // everything explored, you, the start and the guides' hints, all on one screen, centred on the lot
   const { x, z } = player.pos
-  let e = 0
-  for (const [a, b] of [...trail, ...hint, [home.x, home.z]]) e = Math.max(e, Math.abs(a - x) / W, Math.abs(b - z) / H)
-  const k = Math.min(4, (0.45 * UPP) / e)
+  let [x0, z0, x1, z1] = box.map((v) => v * CH)
+  for (const [a, b] of [[x, z], [home.x, home.z], ...hint]) (x0 = Math.min(x0, a)), (z0 = Math.min(z0, b)), (x1 = Math.max(x1, a)), (z1 = Math.max(z1, b))
+  const mx = (x0 + x1) / 2
+  const mz = (z0 + z1) / 2
+  const k = Math.min(4, (0.45 * UPP) / Math.max((x1 - x0) / 2 / W, (z1 - z0) / 2 / H, 1e-3))
+  const u = k / UPP
   c.style.opacity = player.seat?.alt ? 0.8 : 1
-  marks(bigc, W / 2, H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k))
+  marks(bigc, (x - mx) * u + W / 2, (z - mz) * u + H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k, mx, mz), 1e9, W / 2, H / 2)
 }
 
 // ---------- main loop ----------
