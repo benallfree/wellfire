@@ -7809,7 +7809,14 @@
             "bone": "neck",
             "channel": "rx",
             "keys": [
-              -25
+              70
+            ]
+          },
+          {
+            "bone": "head",
+            "channel": "rx",
+            "keys": [
+              -60
             ]
           },
           {

@@ -2825,7 +2825,6 @@ const near = { slime: 0, goblin: 0, spider: 0, bat: 0 } // how present each mons
 const fwd = new THREE.Vector3()
 let inRoom = false
 let wasFp = false
-let eyeY = 0
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
   if (!$('say').hidden) return requestAnimationFrame(frame)
@@ -3165,17 +3164,16 @@ function frame() {
   } else if (fps && !aim && !show) {
     // first person: just in front of the warrior's face, following his head (he's still drawn, so his arms and
     // weapon swing into view), looking along his facing, tilted by pitch
-    // riding, the rider is hidden and the eyes sit a little behind and above the mount's head (by its size), looking a
-    // touch down, so the top of the head shows at the bottom of the view; the eyes' height eases after the head, so
-    // the head nods in view with the gait (hardly at rest, most at a gallop) while the view bobs gently
+    // riding, the rider is hidden and the eyes sit a little behind and over his head (by the mount's size), looking a
+    // touch down, so the mount's head moves in front of them: nodding with the gait, rising as a steed rears, dipping as
+    // a roc stretches its neck out in flight
     const fx = Math.sin(player.dir)
     const fz = Math.cos(player.dir)
     const k = m ? m.m.root.scale.x * m.g.scale.x : 0
-    ;(m ? m.m.bones.head : player.m.bones.head).getWorldPosition(camera.position)
-    camera.position.x += fx * (m ? -0.5 * k : 0.1) // (on foot the head is already 0.12 ahead: any more and, pressed against a house, the eyes pass its 0.4 margin into the wall and see through it)
-    camera.position.z += fz * (m ? -0.5 * k : 0.1)
-    camera.position.y += 0.7 * k
-    if (m) camera.position.y = eyeY += Math.abs(camera.position.y - eyeY) > 2 ? camera.position.y - eyeY : (camera.position.y - eyeY) * Math.min(1, dt * 12)
+    player.m.bones.head.getWorldPosition(camera.position)
+    camera.position.x += fx * (m ? -0.25 * k : 0.1) // (on foot the head is already 0.12 ahead: any more and, pressed against a house, the eyes pass its 0.4 margin into the wall and see through it)
+    camera.position.z += fz * (m ? -0.25 * k : 0.1)
+    camera.position.y += 0.4 * k
     // underground the camera itself keeps clear of the walls (the body stops 0.35 short, the face reaches further)
     for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
       const ax = hw + 0.2 - Math.abs(camera.position.x - cx)
