@@ -1159,27 +1159,6 @@ function buck() {
   // a steed rears with a whinny: a quick squeal up, then a shaking slide down
   else voice([[0, 700], [0.12, 1300], [0.3, 1150], [0.8, 450]], 0.06, { vib: [13, 90], hiss: 0.5 })
 }
-// riding: turn toward the stick at the mount's turn rate, run along its facing, with a little momentum
-function steer(dt, ix, iz, il) {
-  const m = player.seat
-  const v = m.m.vars
-  const run = m.alt > 3 && m.sta ? v.fly : v.run
-  let sp = 0
-  if (chase) {
-    m.dir -= ix * v.turn * 0.8 * dt + drag
-    sp = -iz * run * (iz > 0 ? 0.3 : 1) * (m.busy ? 0.4 : 1) // reins: turn on the spot, back up slowly
-  } else if (il > 0.1) {
-    const c = Math.cos(camYaw)
-    const s = Math.sin(camYaw)
-    let a = Math.atan2(ix * c + iz * s, -ix * s + iz * c) - m.dir
-    a = Math.atan2(Math.sin(a), Math.cos(a))
-    m.dir += Math.max(-v.turn * dt, Math.min(v.turn * dt, a))
-    sp = run * Math.min(1, il) * Math.max(0.3, 1 - Math.abs(a) / 2.5) * (m.busy ? 0.4 : 1)
-  }
-  m.speed += (sp - m.speed) * Math.min(1, dt * 3)
-  m.move(Math.sin(m.dir) * m.speed * dt, Math.cos(m.dir) * m.speed * dt, dt)
-  player.speed = 0
-}
 // a drake's breath: a short cone of flame bits from the mouth, lit by the torch light
 function breathe(m) {
   m.m.bones.mouth.getWorldPosition(seatAt)
@@ -1263,7 +1242,7 @@ function herd(dt) {
       continue
     }
     if (m.rider == player) {
-      // steered in steer(); the blow lands partway through the attack clip
+      // steered in frame() like walking; the blow lands partway through the attack clip
       if (m.striking && m.once?.[0] == 'attack' && m.once[1] > m.m.clips.attack.d * v.at) {
         m.striking = false
         if (v.burn) breathe(m)
@@ -2846,6 +2825,7 @@ const near = { slime: 0, goblin: 0, spider: 0, bat: 0 } // how present each mons
 const fwd = new THREE.Vector3()
 let inRoom = false
 let wasFp = false
+let eyeY = 0
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
   if (!$('say').hidden) return requestAnimationFrame(frame)
@@ -2855,35 +2835,42 @@ function frame() {
   // weapon arm stays, so swings show; a lit torch shows at the lower left)
   if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps)
   fpTorch.visible = !!(fps && lit) // (three.js hides only on false, not null)
+  player.g.visible = !(fps && player.seat)
   // it follows the hidden left hand (the walk's swing, the breath): up and forward from the hand's rest spot
   player.m.bones.handL.getWorldPosition(hand).sub(player.pos)
   fpTorch.position.set(-0.8, hand.y * 0.7 - 1.5, -0.63 - (Math.sin(player.dir) * hand.x + Math.cos(player.dir) * hand.z) * 0.7)
   if (!free() && document.pointerLockElement) document.exitPointerLock()
 
-  // riding: A/D turn (on foot they strafe), W/S walk along the facing, or, in free mode, move relative to the camera
-  // in first person the arrows look instead: left/right turn (a mount too), up/down tilt the view
+  // W/S walk along the facing, A/D strafe, on foot and riding alike (or, in free mode, move relative to the camera)
+  // in first person the arrows look instead: left/right turn, up/down tilt the view
+  // a mount turns at its own rate (turn, against the 2.8 on foot)
+  const m = player.seat
+  const tr = m ? m.m.vars.turn / 2.8 : 1
   const arr = !fps || aim
   let ix = (keys.KeyD || (arr && keys.ArrowRight) ? 1 : 0) - (keys.KeyA || (arr && keys.ArrowLeft) ? 1 : 0) + stick.x
   let iz = (keys.KeyS || (arr && keys.ArrowDown) ? 1 : 0) - (keys.KeyW || (arr && keys.ArrowUp) ? 1 : 0) + stick.y
-  if (!arr) (drag += ((keys.ArrowRight | 0) - (keys.ArrowLeft | 0)) * 2.2 * dt), (pitch = Math.max(-1.3, Math.min(1.3, pitch + ((keys.ArrowUp | 0) - (keys.ArrowDown | 0)) * 1.5 * dt)))
+  if (!arr) (drag += ((keys.ArrowRight | 0) - (keys.ArrowLeft | 0)) * 2.2 * tr * dt), (pitch = Math.max(-1.3, Math.min(1.3, pitch + ((keys.ArrowUp | 0) - (keys.ArrowDown | 0)) * 1.5 * dt)))
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
   const run = 6 * (haste > 0 ? HASTE.speed : 1) // a speed potion quickens him on foot and swimming
   if (aim) aiming(dt, ix, iz)
-  else if (player.seat) {
-    steer(dt, ix, iz, il)
-    player.dir = player.seat.dir
-  } else if (tank && alive) {
-    // on foot A/D strafe and the arrows, the (locked) mouse or a touch drag turn (in first person a touch drag strafes)
+  else if (tank && (alive || m)) {
+    // A/D strafe and the arrows, the (locked) mouse or a touch drag turn (in first person a touch drag strafes); riding,
+    // the mount moves at its own speed (run, or fly high aloft) and takes a moment to get going and to stop
+    const w = m || player
     const sx = (keys.KeyD | 0) - (keys.KeyA | 0)
-    player.dir -= (fps ? 0 : (ix - sx) * 2.8 * dt) + drag
+    w.dir -= (fps ? 0 : (ix - sx) * 2.8 * tr * dt) + drag
     const f = Math.max(-1, Math.min(1, -iz)) * (iz > 0 ? 0.6 : 1) // backing up is slower
     const r = fps ? -ix : -sx
-    const k = run * (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
-    const c = Math.cos(player.dir)
-    const s = Math.sin(player.dir)
-    player.move((f * s + r * c) * k * dt, (f * c - r * s) * k * dt, dt)
-    player.speed = Math.hypot(f, r) * k
+    const k = m ? (m.alt > 3 && m.sta ? m.m.vars.fly : m.m.vars.run) * (m.busy ? 0.4 : 1) : run * (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
+    const e = m ? Math.min(1, dt * 3) : 1
+    w.vf = (w.vf || 0) * (1 - e) + f * k * e
+    w.vr = (w.vr || 0) * (1 - e) + r * k * e
+    const c = Math.cos(w.dir)
+    const s = Math.sin(w.dir)
+    w.move((w.vf * s + w.vr * c) * dt, (w.vf * c - w.vr * s) * dt, dt)
+    w.speed = Math.hypot(w.vf, w.vr)
+    if (m) (player.dir = m.dir), (player.speed = 0)
   } else if (il > 0.1 && alive) {
     ix /= Math.max(1, il)
     iz /= Math.max(1, il)
@@ -3178,23 +3165,25 @@ function frame() {
   } else if (fps && !aim && !show) {
     // first person: just in front of the warrior's face, following his head (he's still drawn, so his arms and
     // weapon swing into view), looking along his facing, tilted by pitch
-    // riding, it rides out in front of the mount's head instead (so the neck and head don't fill the view, and a
-    // drake's breath flames out below and ahead)
+    // riding, the rider is hidden and the eyes sit a little behind and above the mount's head (by its size), looking a
+    // touch down, so the top of the head shows at the bottom of the view; the eyes' height eases after the head, so
+    // the head nods in view with the gait (hardly at rest, most at a gallop) while the view bobs gently
     const fx = Math.sin(player.dir)
     const fz = Math.cos(player.dir)
-    const m = player.seat
     const k = m ? m.m.root.scale.x * m.g.scale.x : 0
     ;(m ? m.m.bones.head : player.m.bones.head).getWorldPosition(camera.position)
-    camera.position.x += fx * (m ? 1.1 * k : 0.1) // (on foot the head is already 0.12 ahead: any more and, pressed against a house, the eyes pass its 0.4 margin into the wall and see through it)
-    camera.position.z += fz * (m ? 1.1 * k : 0.1)
-    camera.position.y += m ? 0.35 * k : 0
+    camera.position.x += fx * (m ? -0.5 * k : 0.1) // (on foot the head is already 0.12 ahead: any more and, pressed against a house, the eyes pass its 0.4 margin into the wall and see through it)
+    camera.position.z += fz * (m ? -0.5 * k : 0.1)
+    camera.position.y += 0.7 * k
+    if (m) camera.position.y = eyeY += Math.abs(camera.position.y - eyeY) > 2 ? camera.position.y - eyeY : (camera.position.y - eyeY) * Math.min(1, dt * 12)
     // underground the camera itself keeps clear of the walls (the body stops 0.35 short, the face reaches further)
     for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
       const ax = hw + 0.2 - Math.abs(camera.position.x - cx)
       const az = hd + 0.2 - Math.abs(camera.position.z - cz)
       if (ax > 0 && az > 0) ax < az ? (camera.position.x = cx + Math.sign(camera.position.x - cx) * (hw + 0.2)) : (camera.position.z = cz + Math.sign(camera.position.z - cz) * (hd + 0.2))
     }
-    camera.lookAt(camera.position.x + fx * Math.cos(pitch), camera.position.y + Math.sin(pitch), camera.position.z + fz * Math.cos(pitch))
+    const P = pitch - (m ? 0.35 : 0)
+    camera.lookAt(camera.position.x + fx * Math.cos(P), camera.position.y + Math.sin(P), camera.position.z + fz * Math.cos(P))
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
     camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
