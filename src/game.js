@@ -1939,6 +1939,9 @@ function boating(dt) {
 // vanishing point, the star. The fifth lock starts the light show and the end screen.
 const LOCK = 0.05
 const STAR = new THREE.Vector3().setFromSphericalCoords(1, (50 + hash(3, 4, SEED + 9) * 25) * DEG, hash(5, 6, SEED + 9) * 7)
+// a locked beam points exactly at the eye, not merely within LOCK of it (older saves too)
+const onStar = (b) => ((b[0] = Math.atan2(STAR.x, STAR.z)), (b[1] = Math.acos(STAR.y)), (b[2] = 1))
+for (const b of Object.values(beacon)) b[2] && onStar(b)
 const star = new THREE.Mesh(new THREE.OctahedronGeometry(1), new THREE.MeshBasicMaterial({ color: '#fff6c0', fog: false }))
 scene.add(star)
 const beamGeo = new THREE.CylinderGeometry(1.5, 0.45, 1, 8, 1, true).translate(0, 0.5, 0)
@@ -2017,7 +2020,7 @@ function aiming(dt, ix, iz) {
   player.move(0, 0, dt)
   player.speed = 0
   if (dir(b).angleTo(STAR) > LOCK) return
-  b[2] = 1
+  onStar(b)
   keep('warriorBeacons', beacon)
   const n = done()
   for (let i = 0; i < (n < GOAL ? 4 : 8); i++) setTimeout(() => beep(523 * 1.26 ** (i % 4) * (i > 3 ? 2 : 1), 0.6, 'triangle', 0.06, 1), i * 130)
