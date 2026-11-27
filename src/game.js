@@ -355,6 +355,7 @@ const keep = (k, v) => {
 const REGROW = 30 * 60e3
 const felled = kept('warriorFelled', {})
 for (const k in felled) {
+  if (k == 'carry') continue // the carried sunstone's cave key: a string, not a list of times
   for (const i in felled[k]) if (Date.now() - felled[k][i] > REGROW) delete felled[k][i]
   if (!Object.keys(felled[k]).length) delete felled[k]
 }
