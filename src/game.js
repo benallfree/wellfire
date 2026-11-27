@@ -2146,7 +2146,7 @@ function caves() {
   g.rotation.y += 0.03
   village.glow.intensity = 14 * (1 + Math.sin(clock.elapsedTime * 3) * 0.2)
   if (Math.hypot(p.x - g.position.x, p.z - g.position.z) > 1.4) return (K.said = 0)
-  if (foes.some((e) => e.cave && e.hp > 0)) return K.said ||= say('Its guardians must fall before you can take the sunstone') || 1
+  if (foes.some((e) => e.guard && e.hp > 0)) return K.said ||= say('Its guardians must fall before you can take the sunstone') || 1
   K.g.remove(g)
   K.gem = 0
   village.glow.intensity = 0
@@ -2155,6 +2155,9 @@ function caves() {
   gain('sunstone', 1)
   sunstone()
 }
+// a cave's creatures stand on its floor and never respawn while you're down there (see spawn), only on your next visit
+const KINDS3 = ['goblin', 'spider', 'slime']
+const dweller = (kind, x, z) => Object.assign(foe(kind, x, z), { cave: player.cave, floor: CAVE.depth, fits: () => 1, wander: 9 })
 // a perfect maze on a size x size grid (recursive backtracker, seeded by the village), the mouth at cell 0,0
 function enter(c) {
   const n = CAVE.size
@@ -2234,13 +2237,29 @@ function enter(c) {
     K.gem.scale.setScalar(2)
     g.add(K.gem)
     village.glow.position.set(ex, y + 1.8, ez)
-    const kinds = ['goblin', 'spider', 'slime'] // a mixed guard, whatever lives up top
-    for (let k = 0, cell = end; k < CAVE.guards + done(); k++) {
-      const [gx, gz] = at(cell)
-      const e = foe(kinds[k % 3], gx + R() * 2 - 1, gz + R() * 2 - 1)
-      Object.assign(e, { cave: K, floor: y, fits: () => 1, wander: 9 })
-      if (k % 2 && from[cell]) cell = from[cell] // two to a cell, back along the way
+    // its guard, packed into the last two cells: CAVE.guards (+1 a locked beam) led by a boss goblin, all of whom
+    // must fall before it can be taken
+    const den2 = [end, from[end] || end]
+    for (let k = 0; k <= CAVE.guards + done(); k++) {
+      const [gx, gz] = at(den2[k % 2])
+      const e = dweller(k ? KINDS3[k % 3] : 'goblin', gx + R() * 3 - 1.5, gz + R() * 3 - 1.5)
+      e.guard = 1
+      if (!k) {
+        // the boss: bigger, much tougher, hits harder and reaches further
+        e.boss = 1
+        e.g.scale.setScalar(1.6)
+        e.hp = e.maxHp *= 4
+        e.dmg *= 2
+        e.reach += 0.8
+      }
     }
+  }
+  // and the rest of the maze has CAVE.roamers (+1 a locked beam) of its own, one to a cell, away from the mouth and the den
+  const cells = []
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if ((i || j) && i + ',' + j != end + '' && i + ',' + j != from[end] + '') cells.push([i, j])
+  for (let k = 0; k < CAVE.roamers + done() && cells.length; k++) {
+    const [gx, gz] = at(cells.splice((R() * cells.length) | 0, 1)[0])
+    dweller(KINDS3[k % 3], gx + R() * 2 - 1, gz + R() * 2 - 1)
   }
   hud()
 }

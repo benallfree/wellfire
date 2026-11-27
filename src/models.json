@@ -8967,7 +8967,8 @@
     "wallColor": "6a6058",
     "floorColor": "3a322a",
     "roofColor": "2e2a26",
-    "guards": 6
+    "guards": 6,
+    "roamers": 8
   },
   "talk": {
     "roles": [

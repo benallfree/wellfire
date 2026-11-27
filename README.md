@@ -977,11 +977,16 @@ guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and
 - **The maze.** A perfect maze on a `size` x `size` grid (6 x 6) of `cell`-unit cells (5), carved by a recursive
   backtracker seeded by the village, so it's the same every visit and full of dead ends. Walls are `wall` (3.2) high,
   one instanced mesh. You start in the corner cell; the way out is the gap behind you.
-- **The sunstone.** It waits in the cell most steps from the mouth (often 20-30 steps of winding), glowing, with
-  `guards` (6) plus one per locked beam goblins, spiders and slimes set two to a cell back along the way to it. It can
-  only be taken once every guardian is dead; then it's the usual sunstone celebration. Taken, it's kept in
-  `warriorFelled.gems` (an older save's cracked sunstone egg counts), and the cave is empty from then on. Guardians you
-  leave alive come back next visit.
+- **The sunstone.** Every cave has one (checked across the 17 villages around the start), in the cell most steps from
+  the mouth (often 20-30 steps of winding), glowing. Its guard is packed into that cell and the one before it:
+  `guards` (6) goblins, spiders and slimes, plus one per locked beam, led by a boss goblin (1.6x size, 4x health,
+  2x damage, longer reach). The sunstone can only be taken once the whole guard is dead; then it's the usual sunstone
+  celebration. Taken, it's kept in `warriorFelled.gems` (an older save's cracked sunstone egg counts).
+- **Roamers.** The rest of the maze holds `roamers` (8) more, plus one per locked beam, one to a cell, away from the
+  mouth and the den. They don't have to die for the sunstone.
+- **No respawning down there.** A creature killed in the cave stays dead for the rest of the visit, and nothing comes
+  in from the surface; leaving and coming back resets the cave's creatures (an emptied cave keeps its roamers).
+  Cave creatures are scaled by distance from home like any other, so Oakdale's boss is the gentlest.
 - **Coming out.** Walk out through the gap: you're back a few steps in front of the mouth, facing the village.
 - **The sage.** One townsperson in each village knows the cave: which quarter of the wilds it's in and that a boulder
   seals it, then that it's open and its sunstone is past the guardians, then that it's found.
