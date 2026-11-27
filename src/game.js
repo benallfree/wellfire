@@ -950,7 +950,7 @@ const nearMount = () => mounts.find((m) => !m.rider && !m.leave && m.hp > 0 && M
 function mountUp() {
   if (aim) return (aim = null)
   if (player.boat) return ashore()
-  if (player.seat) return player.seat.alt ? say('Land first: Space') : unseat(player)
+  if (player.seat) return player.seat.alt ? say('Land first: Space') : ((player.seat.leave = player.seat.m.vars.fly), unseat(player)) // a roc leaves when you get off
   if (nearBoat()) return board()
   const m = player.hp > 0 && !village.in && nearMount()
   if (m) seat(player, m)
@@ -1007,7 +1007,8 @@ function breathe(m) {
 }
 blockers.push((x, z, w) => (mounts.includes(w) && height(x, z) < WATER - 0.2 ? [w.pos.x, w.pos.z] : [x, z])) // no swimming mounts
 // the whistle (in hand, Space; crafted in a village): the roc flies to you and lands; ridden, it climbs high and flies fast on
-// stamina, out of every creature's reach, and comes down to rest when it runs out
+// stamina, out of every creature's reach, and comes down when it runs out. Each call is one flight: when it lands with you, or
+// you get off, it flies away, and only the whistle brings it back
 function whistle() {
   const v = lib.roc.vars
   if (player.seat || player.boat) return
@@ -1132,7 +1133,9 @@ function herd(dt) {
       m.sta = Math.min(1, Math.max(0, m.sta + dt * (m.alt > 3 ? -1 / v.tire : 1 / v.rest)))
       m.fy = Math.max(g, m.fy + (g + m.alt - m.fy) * Math.min(1, dt * 3))
       m.floor = m.alt ? m.fy : null
-      if (m.out && !m.alt) (m.out = 0), (m.leave = 1), unseat(player, player.pos), say(v.name + ' is worn out and flies off')
+      if (r == player && m.alt > 3) m.flew = 1
+      // one call, one flight: once it has flown you and lands, it sets you down and leaves (tired or not)
+      if (m.flew && !m.alt) say(v.name + (m.out ? ' is worn out and flies off' : ' flies off')), (m.flew = m.out = 0), (m.leave = 1), unseat(player, player.pos)
     }
     m.update(dt, v.run)
     if (m.rider) {
