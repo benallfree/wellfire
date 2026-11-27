@@ -40,8 +40,8 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | click | lock the mouse (Esc lets go). Sideways turns you (in first person up/down also tilts the view); a click attacks |
 | C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Dragging with the mouse button held looks too (for browsers that won't lock). Caves are always first person |
 | Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood or flint; at a well, set or take the beam |
-| F or Tab | swap to the next item |
-| 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle) |
+| F or Tab | swap to the next item (the torch isn't in the swap: it has its own hand) |
+| 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle). The torch slot (3) lights the torch in the left hand, or puts it out, and leaves the weapon in the right |
 | 0 | crafting (in a village) |
 | R | ride or leave a mount, let go of a beam |
 | N | the big map (Esc closes it) |
@@ -59,8 +59,9 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   gold, +30 health) and speed (150 gold: 1.6× walking and swimming speed for 30 s, not on a mount; a teal bar under
   the torch's counts it down). Inside, both stand on the floor beside the shopkeeper: walk up to one and press Space to buy it.
   Drink either from the tray like any item (Space).
-- **Night.** A 3-minute day. Nights are near-black, so the torch matters: lit, it lights the way, sets monsters
-  alight and scares slimes and spiders back (bats are drawn to it), and it burns down in 90 seconds.
+- **Night.** A 3-minute day. Nights are near-black, so the torch matters. It's carried lit in the left hand, beside
+  your sword or axe (there's no shield), and does no damage itself: it lights the way, scares slimes and spiders back
+  (bats are drawn to it, and bosses don't care), stays lit on a mount, and burns down in 90 seconds.
 - **Caves.** Each village has a cave out in its wilds, sealed by a boulder that takes 8 axe blows. Inside, with a lit
   torch, is a seeded 6×6 maze of dead ends with roamers, and in its farthest cell a sunstone guarded by six
   creatures and a boss. The sunstone is yours once its guard is dead (roamers don't count), and taking it wakes the cave: every creature

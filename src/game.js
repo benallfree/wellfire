@@ -6,7 +6,7 @@ import { score, jukebox } from './music.js'
 const lib = library(document.getElementById('models').textContent)
 
 const WATER = 0.2
-const ITEMS = ['sword', 'axe', 'torch', 'wood', 'flint', 'haste', 'potion', 'whistle']
+const ITEMS = ['sword', 'axe', 'wood', 'flint', 'haste', 'potion', 'whistle']
 // monster mix and how crowded it gets, per region (meadow, forest, rocky hills, lakes)
 const FOES = [
   ['slime', 'slime', 'bat', 'goblin'],
@@ -672,7 +672,7 @@ const has = (r) => Object.keys(r).every((m) => own(m) >= r[m])
 function tray() {
   $('tray').innerHTML =
     [...belt, 'pack']
-      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
+      .map((k, i) => `${k == 'pack' ? `<b class=${bag.sunstone ? 'on' : 'off'}>${ICON.sunstone}<u>${bag.sunstone}</u></b>` : ''}<b data-s=${i} class=${(pick < 0 ? k == ITEMS[player.item] || (k == 'torch' && lit) : i == pick) ? 'on' : k in bag && !bag[k] ? 'off' : ''}>${ICON[k] || ''}<i>${k == 'pack' ? 0 : i + 1}</i>${k in bag ? `<u>${bag[k]}</u>` : ''}</b>`)
       .join('')
   $('inv').innerHTML =
     Object.entries(RECIPES)
@@ -690,10 +690,10 @@ function slot(i, tap) {
     pick = i
     return tray()
   }
-  if (k == 'torch' && !bag.torch) craft()
+  if (k == 'torch') bag.torch ? light() : craft() // the torch isn't held in the weapon hand: its slot lights it or puts it out
   if (POTS.includes(k) && !bag[k]) say('No potion: buy one at the apothecary')
   if (k == 'whistle' && !bag.whistle) craft('whistle')
-  if (ITEMS.includes(k)) equip(ITEMS.indexOf(k), 1)
+  if (ITEMS.includes(k)) equip(ITEMS.indexOf(k))
 }
 function gain(k, n) {
   bag[k] = (bag[k] || 0) + n
@@ -940,40 +940,44 @@ player.item = 0
 player.kills = 0
 player.air = 1
 let item
-// The torch is a weapon like the sword and axe: taking it in hand (its slot, F or SWAP) lights it (a fire swing: +2
-// damage and the burn) and lights the night. Unlit, it's a weak club. A torch burns for FUEL seconds (the orange bar),
-// then it's spent and leaves the bag; take another from the slot, or craft one (a wood and a flint). Water douses it.
+// The torch is no weapon: its slot (3) lights it in the left hand, beside whatever weapon is in the right, or puts it out.
+// Lit, it lights the night and caves and scares off small monsters; it does no damage. A torch burns for FUEL seconds
+// (the orange bar), then it's spent and leaves the bag; light another from the slot, or craft one (a wood and a flint).
+// Water douses it.
 const FUEL = 90 // a minute and a half: enough for a cave run (the 6×6 maze and its guard) if lit at the mouth
 let lit = 0
 let arm = 0 // the weapon last in hand: it goes on his back while he holds an item (wood, flint) up in both hands
 let fuel = FUEL
 function torch() {
-  hold(lib, player.m, 'handL', player.lift ? null : 'shield')
-  for (const b in player.m.props) if (player.m.props[b].bones.flame) player.m.props[b].bones.flame.visible = b != 'back' && lit > 0
+  hold(lib, player.m, 'handL', lit ? 'torch' : null)
   hud()
+  tray()
 }
 function light() {
-  if (lit || player.swim || ITEMS[player.item] != 'torch' || !bag.torch) return
-  lit = 1
+  if (player.swim) return
+  lit ^= 1
   beep(200, 0.25, 'sawtooth', 0.03, 2)
   torch()
 }
-function equip(i, take) {
+function equip(i) {
   player.item = (i + ITEMS.length) % ITEMS.length
   if (ITEMS[player.item] in bag && !bag[ITEMS[player.item]]) player.item = 0 // none left to hold
   const k = ITEMS[player.item]
-  if (k != 'torch') lit = 0
-  player.lift = player.item > 2 // anything but a weapon is held up over his head
+  player.lift = player.item > 1 // anything but a weapon is held up over his head
   if (!player.lift) arm = player.item
   item = hold(lib, player.m, 'handR', k).vars
-  if (village?.in || player.swim || (player.seat && k != 'torch')) village.stow(1)
+  if (village?.in || player.swim || player.seat) village.stow(1)
   else village?.sling(player.lift && ITEMS[arm])
   torch()
-  tray()
-  take && light()
 }
 const torchLight = new THREE.PointLight('#ff9a40', 0, 14, 1.5)
 scene.add(torchLight)
+// first person hides the left arm, so a lit torch shows at the lower left of the view instead
+const fpTorch = new THREE.Mesh(geo('torch'), itemMat)
+fpTorch.position.set(-0.8, -0.6, -1)
+fpTorch.rotation.y = 3 // flame up and away
+camera.add(fpTorch)
+scene.add(camera)
 equip(0)
 
 // ---------- mounts: steeds and drakes found in the world, ridden in place of the weapon ----------
@@ -1013,7 +1017,7 @@ function seat(r, m) {
   m.rider = r
   r.was = r.hp
   if (r == player) {
-    ITEMS[player.item] != 'torch' && village.stow(1) // a torch stays in hand on a mount
+    village.stow(1) // (a lit torch stays in the left hand on a mount)
     if (tamed != m) gone.add(m.home)
     tamed = m
     m.flee = m.jolt = 0
@@ -1547,7 +1551,7 @@ var village
     return [x, z]
   })
 
-  // the weapon hangs on the warrior's back inside a village, its longest end down (a torch's flame up)
+  // the weapon hangs on the warrior's back inside a village, its longest end down
   const back = new THREE.Object3D()
   const turn = new THREE.Object3D() // aims whichever prop is stowed
   back.position.set(-0.05, 0.62, -0.27)
@@ -1570,7 +1574,7 @@ var village
         const M = inv.clone().multiply(o.matrixWorld)
         for (let i = 0; i < a.count; i++) if (v3.fromBufferAttribute(a, i).applyMatrix4(M).length() > far.length()) far.copy(v3)
       })
-      turn.quaternion.setFromUnitVectors(far.normalize(), v3.set(0, 0, p.vars.burn ? -1 : 1))
+      turn.quaternion.setFromUnitVectors(far.normalize(), v3.set(0, 0, 1))
     }
   }
   function stow(on) {
@@ -2591,7 +2595,7 @@ addEventListener('keydown', (e) => {
   if (e.code == 'Escape' && !$('inv').hidden) pack()
   if (!$('say').hidden) return ['Space', 'KeyJ', 'Escape', 'Enter'].includes(e.code) && ($('say').hidden = true)
   if (e.code == 'Space' || e.code == 'KeyJ') attack()
-  if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1, 1)
+  if (e.code == 'KeyF' || e.code == 'Tab') equip(player.item + 1)
   if (e.code.startsWith('Digit')) slot(e.code == 'Digit0' ? belt.length : e.code < 'Digit9' ? e.code[5] - 1 : -1) // 1-8 the tray, 0 crafting
   if (e.code == 'Tab') e.preventDefault()
   if (e.code == 'KeyM') $('mute').onclick()
@@ -2620,7 +2624,7 @@ const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
 addEventListener('touchstart', (e) => {
   for (const t of e.changedTouches) {
     if (!$('say').hidden) $('say').hidden = true
-    else if (t.target.id == 'swap') equip(player.item + 1, 1)
+    else if (t.target.id == 'swap') equip(player.item + 1)
     else if (t.target.id == 'hit') attack()
     else if (t.target.id == 'mnt') mountUp()
     else if (t.target.id == 'mute' || t.target.closest('#tray,#nav,#big,#inv')) continue
@@ -2729,9 +2733,10 @@ function frame() {
   if (!$('say').hidden) return requestAnimationFrame(frame)
   const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
   const fps = fpNow()
-  // first person: a wide (90 degree), close lens, and the head and the left arm and shield hidden so they don't fill
-  // the view (the weapon arm stays, so swings show)
+  // first person: a wide (90 degree), close lens, and the head and the left arm hidden so they don't fill the view (the
+  // weapon arm stays, so swings show; a lit torch shows at the lower left)
   if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps)
+  fpTorch.visible = !!(fps && lit) // (three.js hides only on false, not null)
   if (!free() && document.pointerLockElement) document.exitPointerLock()
 
   // riding: A/D turn (on foot they strafe), W/S walk along the facing, or, in free mode, move relative to the camera
@@ -2797,8 +2802,6 @@ function frame() {
   // the blow lands partway through the swing
   if (player.once && player.once[0] == item.anim && !player.struck && player.once[1] > player.m.clips[item.anim].d * 0.45) {
     player.struck = true
-    const fire = item.burn && lit
-    if (fire) burst(torchLight.position, '#fa3', 10)
     for (const e of [...foes, ...mounts.filter((m) => !m.rider)]) {
       if (e.hp <= 0) continue
       const dx = e.pos.x - player.pos.x
@@ -2807,8 +2810,7 @@ function frame() {
       let a = Math.atan2(dx, dz) - player.dir
       a = Math.atan2(Math.sin(a), Math.cos(a))
       if (d < item.reach + e.m.root.scale.x * 0.4 && Math.abs(a) < 1.2 && clear(player.pos.x, player.pos.z, e.pos.x, e.pos.z)) {
-        hurt(e, item.dmg + (fire ? 2 : 0), player.pos, item.push)
-        if (fire) e.burn = item.burn
+        hurt(e, item.dmg, player.pos, item.push)
       }
     }
     if (item.chop && !player.cave) chop(), crack()
@@ -2818,7 +2820,7 @@ function frame() {
   player.update(dt, run)
   player.safe -= dt
   // a torch that burns out is spent: one fewer in the bag, and the next one starts fresh
-  if (lit && (fuel -= dt) <= 0) (lit = 0), (fuel = FUEL), gain('torch', -1), torch(), say(bag.torch ? 'Your torch burnt out: take another (3)' : 'Your torch burnt out: craft a new one (a wood and a flint)')
+  if (lit && (fuel -= dt) <= 0) (lit = 0), (fuel = FUEL), gain('torch', -1), torch(), say(bag.torch ? 'Your torch burnt out: light another (3)' : 'Your torch burnt out: craft a new one (a wood and a flint)')
   $('fuel').style.width = (fuel / FUEL) * 100 + '%'
   $('fuelbar').style.opacity = lit ? 1 : 0
   haste -= dt
@@ -2984,7 +2986,7 @@ function frame() {
   }
 
   // torch light follows the flame, flickering
-  const flame = lit && player.m.props.handR?.bones.flame
+  const flame = lit && player.m.props.handL?.bones.flame
   const t = clock.elapsedTime
   if (flame) {
     flame.getWorldPosition(torchLight.position)

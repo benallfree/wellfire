@@ -108,7 +108,7 @@ md.push('')
 // ---------- model JSON vs. the meshes it compiles to ----------
 // The characters and props, one seeded variant each: what you would otherwise export from a modeling tool.
 const lib = library(src('models.json').toString())
-const NAMES = ['warrior', 'shield', 'sword', 'axe', 'torch', 'club', 'spear', 'slime', 'goblin', 'spider', 'bat']
+const NAMES = ['warrior', 'sword', 'axe', 'torch', 'club', 'spear', 'slime', 'goblin', 'spider', 'bat']
 // The model JSON for just these models, formatted as in src/models.json.
 const text = Buffer.from(JSON.stringify(Object.fromEntries(['common', ...NAMES].map((n) => [n, lib[n]])), null, 2) + '\n')
 const meshes = []

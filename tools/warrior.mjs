@@ -60,7 +60,7 @@ const MIRROR = 'ry rz x' // channels a mirrored (*) bone flips on its right side
 const STANCE = {
   hy: -0.1,
   hz: 0.02,
-  L: [0.2, 0, 0], // shield-side foot forward
+  L: [0.2, 0, 0], // torch-side foot forward
   R: [-0.16, 0, 0],
   'leg*.rz': 6,
   'foot*.rz': -6,
@@ -75,11 +75,11 @@ const STANCE = {
   'armR.rz': -12,
   'foreR.rx': -75,
   'handR.rx': 75,
-  // shield arm up
+  // torch arm up
   'armL.rx': -20,
   'armL.rz': 15,
   'foreL.rx': -95,
-  'handL.rx': 28, // turns the shield's face forward (solved for this arm pose)
+  'handL.rx': 28, // (solved to turn a shield's face forward when the warrior carried one)
   'handL.ry': -76,
   'handL.rz': -102,
 }
@@ -186,7 +186,7 @@ clips.ride = {
   keys: [P({ ...base, 'leg*.rx': -80, 'leg*.rz': 18, 'shin*.rx': 85, 'foot*.rx': -5, 'foot*.rz': -18, 'hip.ry': 0, 'chest.ry': -5, 'head.ry': 5 })],
 }
 
-// lift: an item (wood, flint) held level over the head in both hands, laid over idle/walk (the shield is put away)
+// lift: an item (wood, flint) held level over the head in both hands, laid over idle/walk
 clips.lift = {
   duration: 1,
   loop: true,
