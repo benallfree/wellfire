@@ -2306,7 +2306,7 @@ function enter(c) {
   g.add(m)
   daylit.position.set(X, y + 1.5, Z - S / 2 - 0.5)
   scene.add(g)
-  const K = (player.cave = { c, x: X, z: Z, y, walls, g })
+  const K = (player.cave = { c, x: X, z: Z, y, walls, g, from, end })
   learn('goIn')
   for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
   player.floor = y
@@ -2399,7 +2399,7 @@ function goal() {
     .sort((a, b) => far(a) - far(b))[0]
   if (done() >= GOAL) return []
   for (const k in beacon) if (!beacon[k][2]) return [HINT.aim.replace('$', siteAt(k).name), top(siteAt(k))]
-  if (K) return K.gem ? [foes.some((e) => e.guard && e.hp > 0) && far(K.gem.position) < 12 ? HINT.guard : HINT.find, K.gem.position] : [HINT.leave, { x: K.x, z: K.z - CAVE.cell / 2 }]
+  if (K) return K.gem ? [foes.some((e) => e.guard && e.hp > 0) && far(K.gem.position) < 12 ? HINT.guard : HINT.find, route(K, K.end)] : [HINT.leave, route(K)]
   if (bag.sunstone) return [bag.torch ? HINT.well.replace('$', T?.name) : HINT.torchFirst, T && top(T)]
   const V = sites(p.x, p.z, 2)
     .filter((t) => den(t.gi, t.gj) && !got(t))
@@ -2412,6 +2412,16 @@ function goal() {
   if (done() && d > 60) return [HINT.sage.replace('$', V.name)]
   if (!felled.caves?.[V.k]) return [d > 12 ? HINT.findCave.replace('$', V.name) : HINT.boulder, at]
   return [lit ? HINT.goIn : bag.torch ? HINT.light : HINT.torchCave, at]
+}
+// underground the arrow follows the maze: the doorway to the next cell on the way out (from the mouth cell, out of
+// it), or with `e`, on the way to that cell (up toward the mouth until on its path, then down it; in it, the sunstone)
+function route(K, e) {
+  const S = CAVE.cell
+  const c = [Math.round((player.pos.x - K.x) / S), Math.round((player.pos.z - K.z) / S)]
+  let n = K.from[c] || [0, -1]
+  if (e + '' == c) return K.gem.position
+  for (let t = e; t; t = K.from[t]) if (K.from[t] + '' == c) n = t
+  return { x: K.x + ((c[0] + n[0]) * S) / 2, z: K.z + ((c[1] + n[1]) * S) / 2 }
 }
 // a move once made (rode, talked, cracked the boulder...) retires its prompt for good
 const learned = kept('warriorLearned', {})
