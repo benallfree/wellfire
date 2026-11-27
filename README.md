@@ -154,7 +154,9 @@ The compression level is saved in `package.json` under `"size"`, together with t
 - `npm run fit` builds and compresses at the saved level. While the archive is over budget minus headroom, it steps
   up one level at a time, up to `-9`. It saves the first level that fits and prints a table of every level it tried.
   If even `-9` is over, it leaves `package.json` unchanged and exits 1. Pass `npm run fit -- --down` to also step
-  down while lower (faster) levels still fit. `fit` skips the baseline.
+  down while lower (faster) levels still fit. `fit` skips the baseline. Each level runs with surprisal's
+  `--stop-at`, so a level that's going to be over budget stops as soon as that's certain instead of running to the
+  end (the table marks it `≥` with where it stopped). A surprisal without `--stop-at` runs every level in full.
 
 Higher levels are slower. `-6` takes a few minutes on the GPU, and `-9` much longer. The baseline takes about 15
 seconds. `ROADROLLER_O` and `ADVZIP_ITER` tune the baseline. `npm run size` prints a fuller report across formats.

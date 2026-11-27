@@ -6,9 +6,12 @@
 //   SURPRISAL=/path/to/surprisal npm run fit
 // Settings live in package.json: "size": { "level": 6, "headroom": 200, "budget": 13312 }.
 // Each level writes dist/fit/index-N.13k; the chosen one is copied to dist/index.13k. No roadroller baseline here
-// (`npm run ship` still packs it). Surprisal's output streams straight through (stdio inherit).
+// (`npm run ship` still packs it). Surprisal's output streams straight through.
+// Each level runs with --stop-at=<budget - headroom>: surprisal gives up (exit 3, no archive) as soon as the archive
+// is certain to be over the limit, so an over-budget level costs only the part it took to get there. It never stops
+// a level that would fit. A surprisal without --stop-at runs every level to the end.
 // If even -9 doesn't fit, package.json is left alone and the exit code is 1.
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -32,6 +35,11 @@ if (SURPRISAL.includes('/') && !existsSync(SURPRISAL)) {
 
 const t = () => new Date().toTimeString().slice(0, 8)
 
+// An older surprisal has no --stop-at (its help doesn't mention it); then every level runs to the end.
+const help = spawnSync(SURPRISAL, ['-h'], { encoding: 'utf8' })
+const STOP_AT = `${help.stdout}${help.stderr}`.includes('stop-at')
+const OVER = 3 // surprisal's exit status when --stop-at's limit is exceeded
+
 function run(cmd, args) {
   const r = spawnSync(cmd, args, { cwd: root, stdio: 'inherit' })
   if (r.error) {
@@ -44,14 +52,45 @@ function run(cmd, args) {
   }
 }
 
-const tried = [] // { level, size, secs }
-function tryLevel(level) {
+// runSurprisal runs surprisal with its output streaming through; stderr is also kept, for --stop-at's message.
+function runSurprisal(args) {
+  return new Promise((resolve) => {
+    const p = spawn(SURPRISAL, args, { cwd: root, stdio: ['inherit', 'inherit', 'pipe'] })
+    let err = ''
+    p.stderr.on('data', (d) => {
+      process.stderr.write(d)
+      err = (err + d).slice(-4000)
+    })
+    p.on('error', (e) => {
+      console.error(e.code === 'ENOENT' ? `${SURPRISAL}: not found. Set SURPRISAL=/path/to/surprisal.` : e.message)
+      process.exit(1)
+    })
+    p.on('close', (status, signal) => resolve({ status, signal, err }))
+  })
+}
+
+const tried = [] // { level, size, secs, stopped? }
+async function tryLevel(level) {
   const file = `dist/fit/index-${level}.13k`
-  const args = [`-${level}`, '-f', '-o', file, input]
+  const args = [`-${level}`, '-f', ...(STOP_AT ? [`--stop-at=${LIMIT}`] : []), '-o', file, input]
   console.log(`\n[${t()}] compressing at -${level}…  ${SURPRISAL} ${args.join(' ')}`)
   rmSync(root + file, { force: true }) // never report a stale archive
   const t0 = Date.now()
-  run(SURPRISAL, args)
+  const res = await runSurprisal(args)
+  if (STOP_AT && res.status === OVER) {
+    // "the archive will be at least N bytes, over the L-byte limit (stopped at D/T tokens)", or at the very end
+    // "the archive is N bytes, over ..."
+    const m = res.err.match(/(?:at least|is) (\d+) bytes, over/)
+    const at = res.err.match(/stopped at (\d+\/\d+) tokens/)
+    const r = { level, size: m ? +m[1] : LIMIT + 1, secs: (Date.now() - t0) / 1000, stopped: at ? at[1] : '' }
+    tried.push(r)
+    console.log(`[${t()}] -${level}: over (at least ${r.size.toLocaleString()} bytes${r.stopped ? `, stopped at ${r.stopped} tokens` : ''}; limit ${LIMIT.toLocaleString()})`)
+    return false
+  }
+  if (res.status !== 0) {
+    console.error(`${SURPRISAL} failed (${res.signal || 'exit ' + res.status})`)
+    process.exit(res.status || 1)
+  }
   if (!existsSync(root + file)) {
     console.error(`${file} was not written`)
     process.exit(1)
@@ -64,16 +103,17 @@ function tryLevel(level) {
 }
 
 console.log(`[${t()}] saved level -${saved}, budget ${BUDGET.toLocaleString()}, headroom ${HEADROOM}: fit at or under ${LIMIT.toLocaleString()} bytes${down ? ' (--down)' : ''}`)
+if (!STOP_AT) console.log(`[${t()}] ${SURPRISAL} has no --stop-at: over-budget levels run to the end`)
 console.log(`[${t()}] building…`)
 run(process.execPath, ['tools/build.mjs'])
 mkdirSync(root + 'dist/fit', { recursive: true })
 
 let chosen
-if (tryLevel(saved)) {
+if (await tryLevel(saved)) {
   chosen = saved
-  if (down) for (let l = saved - 1; l >= 0 && tryLevel(l); l--) chosen = l
+  if (down) for (let l = saved - 1; l >= 0 && (await tryLevel(l)); l--) chosen = l
 } else {
-  for (let l = saved + 1; l <= 9; l++) if (tryLevel(l)) { chosen = l; break }
+  for (let l = saved + 1; l <= 9; l++) if (await tryLevel(l)) { chosen = l; break }
 }
 
 const fmtTime = (s) => (s >= 60 ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, '0')}s` : `${s.toFixed(1)}s`)
@@ -81,7 +121,7 @@ console.log(`\n[${t()}] levels tried (budget ${BUDGET.toLocaleString()}, limit $
 console.log(`  level    bytes  of budget     left    time`)
 for (const r of [...tried].sort((a, b) => a.level - b.level))
   console.log(
-    `  ${('-' + r.level).padEnd(5)}${r.size.toLocaleString().padStart(9)}  ${((r.size / BUDGET) * 100).toFixed(1).padStart(8)}%  ${(BUDGET - r.size).toLocaleString().padStart(7)}  ${fmtTime(r.secs).padStart(6)}  ${r.size <= LIMIT ? 'fits' : 'over'}${r.level === chosen ? '  <- chosen' : ''}`,
+    `  ${('-' + r.level).padEnd(5)}${((r.stopped !== undefined ? '≥' : '') + r.size.toLocaleString()).padStart(9)}  ${((r.size / BUDGET) * 100).toFixed(1).padStart(8)}%  ${(BUDGET - r.size).toLocaleString().padStart(7)}  ${fmtTime(r.secs).padStart(6)}  ${r.size <= LIMIT ? 'fits' : 'over'}${r.stopped ? ` (stopped at ${r.stopped} tokens)` : ''}${r.level === chosen ? '  <- chosen' : ''}`,
   )
 
 if (chosen === undefined) {
