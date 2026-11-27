@@ -15,14 +15,14 @@ npm install && npm start
 Then open http://127.0.0.1:8713. (`npm start` builds `dist/index.html` and serves it; three.js comes from a CDN, so you
 need a network connection.)
 
-**Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
+**Controls:** W/S or up/down walk forward and back · A/D or left/right turn ·
 Space or J uses what's in hand: a weapon attacks (the axe also chops trees and breaks flint), a potion is drunk, the
 whistle calls the roc, and wood, flint and a boat are thrown · F or Tab swap the item in hand · 1-8 pick a tray
 slot (7 potion, 8 whistle), 0 crafting · the torch is a weapon: taking it in hand lights it (a burnt-out one is used up), and Space
 at a well sets a torch and a sunstone in the beacon, then aims the beam (turn, W/S tilt; R lets go) · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
-or let go of a beam · C switches between the chase camera and first person (in first person A/D strafe and Q/E turn; click to lock the pointer, then the mouse or trackpad looks around in every direction and a click attacks; Esc lets go; caves are always first person) · M or the ♪ button toggles sound.
+or let go of a beam · C switches between the chase camera and first person (in first person A/D strafe; click to lock the pointer, then the mouse or trackpad looks around in every direction and a click attacks; Esc lets go; caves are always first person) · M or the ♪ button toggles sound.
 On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP and RIDE buttons, and tap a tray slot. See
 [Chase camera](#chase-camera).
 
@@ -199,7 +199,7 @@ weapons. Monster stats scale with the compiled size. The world itself is seeded 
 
 ## The game
 
-Third-person, high three-quarter perspective camera that trails the player (Q/E rotate it). An endless seeded world
+Third-person, high three-quarter perspective camera that trails the player. An endless seeded world
 of meadows, forests, rocky hills and lakes, with an exploration minimap, and a 3-minute day/night cycle (the torch earns
 its place at night). Twelve to twenty-odd monsters at a time wander, chase within 12 units, wind up and strike; you get knocked back and flash, they get knocked
 back, flash, and burst into little cubes. The sword is quick, the axe is slow and heavy with big knockback, the torch
@@ -759,7 +759,7 @@ about 5.2 KB and the swim clip about 2.2 KB, plus indentation. Not measured with
 ## Chase camera
 
 The camera stays behind the hero. A/D (or the stick's x, or a mouse drag) turn him at 2.8 rad/s, W/S walk along his
-facing (backing up at 60% speed), Q/E strafe, and the camera swings round to sit behind him with a short lag (it
+facing (backing up at 60% speed), and the camera swings round to sit behind him with a short lag (it
 closes 4 × the angle gap per second), so turns feel smooth rather than bolted on.
 
 | | |
@@ -783,8 +783,9 @@ closes 4 × the angle gap per second), so turns feel smooth rather than bolted o
 - **Swimming.** Same turning controls in deep water, at the swimmer's 55% speed; the camera stays above the surface.
 - **Minimap.** It still turns with the camera, so up on the map is the way the camera looks; it lags with the camera,
   matching the view.
-- **Free camera.** Kept behind C, for ~100 bytes: the old high three-quarter view with screen-relative WASD and Q/E
-  camera turns. It's useful for looking around and is what the room code already relies on.
+- **First person.** C switches to it (caves always use it): the camera just in front of the warrior's face, A/D
+  strafe, and a click locks the pointer so the mouse or trackpad looks around and a click attacks. There are no Q/E
+  keys and no mouse drag-to-turn in any mode.
 
 Cost: about +2.4 KB raw in `src/game.js` (58,139 vs 55,763 bytes, much of it comments) and +29 bytes in the page
 shell; at ~90% compression, roughly +0.24 KB in the shipped build.

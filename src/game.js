@@ -2353,7 +2353,7 @@ blockers.push((x, z, w) => {
 function aiming(dt, ix, iz) {
   const b = beacon[aim.k]
   b[0] -= ix * dt * 0.6 + drag * 0.3
-  b[1] = Math.min(1.5, Math.max(0.1, b[1] + iz * dt * 0.4 + tilt * 0.3)) // W/S, a touch drag or a mouse drag up and down
+  b[1] = Math.min(1.5, Math.max(0.1, b[1] + iz * dt * 0.4 + tilt * 0.3)) // W/S, a touch drag or the locked mouse up and down
   player.dir = b[0] // the warrior, and so the minimap, face the way the beam points
   player.move(0, 0, dt)
   player.speed = 0
@@ -2564,13 +2564,9 @@ const chase = 1 // (tank controls always; the old free camera is gone)
 let first = 0
 let pitch = 0
 const fpNow = () => (first || player.cave) && !player.room && !title
-let drag = 0 // mouse-drag turning, in radians, used up each frame
+let drag = 0 // turning from the locked mouse, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
-addEventListener('pointermove', (e) =>
-  document.pointerLockElement
-    ? ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (tilt += e.movementY * 0.0025))
-    : e.buttons && e.pointerType == 'mouse' && ((drag += e.movementX * 0.006), (tilt += e.movementY * 0.006))
-)
+addEventListener('pointermove', (e) => document.pointerLockElement && ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (tilt += e.movementY * 0.0025)))
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (document.pointerLockElement) return attack()
   if (fpNow() && e.pointerType == 'mouse') renderer.domElement.requestPointerLock()
@@ -2691,8 +2687,6 @@ function frame() {
   const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
   const fps = fpNow()
   if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 70 : 45, fps ? 0.05 : 0.5), fps || document.exitPointerLock?.() // first person: a wider, closer lens
-  const q = (keys.KeyQ ? 1 : 0) - (keys.KeyE ? 1 : 0)
-  if (!tank) camYaw += q * dt * 2
 
   // on foot or riding: A/D turn and W/S walk along the facing (Q/E strafe), or, in free mode, move relative to the camera
   let ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + stick.x
@@ -2706,10 +2700,10 @@ function frame() {
     steer(dt, ix, iz, il)
     player.dir = player.seat.dir
   } else if (tank && alive) {
-    // first person: A/D strafe and Q/E turn; otherwise A/D turn and Q/E strafe
-    player.dir -= (fps ? -q * 2.2 : ix * 2.8) * dt + drag
+    // first person: A/D strafe and the (locked) mouse turns; otherwise A/D turn
+    player.dir -= (fps ? 0 : ix * 2.8 * dt) + drag
     const f = Math.max(-1, Math.min(1, -iz)) * (iz > 0 ? 0.6 : 1) // backing up is slower
-    const r = fps ? -ix : q * 0.8
+    const r = fps ? -ix : 0
     const k = run * (player.busy ? 0.5 : 1) * (player.swim ? 0.55 : 1)
     const c = Math.cos(player.dir)
     const s = Math.sin(player.dir)
