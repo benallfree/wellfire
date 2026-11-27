@@ -589,7 +589,7 @@ try {
 function hud() {
   $('g').textContent = gold
   $('hp').style.width = (Math.max(0, player.hp) / player.maxHp) * 100 + '%'
-  $('info').textContent = player.hp > 0 ? `${player.cave ? 'cave of ' + player.cave.c.T.name : village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''}${lit ? ` · torch ${Math.ceil((fuel / FUEL) * 100)}%` : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
+  $('info').textContent = player.hp > 0 ? `${player.cave ? 'cave of ' + player.cave.c.T.name : village?.in ? village.name + ' · weapon stowed' : player.boat ? 'rowing' : player.swim ? 'swimming · weapon stowed' : item ? item.name : ''} · ${player.kills} kills · ✦ ${done()}/${GOAL}` : `You fell after ${player.kills} kills…`
 }
 // the tray (models.json "tray"): eight slots, keys 1-8 or a tap, each item taken in hand; Space uses what's in hand (a
 // weapon swings, wood, flint and a boat are thrown, a potion is drunk, the whistle is blown). The last slot (key 0) opens crafting: recipes (tap one; only in a village; a recipe's
@@ -916,8 +916,9 @@ player.kills = 0
 player.air = 1
 let item
 // The torch is a weapon like the sword and axe: taking it in hand (its slot, F or SWAP) lights it (a fire swing: +2
-// damage and the burn) and lights the night. Unlit, it's a weak club. A torch burns for FUEL seconds; relighting a
-// spent one (take it again) costs a wood. Water douses it. In the boat the lit torch stands in the bow post.
+// damage and the burn) and lights the night. Unlit, it's a weak club. A torch burns for FUEL seconds (the orange bar),
+// then it's spent and leaves the bag; take another from the slot, or craft one (a wood and a flint). Water douses it.
+// In the boat the lit torch stands in the bow post.
 const FUEL = 150
 let lit = 0
 let arm = 0 // the weapon last in hand: it goes on his back while he holds an item (wood, flint) up in both hands
@@ -930,12 +931,7 @@ function torch() {
   hud()
 }
 function light() {
-  if (lit || player.swim || ITEMS[player.item] != 'torch') return
-  if (fuel <= 0) {
-    if (!bag.wood) return say('Your torch is spent: relighting it takes a wood')
-    gain('wood', -1)
-    fuel = FUEL
-  }
+  if (lit || player.swim || ITEMS[player.item] != 'torch' || !bag.torch) return
   lit = 1
   beep(200, 0.25, 'sawtooth', 0.03, 2)
   torch()
@@ -2627,8 +2623,10 @@ function frame() {
   player.update(dt, run)
   if (player.boat) grip()
   player.safe -= dt
-  if (lit && (fuel -= dt) <= 0) (lit = 0), torch(), say('Your torch burnt out: pick it to relight (1 wood)')
-  if (lit && (fuel | 0) != ((fuel + dt) | 0)) hud()
+  // a torch that burns out is spent: one fewer in the bag, and the next one starts fresh
+  if (lit && (fuel -= dt) <= 0) (lit = 0), (fuel = FUEL), gain('torch', -1), torch(), say(bag.torch ? 'Your torch burnt out: take another (3)' : 'Your torch burnt out: craft a new one (a wood and a flint)')
+  $('fuel').style.width = (fuel / FUEL) * 100 + '%'
+  $('fuelbar').style.opacity = lit ? 1 : 0
   if (!alive && (player.dead += dt) > 3) {
     player.hp = player.maxHp
     player.air = 1

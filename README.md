@@ -18,7 +18,7 @@ need a network connection.)
 **Controls:** W/S or up/down walk forward and back · A/D or left/right turn · Q/E strafe · drag the mouse to turn ·
 Space or J uses what's in hand: a weapon attacks (the axe also chops trees and breaks flint), a potion is drunk, the
 whistle calls the roc, and wood, flint and a boat are thrown · F or Tab swap the item in hand · 1-8 pick a tray
-slot (7 potion, 8 whistle), 0 crafting · the torch is a weapon: taking it in hand lights it (a spent one relights for a wood), and Space
+slot (7 potion, 8 whistle), 0 crafting · the torch is a weapon: taking it in hand lights it (a burnt-out one is used up), and Space
 at a well sets a torch and a sunstone in the beacon, then aims the beam (turn, W/S tilt; R lets go) · wood, flint, a potion and the whistle are held up over his head in both hands (shield and
 weapon put away on his back; Space throws one, and the last one thrown puts the weapon back in hand) · a boat (slot 6) is
 carried the same way, upside down, and Space throws it where it should float · R ride, board and leave the boat,
@@ -905,9 +905,10 @@ neither needs a torch. The minimap and HUD are unchanged and stay readable.
 - **Fear and lure.** Within 7 units of a lit torch, slimes and spiders back off to about 5 units and circle the edge
   of the light, then dare a rush (2 s in every 7), so the light buys breathing room, not safety. Bats are drawn to
   it: they chase from 24 units instead of 12.
-- **Fuel.** A torch burns for 150 s of being lit (the HUD shows `torch N%`). A spent torch goes out and stays in your
-  hand as a club ("Your torch burnt out: pick it to relight (1 wood)"); taking it again relights it for
-  one wood. Putting it out keeps what's left.
+- **Fuel.** A torch burns for 150 s of being lit, shown as an orange bar under the health bar while it's lit. When it
+  burns out it's spent: it leaves the bag (the torch slot's count drops by one). If you have another, take the slot
+  again and it lights fresh; if not, craft a new one in a village (a wood and a flint). Putting a torch out keeps
+  what's left of it.
 - **Water and riding.** Swimming douses it (and you can't light it while swimming); ashore, take it again to relight
   it. On a mount you keep holding the torch, lit (any other weapon is stowed); in a village it is stowed as before. In the boat it stands in the bow post (see the boat).
 
