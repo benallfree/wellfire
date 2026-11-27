@@ -4,14 +4,14 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { strip } from './strip.mjs'
 
-// the version and commit this build is from, shown in the corner: v<major>.<minor>.<commits> · <commit> ('+' for
-// uncommitted changes). major.minor come from package.json; the patch is the commit count on this branch, so every
-// deploy from main gets a higher one (CI checks out the full history for it, see .github/workflows/pages.yml)
-const [major, minor] = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version.split('.')
-let build = `v${major}.${minor} · dev`
+// the version and commit this build is from, shown in the corner: <version>-alpha.<commits> · <commit> ('+' for
+// uncommitted changes). <version> is package.json's (1.0.0); the alpha number is the commit count on this branch, so
+// every deploy from main gets a higher one (CI checks out the full history for it, see .github/workflows/pages.yml)
+const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
+let build = `${version}-alpha · dev`
 try {
   const git = (c) => execSync('git ' + c, { encoding: 'utf8' }).trim()
-  build = `v${major}.${minor}.${git('rev-list --count HEAD')} · ${git('rev-parse --short HEAD')}${git('status --porcelain src') ? '+' : ''}`
+  build = `${version}-alpha.${git('rev-list --count HEAD')} · ${git('rev-parse --short HEAD')}${git('status --porcelain src') ? '+' : ''}`
 } catch {}
 
 const read = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8')
