@@ -1033,6 +1033,7 @@ function seat(r, m) {
 function unseat(r, from) {
   const m = r.seat
   r.seat = m.rider = r.floor = null
+  if (m.m.vars.fly) (m.leave = 1), (m.flew = m.out = 0) // a roc leaves the moment anyone comes off it, for any reason
   const a = m.dir + Math.PI / 2
   r.pos.x = m.pos.x + Math.sin(a) * 1.3
   r.pos.z = m.pos.z + Math.cos(a) * 1.3
@@ -1052,7 +1053,7 @@ function mountUp() {
   if (aim) return (aim = null)
   if (player.cave) return
   if (player.boat) return ashore()
-  if (player.seat) return player.seat.alt ? say('Land first: Space') : ((player.seat.leave = player.seat.m.vars.fly), unseat(player)) // a roc leaves when you get off
+  if (player.seat) return player.seat.alt ? say('Land first: Space') : unseat(player)
   if (nearBoat()) return board()
   const m = player.hp > 0 && !village.in && nearMount()
   if (m) seat(player, m)
@@ -1237,7 +1238,7 @@ function herd(dt) {
       m.floor = m.alt ? m.fy : null
       if (r == player && m.alt > 0.3) m.flew = 1 // any take-off counts, even a hop that lands again before climbing high
       // one call, one flight: once it has flown you and lands, it sets you down and leaves (tired or not)
-      if (m.flew && !m.alt) say(v.name + (m.out ? ' is worn out and flies off' : ' flies off')), (m.flew = m.out = 0), (m.leave = 1), unseat(player, player.pos)
+      if (m.flew && !m.alt) say(v.name + (m.out ? ' is worn out and flies off' : ' flies off')), unseat(player, player.pos)
     }
     m.update(dt, v.run)
     if (m.rider) {
@@ -2752,6 +2753,7 @@ function frame() {
     player.air = 1
     player.once = null
     if (player.cave) leave() // a fall underground wakes you at home, the cave left behind
+    if (player.seat) unseat(player) // and off whatever you rode (a roc flies away)
     player.pos.copy(bed)
     if (player.boat) (player.boat = player.floor = null), village.stow(0)
     hud()
