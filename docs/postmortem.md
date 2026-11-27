@@ -1,3 +1,21 @@
+# Wellfire post-mortem: the development journal
+
+> **This is the development history, not the manual.** It is the project's old README, kept nearly as it was: each
+> section was written as that feature was built, with its design notes and costs. For the game as it is now, read the
+> [README](../README.md).
+>
+> - **Numbers are as measured at the time.** File sizes, byte counts, "+N KB raw" costs and surprisal results describe
+>   the build of that day; the game has since grown several times over. The early "about 3 KB under surprisal" result
+>   in particular is long out of date (current figures are in the README).
+> - **Some mechanics are superseded**, and later sections often say so themselves. The fixed high three-quarter camera
+>   became the chase camera; Q/E strafing, mouse drag-to-turn, the T torch key and B boat key are gone; the
+>   over-the-shoulder alt camera became first person (C, and always in caves); thunder eggs gave way to rocks and caves;
+>   the 4-slot tray grew to 8. Screenshots show the HUD and help line of the build they were taken on.
+> - Related write-ups: [JSON vs. the text DSL](json-vs-dsl.md), [refactor size](refactor-size.md),
+>   [goal ideas](goal-ideas.md), [world layers](world-layers.md).
+
+---
+
 # Warrior: a 3D js13k spike measured with surprisal
 
 **Play Wellfire:** https://benallfree.github.io/wellfire/ (built from `main` on every push by `.github/workflows/pages.yml`)
@@ -28,12 +46,12 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), plus HIT, SWAP
 
 | | |
 |---|---|
-| ![Sword swing against spiders and a bat](docs/sword-vs-spiders.jpg) | ![Axe in hand, a slime, goblin and spider closing in](docs/axe.jpg) |
-| ![Torch at night against goblins with a club and a spear](docs/torch-night-goblins.jpg) | ![The seeded world](docs/world.jpg) |
-| ![Burning slimes at night, lit by the torch](docs/torch-burning.jpg) | ![Touch controls on a phone-sized screen](docs/touch.jpg) |
-| ![Health bars over a crowd of monsters at night, mid-swing](docs/health-bars.jpg) | |
+| ![Sword swing against spiders and a bat](sword-vs-spiders.jpg) | ![Axe in hand, a slime, goblin and spider closing in](axe.jpg) |
+| ![Torch at night against goblins with a club and a spear](torch-night-goblins.jpg) | ![The seeded world](world.jpg) |
+| ![Burning slimes at night, lit by the torch](torch-burning.jpg) | ![Touch controls on a phone-sized screen](touch.jpg) |
+| ![Health bars over a crowd of monsters at night, mid-swing](health-bars.jpg) | |
 
-## Results in one paragraph
+## Results in one paragraph (superseded: an early measurement)
 
 The whole game, readable and unminified, is about 33 KB in one HTML file. Surprisal at level 1 packs it to about 3 KB
 (32,727 → 3,033 bytes, 90.7%), under a quarter of the 13,312-byte budget. The model text on its own (5,140 bytes for
@@ -41,7 +59,7 @@ the characters and props) packs to 916 bytes. So the budget is not the constrain
 of **~90% under surprisal**, this architecture leaves room for roughly four times as much game. I stopped measuring
 after those spot checks and used that ratio while building; the full table below is a tool you can run, not
 something I ran to completion. (Those numbers predate the switch from the text DSL to JSON models, which made the
-compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-dsl.md](docs/json-vs-dsl.md).)
+compiler + models bundle 170 bytes smaller under surprisal: see [docs/json-vs-dsl.md](json-vs-dsl.md).)
 
 ## Architecture
 
@@ -75,7 +93,7 @@ budget. The game leans on it heavily on purpose: `BoxGeometry`, `SphereGeometry`
 > The models were first written in a custom line-based DSL (`box chest cloth 0 .27 0 .46 .55 .28`). Measuring showed
 > that the same content as plain pretty-printed JSON packs about 10% smaller under surprisal, and the whole
 > compiler + models bundle smaller too, even though the JSON is seven times bigger raw. So the game now ships JSON. The
-> comparison, and the old DSL with its compiler, are in [docs/json-vs-dsl.md](docs/json-vs-dsl.md) and `tools/formats/`.
+> comparison, and the old DSL with its compiler, are in [docs/json-vs-dsl.md](json-vs-dsl.md) and `tools/formats/`.
 
 Prior art I weighed:
 
@@ -132,7 +150,7 @@ Numbers anywhere can be expressions over variables (strings), so a goblin's ears
 
 ## Compiler and rig
 
-`make(lib, name, seed)` in [src/compiler.js](src/compiler.js) walks a model's block in order (vars, bones, parts, holds, clips) with a seeded random generator:
+`make(lib, name, seed)` in [src/compiler.js](../src/compiler.js) walks a model's block in order (vars, bones, parts, holds, clips) with a seeded random generator:
 
 1. Bones become `Object3D`s in a hierarchy under the model's root; their rest transforms are recorded.
 2. Each shape becomes a three.js geometry, rotated and translated into its bone's space, stripped to positions, and
@@ -168,7 +186,7 @@ of idle/walk, winding up and following through with shoulder, elbow, wrist and t
 shift over planted feet. He has his own `ride` (thighs forward and spread, knees bent, hips square) in place of `common`'s,
 whose deltas were written for the old straight-legged rest pose.
 
-Those bones and clips are not hand-typed: [tools/warrior.mjs](tools/warrior.mjs) (dev only) writes them into
+Those bones and clips are not hand-typed: [tools/warrior.mjs](../tools/warrior.mjs) (dev only) writes them into
 `models.json` from absolute poses. It solves each leg with planar two-bone IK from a hip offset and a foot target, so
 the feet stay on the ground (within a few cm) while the body crouches, lunges and dips; folds L/R pairs back into `*`
 and `^` channels where they mirror; keeps 4 walk keys instead of 8 where the curve allows; and drops channels that
@@ -186,20 +204,20 @@ almost all of it one-shot keyframes. Not measured under surprisal.
 
 | stance (sword, axe, torch) | walk |
 |---|---|
-| ![stance](docs/rig/stance.png) | ![walk](docs/rig/walk.png) |
+| ![stance](rig/stance.png) | ![walk](rig/walk.png) |
 | **swing** | **death** |
-| ![swing](docs/rig/swing.png) | ![death](docs/rig/death.png) |
+| ![swing](rig/swing.png) | ![death](rig/death.png) |
 
 **Deterministic creatures.** The slime, goblin, spider and bat blocks use `~` ranges, `|` picks, `chance` optional
 parts and `scale`, so every seed is a different, repeatable creature: size, color, head size, horns, hats, markings,
 weapons. Monster stats scale with the compiled size. The world itself is seeded too, and endless (see
 [Endless world](#endless-world)).
 
-![Characters compiled from text](docs/models.jpg)
+![Characters compiled from text](models.jpg)
 
 ## The game
 
-Third-person, high three-quarter perspective camera that trails the player. An endless seeded world
+Third-person camera (at first a fixed high three-quarter view; since superseded by the chase camera and first person). An endless seeded world
 of meadows, forests, rocky hills and lakes, with an exploration minimap, and a 3-minute day/night cycle (the torch earns
 its place at night). Twelve to twenty-odd monsters at a time wander, chase within 12 units, wind up and strike; you get knocked back and flash, they get knocked
 back, flash, and burst into little cubes. The sword is quick, the axe is slow and heavy with big knockback, the torch
@@ -213,8 +231,8 @@ tenth of your health (`heal` 0.1, 3 of 30), and it grows back after 4 minutes (`
 
 ## Music
 
-The background music is text too: [src/score.json](src/score.json), compiled at load by
-[src/music.js](src/music.js) and played by a small WebAudio sequencer. Up to fourteen voices sound at once (lead or bell,
+The background music is text too: [src/score.json](../src/score.json), compiled at load by
+[src/music.js](../src/music.js) and played by a small WebAudio sequencer. Up to fourteen voices sound at once (lead or bell,
 arpeggio, pad chords, bass, kick, hi-hat, and a part for each kind of monster), all synthesized in code: no samples, no
 audio files. See **Instruments** below for how each one is built.
 
@@ -225,7 +243,7 @@ I took the tracker's grid (one token per step, voices lined up) and ABC's note l
 sheets: a **chord track**. Bass and arpeggio lines are written as chord tones (`1` root, `2` third, `3` fifth, `4` root an
 octave up, ...), so one short line plays over any progression, and a new section only needs new chords and a melody.
 
-The file follows the models' format choice ([docs/json-vs-dsl.md](docs/json-vs-dsl.md)): pretty-printed JSON with
+The file follows the models' format choice ([docs/json-vs-dsl.md](json-vs-dsl.md)): pretty-printed JSON with
 named keys, because under surprisal the keys are nearly free and tell the model what each number is. The note patterns
 stay strings: a pattern is the notation itself, the tokens are letters rather than numbers, and one string per part keeps
 the bars readable. (An earlier version was a line-based text format with the same patterns; the JSON compiles to
@@ -314,7 +332,7 @@ Cost: `music.js` grew from 7,928 to 16,489 bytes raw (+8.6 KB) and the score's v
 (+0.4 KB). At the ~90% the project assumes for surprisal, that is roughly +0.9 KB shipped. At runtime a scheduler tick
 averages under 1 ms (about 0.1 ms once the buffers are warm), measured in Chrome with every monster part playing. Before
 and after renders of each section, made with an OfflineAudioContext (12 s each, AAC), are in
-[docs/audio/](docs/audio/): `A-before.m4a` / `A-after.m4a` and the same for `B`, `N` (night), `M`, and `monsters` (section
+[docs/audio/](audio/): `A-before.m4a` / `A-after.m4a` and the same for `B`, `N` (night), `M`, and `monsters` (section
 A with every monster part in).
 
 **Compiler and player.** `score()` parses the JSON and compiles every section into per-step event lists with notes
@@ -346,7 +364,7 @@ surprisal -1** (the whole game goes from 3,068 to 4,112 bytes). With the old tex
 
 ## Villages
 
-![Brookford from the square](docs/village.jpg)
+![Brookford from the square](village.jpg)
 
 Villages are part of the seeded world (see [Villages and roads](#villages-and-roads-in-the-seeded-world) below): one
 always sits about 30 units from the start, and more turn up every few hundred units, joined by roads. Each has five
@@ -360,7 +378,7 @@ back out of the door and you're outside again, in front of it.
 
 | weapon stowed | inside a house |
 |---|---|
-| ![sword on the back](docs/village-stowed.jpg) | ![interior](docs/village-interior.jpg) |
+| ![sword on the back](village-stowed.jpg) | ![interior](village-interior.jpg) |
 
 How other games do this cheaply, and what I picked:
 
@@ -401,11 +419,11 @@ and the ~97% that `models.json` packs to overall, that's roughly 1.1 KB + 0.6 KB
 
 ## Endless world
 
-![6.8 km from the start, in the rocky hills](docs/endless-rocky.jpg)
+![6.8 km from the start, in the rocky hills](endless-rocky.jpg)
 
 There is no edge. The world is a pure function of `SEED` and coordinates, so any place regenerates identically on
 every visit and every page load, and nothing generated needs storing. It's one self-contained block in
-[src/game.js](src/game.js) (`// ---------- world`):
+[src/game.js](../src/game.js) (`// ---------- world`):
 
 - **Noise.** `hash(x, z, seed)` is an integer hash (`Math.imul` mixing), so it stays exact at any coordinate (the old
   `sin()` hash loses precision far out). `noise()` is smooth value noise on it.
@@ -452,11 +470,11 @@ every visit and every page load, and nothing generated needs storing. It's one s
 
 ## Villages and roads in the seeded world
 
-![The road network for SEED 1337, about 2.4 km across, start in yellow](docs/world-network.jpg)
+![The road network for SEED 1337, about 2.4 km across, start in yellow](world-network.jpg)
 
 Villages and the roads between them are two more pure layers over the terrain, so the same seed gives the same
 settlements and routes wherever you walk, and nothing about them is stored. The design and the options weighed are in
-[docs/world-layers.md](docs/world-layers.md). In short:
+[docs/world-layers.md](world-layers.md). In short:
 
 - **Settlements** sit on a grid of 280-unit cells centred on the start. `site(gi, gj)` gives each cell a seeded
   ~60% chance of a village, tries up to four jittered spots in the middle of the cell, and keeps the first that is dry
@@ -487,9 +505,9 @@ settlements and routes wherever you walk, and nothing about them is stored. The 
 
 | a road into Wildale's gate | the minimap after walking two roads |
 |---|---|
-| ![a dirt road leading to a fence gate](docs/road-gate.jpg) | ![minimap with roads and a village ring](docs/minimap-roads.png) |
+| ![a dirt road leading to a fence gate](road-gate.jpg) | ![minimap with roads and a village ring](minimap-roads.png) |
 
-![In Oakdale's square](docs/seeded-village.jpg)
+![In Oakdale's square](seeded-village.jpg)
 
 **Checked in the browser** (via `window.game`; the browser pane was hidden, so the loop ran on `setTimeout`):
 
@@ -513,7 +531,7 @@ scenery still has that mirror symmetry.
 
 ## Exploration minimap
 
-![The minimap after exploring around a forest, rocky hills and a lake](docs/minimap.png)
+![The minimap after exploring around a forest, rocky hills and a lake](minimap.png)
 
 Top right, under the mute button, a round 160-pixel map shows 320×320 units around the player at 2 units per pixel.
 Ground you've been within 36 units of is drawn in the world's own colours: deep and shallow water, sand, meadow, forest
@@ -531,14 +549,14 @@ by sampling `height()`, `region()` and `ground()` 16 times. Each frame the visib
 trail drawn on top, and the result drawn turned by the camera's yaw. The chunk canvases are an LRU cache of 150: an evicted one is repainted from `seen` when
 you come back into view, so leaving and returning shows exactly the ground you explored.
 
-![6.7 km from the start, in a forest with a spider](docs/endless-far.jpg)
+![6.7 km from the start, in a forest with a spider](endless-far.jpg)
 
 Cost: about 8.2 KB raw (game code +7.9 KB, HTML/CSS +0.3 KB), including the disposal fix and the region tables. Not
 measured with surprisal; at ~90% that's roughly 0.8 KB shipped.
 
 ## Mounts
 
-![Riding a steed: the sword hangs on the warrior's back, the camera pulled back](docs/mount-riding.jpg)
+![Riding a steed: the sword hangs on the warrior's back, the camera pulled back](mount-riding.jpg)
 
 Two original rideable creatures live in `models.json`. Both are ordinary models with bones, rigid parts and keyframe
 clips, a `saddle` socket bone, and their gameplay numbers in `vars`. Each one varies by seed: size, coat or scale
@@ -568,8 +586,8 @@ the stick or WASD turns it toward the direction you hold, at its own turn rate, 
 the mount's attack, with damage, reach, arc, knockback, cooldown and hit timing (`at`, a fraction of the clip) all from
 its vars. R again climbs off and leaves it standing.
 
-![A steed rearing to trample a goblin](docs/mount-steed-rear.jpg)
-![A drake's fire breath setting slimes alight](docs/mount-drake-breath.jpg)
+![A steed rearing to trample a goblin](mount-steed-rear.jpg)
+![A drake's fire breath setting slimes alight](mount-drake-breath.jpg)
 
 **Rules**
 
@@ -586,7 +604,7 @@ its vars. R again climbs off and leaves it standing.
   seed, same mount). The last mount you rode (`tamed`) never despawns and stays where you left it, even kilometres
   away. A chunk whose mount you took or killed never rolls another. A goblin's mount leaves with its goblin.
 
-![A goblin charging on a drake](docs/mount-goblin-rider.jpg)
+![A goblin charging on a drake](mount-goblin-rider.jpg)
 
 For play-testing: `game.addMount('steed' | 'drake', seed, x, z)`, `game.seat(actor, mount)`, `game.mountUp()` and
 `game.mounts`.
@@ -600,7 +618,7 @@ be the first cut if space gets tight.
 
 | | |
 |---|---|
-| ![Coins spilling from slimes and a goblin by day, one being pulled to the player](docs/gold-day.jpg) | ![Coins spinning on the ground at dusk, lit by the torch](docs/gold-dusk.jpg) |
+| ![Coins spilling from slimes and a goblin by day, one being pulled to the player](gold-day.jpg) | ![Coins spinning on the ground at dusk, lit by the torch](gold-dusk.jpg) |
 
 Every kill spills a few gold coins. What it pays is data plus a seeded roll:
 
@@ -638,7 +656,7 @@ surprisal; at ~90% that's roughly 0.4 KB shipped.
 
 ## Terrain
 
-![A mountain range: grass, then dirt on the slopes, rock, and snow on the crests](docs/terrain-range.jpg)
+![A mountain range: grass, then dirt on the slopes, rock, and snow on the crests](terrain-range.jpg)
 
 The old height was four octaves of small noise: 98.5% of land had a slope under 0.3, and the highest point anywhere
 was 22 units, so the world read as flat. Height is now `height(x, z) = flatten(x, z, terrain(x, z))`: `terrain()` is a
@@ -663,7 +681,7 @@ self-contained base terrain, and anything that levels ground (the village today,
   mountains). Mountains fade in from 35 to 90 units out, and hills and knolls flatten only on a pad within 10–35 units,
   so you start on level ground and walk into hills within a few seconds. The village ring is still levelled flat.
 
-![Six km around the start, rendered offline from the same functions, with hillshade](docs/terrain-overview.jpg)
+![Six km around the start, rendered offline from the same functions, with hillshade](terrain-overview.jpg)
 
 Measured over 6×6 km (every 8 units): land with a slope under 0.3 went from 98.5% to 64%, 0.3–1 is 35%, 1–1.5 is
 0.8% and nothing is steeper, so cliffs are rare and nothing needs blocking. Heights run from −10 (lake beds) to 40
@@ -685,14 +703,14 @@ lit from the north-west, and water darkens with depth. The colours are written w
 (`getHexString(LinearSRGBColorSpace)`), which keeps the map's contrast. It is still painted per chunk into the
 same 150-tile LRU cache as cells are revealed, behind the same fog of war, so memory stays bounded.
 
-![The minimap over rocky hills: hillshade, rock, snow on the peaks, grass valleys](docs/terrain-minimap.jpg)
+![The minimap over rocky hills: hillshade, rock, snow on the peaks, grass valleys](terrain-minimap.jpg)
 
 **Checked in the browser** (via `window.game`, which now also exposes `world.terrain`):
 
 - Teleports to a summit, a mountain range, rolling forest hills, a river, a lake shore and open meadow:
-  [mountain](docs/terrain-mountain.jpg), [range](docs/terrain-range.jpg), [hills](docs/terrain-hills.jpg),
-  [river](docs/terrain-river.jpg), [lake](docs/terrain-lake.jpg), [plains](docs/terrain-plains.jpg), and
-  [night on a snowfield by torchlight](docs/terrain-night.jpg). Overview shots use a raised camera; the game camera
+  [mountain](terrain-mountain.jpg), [range](terrain-range.jpg), [hills](terrain-hills.jpg),
+  [river](terrain-river.jpg), [lake](terrain-lake.jpg), [plains](terrain-plains.jpg), and
+  [night on a snowfield by torchlight](terrain-night.jpg). Overview shots use a raised camera; the game camera
   is unchanged.
 - Seams: 0 height difference along 52 shared chunk edges. All 1,553 live scenery instances and every actor sit exactly
   on `height()` (or on the water floor).
@@ -710,7 +728,7 @@ measured with surprisal; at ~90% that's roughly 0.3 KB shipped.
 
 | | |
 |---|---|
-| ![Swimming off the shore: goblins, slimes and a spider stop at the waterline](docs/swim-shore.jpg) | ![Two eels chasing the swimming warrior at night](docs/swim-eels.jpg) |
+| ![Swimming off the shore: goblins, slimes and a spider stop at the waterline](swim-shore.jpg) | ![Two eels chasing the swimming warrior at night](swim-eels.jpg) |
 
 Where the ground drops more than a unit below the water (`SWIM = WATER - 1`), the warrior **swims**. He sinks to
 his shoulders at the surface, moves at 55% speed and plays the warrior's looping `swim` clip: body pitched forward,
@@ -758,15 +776,15 @@ about 5.2 KB and the swim clip about 2.2 KB, plus indentation. Not measured with
 
 ## Chase camera
 
-The camera stays behind the hero. A/D (or the stick's x, or a mouse drag) turn him at 2.8 rad/s, W/S walk along his
+The camera stays behind the hero. A/D (or the stick's x; mouse drag-to-turn was later removed) turn him at 2.8 rad/s, W/S walk along his
 facing (backing up at 60% speed), and the camera swings round to sit behind him with a short lag (it
 closes 4 × the angle gap per second), so turns feel smooth rather than bolted on.
 
 | | |
 |---|---|
-| ![Turning: the camera lags a little, then settles behind](docs/chase-turn.jpg) | ![A swing turns to the nearest monster in front](docs/chase-fight.jpg) |
-| ![Riding: reins steering, the camera farther back](docs/chase-ride.jpg) | ![On a phone: the stick's y walks, its x turns](docs/chase-touch.jpg) |
-| ![A house's room keeps its fixed cutaway camera](docs/chase-interior.jpg) | ![Out of the door, the camera snaps behind and the house fades](docs/chase-door.jpg) |
+| ![Turning: the camera lags a little, then settles behind](chase-turn.jpg) | ![A swing turns to the nearest monster in front](chase-fight.jpg) |
+| ![Riding: reins steering, the camera farther back](chase-ride.jpg) | ![On a phone: the stick's y walks, its x turns](chase-touch.jpg) |
+| ![A house's room keeps its fixed cutaway camera](chase-interior.jpg) | ![Out of the door, the camera snaps behind and the house fades](chase-door.jpg) |
 
 - **Framing.** 7 units back and 4.8 up, looking at a point 3 units ahead of him at waist height: a slight downward
   angle that shows the ground ahead and monsters in front instead of the hero's back. If the ground behind is
@@ -810,9 +828,9 @@ metre of water looked the same as ten.
 - **Wading:** actors now sink with the bed down to `WATER - 0.9` (about waist-deep), going ankle, knee, then waist.
   `wade(p)` slows movement and the walk cycle by up to 45%.
 
-![Knee-deep on the shelf: light shallows, darker water beyond](docs/water-knee.jpg)
-![Waist-deep and slowed, the bed darkening toward the middle](docs/water-waist.jpg)
-![Minimap: teal shallows, navy deep](docs/water-minimap.png)
+![Knee-deep on the shelf: light shallows, darker water beyond](water-knee.jpg)
+![Waist-deep and slowed, the bed darkening toward the middle](water-waist.jpg)
+![Minimap: teal shallows, navy deep](water-minimap.png)
 
 **How it sits with the other layers.** `shore()` runs on `terrain()` inside the road/village `height()`, before
 grading and levelling, so roads and villages still flatten on top. Swimming starts where the ground drops below `SWIM`
@@ -831,10 +849,10 @@ to the gold. A new kind of goods is an icon in `ICON` and a use in `GOODS`; the 
 
 | | |
 |---|---|
-| ![Three chops and a tree tips away from you, dropping 3 wood](docs/wood-felling.jpg) | ![The tray on a phone, above the touch buttons](docs/tray-touch.jpg) |
-| ![A boat thrown onto the water: 10 wood and 30 gold build one](docs/boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](docs/boat-rowing.jpg) |
-| ![A slime on the bank can't reach the boat](docs/boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](docs/boat-ashore.jpg) |
-| ![The torch in the boat at night: it stands in the bow post and lights the water](docs/boat-torch-night.jpg) | |
+| ![Three chops and a tree tips away from you, dropping 3 wood](wood-felling.jpg) | ![The tray on a phone, above the touch buttons](tray-touch.jpg) |
+| ![A boat thrown onto the water: 10 wood and 30 gold build one](boat-launch.jpg) | ![Rowing mid-stroke: both hands on the oars, blades under on the pull](boat-rowing.jpg) |
+| ![A slime on the bank can't reach the boat](boat-shore-slime.jpg) | ![R at a shore steps out; the boat stays](boat-ashore.jpg) |
+| ![The torch in the boat at night: it stands in the bow post and lights the water](boat-torch-night.jpg) | |
 
 - **Chopping.** The axe has `"chop": 1` in `models.json`; other weapons have no `chop` and pass through trees. A swing
   near a pine or oak (within reach, about 66° of your facing) hits it: wood chips, a thunk, and the tree shakes.
@@ -897,9 +915,9 @@ neither needs a torch. The minimap and HUD are unchanged and stay readable.
 
 | | |
 |---|---|
-| ![Day](docs/night-day.jpg) | ![Dusk](docs/night-dusk.jpg) |
-| ![Night, no torch: near-black, a faint moonlit silhouette](docs/night-unlit.jpg) | ![Night, torch lit](docs/night-lit.jpg) |
-| ![A lit torch swing: flame bits, two slimes burning](docs/night-fight.jpg) | |
+| ![Day](night-day.jpg) | ![Dusk](night-dusk.jpg) |
+| ![Night, no torch: near-black, a faint moonlit silhouette](night-unlit.jpg) | ![Night, torch lit](night-lit.jpg) |
+| ![A lit torch swing: flame bits, two slimes burning](night-fight.jpg) | |
 
 - **Light it.** The torch is a weapon like the sword and axe, always with the shield: taking it in hand (its tray
   slot, F/Tab or SWAP) lights it, and switching to another weapon puts it out, keeping its fuel. There is no T key
@@ -931,7 +949,7 @@ aimed at it. Five beams pin the eye and the night goes blind, which is the end s
 The game has an ending now. One bright star hangs at a fixed, seeded direction in the sky (about 15-40° up), as if
 infinitely far away, so the right aim is the same from every village. Set your torch in the beacon on five villages'
 wells, turn each beam until it meets the star, and the five beams start a light show and the end screen. The
-design discussion and the other options weighed are in [docs/goal-ideas.md](docs/goal-ideas.md).
+design discussion and the other options weighed are in [docs/goal-ideas.md](goal-ideas.md).
 
 - **Setting a beacon.** At a well (within 3.5 units), Space sets a torch and a sunstone in it (see
   [Rocks, caves and sunstones](#rocks-caves-and-sunstones)). Both leave the bag (the torch slot has a count; the
@@ -940,7 +958,7 @@ design discussion and the other options weighed are in [docs/goal-ideas.md](docs
 - **Aiming.** Setting the beacon takes the beam; Space at a lit, unfinished well takes it again; R or walking off
   lets go. The camera stands behind the sunstone and looks
   along the beam. Turning (A/D, drag) swings it round, W/S tilt it, and the warrior and the minimap turn with it. A
-  `✦` on the minimap rim always shows the star's way. Mouse drag up and down tilts it too. The beam is white until it comes within
+  `✦` on the minimap rim always shows the star's way. The locked mouse (in first person) tilts it too. The beam is white until it comes within
   about 7° (`LOCK`, 0.12 rad) of the star; there it snaps exactly onto the star, turns gold and locks, with a chime and a
   burst. Gold always means locked, and a locked beacon stays locked. A saved beam already inside that zone locks on load.
 - **A new torch.** Flint comes from rocks (below). With a wood and a flint, slot 3 (or tapping the flint)
@@ -1030,7 +1048,7 @@ npm run ship
 npm run baseline
 ```
 
-Baseline on the current build: terser 119,487 bytes, roadroller 43,811 (the page), zip **31,497** (236.6% of the
+Baseline as measured when this section was written: terser 119,487 bytes, roadroller 43,811 (the page), zip **31,497** (236.6% of the
 budget). surprisal `-3` on the same build: 12,531.
 
 `npm run size` builds the game and prints this table (also written to `dist/size/SIZES.md`). It needs a surprisal
@@ -1050,7 +1068,7 @@ What the report covers:
   included in every format): the model JSON the game ships, a JSON mesh export, a
   float32 non-indexed binary (what the compiler hands the GPU), and a quantized, indexed int16 binary.
 
-Spot checks taken during development (surprisal level 1, 0.5B model):
+Spot checks taken early in development (surprisal level 1, 0.5B model; long out of date):
 
 | input | raw | surprisal -1 | saved |
 |---|---:|---:|---:|
@@ -1070,7 +1088,7 @@ hour the first time; the cache makes reruns cheap.
   source with real names *is* the compact form.
 - **JSON beat the custom DSL.** The same models as pretty-printed JSON pack ~10% smaller than the line-based DSL, despite
   being 7× bigger raw: the model gets the syntax nearly free and the keys help it predict the numbers. Details in
-  [docs/json-vs-dsl.md](docs/json-vs-dsl.md).
+  [docs/json-vs-dsl.md](json-vs-dsl.md).
 - **Text models are cheap, and get cheaper with structure.** Eleven rigged, animated models (the warrior, six props,
   four creature generators) are 5.1 KB of text and under 1 KB compressed. The compiled meshes they produce are about
   10,500 vertices; even a quantized binary export of one variant each is tens of kilobytes before compression, and
