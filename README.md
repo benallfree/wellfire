@@ -28,7 +28,7 @@ npm run baseline    # build and pack the baseline only: terser -> roadroller -> 
 three.js comes from a pinned CDN, so you need a network connection. The baseline needs `advzip`
 (`brew install advancecomp`). `ship` uses `/Volumes/Code/repos/surprisal/bin/surprisal` unless `SURPRISAL` points
 elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held item, e.g.
-`?m=goblin&seeds=1,2,3&clip=walk`, and the page exposes `window.game` for the console.
+`?m=goblin&seeds=1,2,3&clip=walk`, and the page exposes `window.game` and the [cheats](#cheats) for the console.
 
 ## Controls
 
@@ -48,6 +48,17 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | M or ♪ | sound on and off |
 
 On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP and RIDE buttons, and tap a tray slot.
+
+## Cheats
+
+Type one in the browser console. They go through the game's own code, so the HUD and the save stay right.
+
+| cheat | what it does |
+|---|---|
+| `wfpyre(n)` `wfbough(n)` `wfspark(n)` `wfcaw(n)` `wfmend(n)` `wfgust(n)` `wfdawn(n)` | add `n` (default 1) torches, wood, flint, whistles, healing potions, speed potions or sunstones |
+| `wfhoard()` | 9 of every item, a sunstone if you have none, and 9,999 gold |
+| `wfmidas(n)` | add `n` gold (default 1,000) |
+| `wfbloom()` | drink a healing potion now (it gives you the potion first) |
 
 ## The game
 

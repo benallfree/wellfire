@@ -3163,3 +3163,11 @@ window.game = { player, foes, mounts, addMount, seat, mountUp, equip, attack, cl
 Object.defineProperty(window.game, 'gold', { get: () => gold, set: (v) => earn(v - gold), enumerable: true })
 window.game.drops = drops
 Object.assign(window.game, { bag, felled, falling, beacon, STAR, craft, aim: () => aim, well: () => well })
+// console cheats, Doom style: type one in the browser console, e.g. wfmidas(). Each goes through the game's own gain,
+// earn and drink, so the HUD and the save stay right. One per bag item (n of it, default 1), wfhoard for everything,
+// wfmidas for gold (default 1000), wfbloom to drink a healing potion now (it gives you the potion first)
+const CHEATS = { pyre: 'torch', bough: 'wood', spark: 'flint', caw: 'whistle', mend: 'potion', gust: 'haste', dawn: 'sunstone' }
+for (const c in CHEATS) window['wf' + c] = (n = 1) => gain(CHEATS[c], n)
+window.wfmidas = (n = 1000) => earn(n)
+window.wfhoard = () => (Object.values(CHEATS).map((k) => gain(k, k == 'sunstone' ? !bag[k] : 9)), earn(9999))
+window.wfbloom = () => (gain('potion', 1), drink('potion'))
