@@ -170,6 +170,12 @@ Every build is versioned: the corner of the game shows `<version>-alpha.<commits
 deploy from `main` shows a higher one. The workflow checks out the full history
 for that count. A `+` after the commit means a local build with uncommitted changes in `src/`.
 
+## Contributing
+
+PRs are welcome, including ones that take the game past the 13 KB budget. The js13k size is where Wellfire started, not
+a limit on where it can go: if people like it, I'm happy to grow it into a first-class game, multiplayer and MMO
+included. Open an issue or a PR with ideas, fixes or features.
+
 ## History
 
 [docs/postmortem.md](docs/postmortem.md) is the full development journal: every feature as it was built, the design
