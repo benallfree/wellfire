@@ -975,8 +975,8 @@ const torchLight = new THREE.PointLight('#ff9a40', 0, 14, 1.5)
 scene.add(torchLight)
 // first person hides the left arm, so a lit torch shows at the lower left of the view instead
 const fpTorch = new THREE.Mesh(geo('torch'), itemMat)
-fpTorch.position.set(-0.8, -0.6, -1)
 fpTorch.rotation.y = 3 // flame up and away
+const hand = new THREE.Vector3()
 camera.add(fpTorch)
 scene.add(camera)
 equip(0)
@@ -2738,6 +2738,9 @@ function frame() {
   // weapon arm stays, so swings show; a lit torch shows at the lower left)
   if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps)
   fpTorch.visible = !!(fps && lit) // (three.js hides only on false, not null)
+  // it follows the hidden left hand (the walk's swing, the breath): up and forward from the hand's rest spot
+  player.m.bones.handL.getWorldPosition(hand).sub(player.pos)
+  fpTorch.position.set(-0.8, hand.y * 0.7 - 1.5, -0.63 - (Math.sin(player.dir) * hand.x + Math.cos(player.dir) * hand.z) * 0.7)
   if (!free() && document.pointerLockElement) document.exitPointerLock()
 
   // riding: A/D turn (on foot they strafe), W/S walk along the facing, or, in free mode, move relative to the camera
