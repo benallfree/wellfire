@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wellfire fonts</title>
+<style>body{margin:0;background:#0b0f18}canvas{display:block}</style>
+<canvas id="c" width="1100" height="900"></canvas>
+<script>
+/*FONTS*/
+/*RENDERER*/
+const ctx = document.getElementById('c').getContext('2d')
+const sky = ctx.createLinearGradient(0, 0, 0, 900)
+sky.addColorStop(0, '#24324a'); sky.addColorStop(1, '#3b5a3a')
+ctx.fillStyle = sky; ctx.fillRect(0, 0, 1100, 900)
+const label = (t, y) => { ctx.fillStyle = '#9ab'; ctx.font = '11px system-ui'; ctx.fillText(t, 12, y) }
+// Readable text with the game's text-shadow look: a dark pass under a light one.
+const hud = (t, x, y, size, color = '#fff') => {
+  ctx.strokeStyle = '#000a'; drawText(ctx, t, x + size / 12, y + size / 10, size, fonts.readable, 1.2)
+  ctx.strokeStyle = color; drawText(ctx, t, x, y, size)
+}
+// Display text: a dark heavy pass, then gold.
+const title = (t, x, y, size, color = '#fd4') => {
+  ctx.strokeStyle = '#310'; drawText(ctx, t, x, y, size, fonts.display, 1.6)
+  ctx.strokeStyle = color; drawText(ctx, t, x, y, size, fonts.display)
+}
+let y = 22
+label('readable · 24px', y); y += 10
+hud('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 12, y, 24); y += 38
+hud('abcdefghijklmnopqrstuvwxyz', 12, y, 24); y += 38
+hud("0123456789 .,!?:;'\"-+/()%&·…✦", 12, y, 24); y += 44
+label('readable · 18px, 15px, 12px (the HUD sizes)', y); y += 10
+hud('The boulder shatters: the cave is open. Light your torch and go in', 12, y, 18, '#fd4'); y += 32
+hud("Set torches in 3 villages' beacons and aim them at the star ✦", 12, y, 15); y += 26
+hud('W/S walk · A/D strafe · ←/→ turn · Space use · F swap · 1-8 tray · 0 craft · R ride', 12, y, 12); y += 22
+hud('Berries · +3 health    42 gold    You can carry only one sunstone: set yours in a well first', 12, y, 12); y += 30
+label('readable on the white dialog card', y); y += 8
+ctx.fillStyle = '#fff'; ctx.fillRect(12, y, 560, 70)
+ctx.strokeStyle = '#d80'; drawText(ctx, 'Apothecary', 30, y + 12, 18)
+ctx.strokeStyle = '#222'; drawText(ctx, 'A potion takes 2 berries and 1 gold. Buy one?', 30, y + 42, 15); y += 96
+label('display', y); y += 14
+title('WELLFIRE', 12, y, 96); y += 124
+title('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 12, y, 36); y += 54
+title("0123456789 .,!?:'- ✦", 12, y, 36); y += 60
+label('display on signs (wood board, 20px and 28px)', y); y += 8
+for (const [t, x, s] of [['APOTHECARY', 12, 20], ['ARMORY', 250, 28], ['INN', 450, 28], ['THE EYE IS SHATTERED', 560, 24]]) {
+  const w = textWidth(t, fonts.display) * s / 8
+  ctx.fillStyle = '#6b4423'; ctx.fillRect(x, y, w + 24, s + 24)
+  ctx.strokeStyle = '#2a1a0c'; drawText(ctx, t, x + 12, y + 12, s, fonts.display, 1)
+  ctx.strokeStyle = '#f4d58a'; drawText(ctx, t, x + 12, y + 12, s, fonts.display)
+}
+</script>

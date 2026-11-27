@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wellfire fonts</title>
+<style>body{margin:0;background:#0b0f18}canvas{display:block}</style>
+<canvas id="c" width="1100" height="900"></canvas>
+<script>
+const fonts = {"readable":{"0":["1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,1 1,0","0,5 4,1"],"1":["0,1 1,0 1,6","0,6 2,6"],"2":["0,1 1,0 3,0 4,1 4,2 0,6 4,6"],"3":["0,1 1,0 3,0 4,1 4,2 3,3 4,4 4,5 3,6 1,6 0,5","1,3 3,3"],"4":["3,6 3,0 0,4 4,4"],"5":["4,0 0,0 0,3 3,3 4,4 4,5 3,6 1,6 0,5"],"6":["3,0 1,0 0,1 0,5 1,6 3,6 4,5 4,4 3,3 0,3"],"7":["0,0 4,0 4,1 1,4 1,6"],"8":["1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3 1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3"],"9":["4,3 1,3 0,2 0,1 1,0 3,0 4,1 4,5 3,6 1,6"],"A":["0,6 0,1 1,0 3,0 4,1 4,6","0,3 4,3"],"B":["0,6 0,0 3,0 4,1 4,2 3,3 0,3","3,3 4,4 4,5 3,6 0,6"],"C":["4,1 3,0 1,0 0,1 0,5 1,6 3,6 4,5"],"D":["0,0 3,0 4,1 4,5 3,6 0,6 0,0"],"E":["4,0 0,0 0,6 4,6","0,3 3,3"],"F":["4,0 0,0 0,6","0,3 3,3"],"G":["4,1 3,0 1,0 0,1 0,5 1,6 3,6 4,5 4,3 2,3"],"H":["0,0 0,6","4,0 4,6","0,3 4,3"],"I":["0,0 2,0","1,0 1,6","0,6 2,6"],"J":["2,0 4,0","3,0 3,5 2,6 1,6 0,5"],"K":["0,0 0,6","4,0 0,4","1,3 4,6"],"L":["0,0 0,6 4,6"],"M":["0,6 0,0 2,2 4,0 4,6"],"N":["0,6 0,0 4,6 4,0"],"O":["1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,1 1,0"],"P":["0,6 0,0 3,0 4,1 4,2 3,3 0,3"],"Q":["1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,1 1,0","2,4 4,6"],"R":["0,6 0,0 3,0 4,1 4,2 3,3 0,3","2,3 4,6"],"S":["4,1 3,0 1,0 0,1 0,2 1,3 3,3 4,4 4,5 3,6 1,6 0,5"],"T":["0,0 4,0","2,0 2,6"],"U":["0,0 0,5 1,6 3,6 4,5 4,0"],"V":["0,0 0,3 2,6 4,3 4,0"],"W":["0,0 0,6 2,4 4,6 4,0"],"X":["0,0 0,1 4,5 4,6","4,0 4,1 0,5 0,6"],"Y":["0,0 2,3 4,0","2,3 2,6"],"Z":["0,0 4,0 4,1 0,5 0,6 4,6"],"a":["4,2 4,6","4,3 3,2 1,2 0,3 0,5 1,6 3,6 4,5"],"b":["0,0 0,6","0,3 1,2 3,2 4,3 4,5 3,6 1,6 0,5"],"c":["4,3 3,2 1,2 0,3 0,5 1,6 3,6 4,5"],"d":["4,0 4,6","4,3 3,2 1,2 0,3 0,5 1,6 3,6 4,5"],"e":["0,4 4,4 4,3 3,2 1,2 0,3 0,5 1,6 4,6"],"f":["3,0 2,0 1,1 1,6","0,2 3,2"],"g":["4,2 4,7 3,8 0,8","4,3 3,2 1,2 0,3 0,4 1,5 4,5"],"h":["0,0 0,6","0,3 1,2 3,2 4,3 4,6"],"i":["0,2 0,6","0,0 0,1"],"j":["2,2 2,7 1,8 0,8","2,0 2,1"],"k":["0,0 0,6","3,2 0,4","1,3 4,6"],"l":["0,0 0,5 1,6"],"m":["0,2 0,6","0,3 1,2 2,3 2,6","2,3 3,2 4,3 4,6"],"n":["0,2 0,6","0,3 1,2 3,2 4,3 4,6"],"o":["1,2 3,2 4,3 4,5 3,6 1,6 0,5 0,3 1,2"],"p":["0,2 0,8","0,3 1,2 3,2 4,3 4,5 3,6 1,6 0,5"],"q":["4,2 4,8","4,3 3,2 1,2 0,3 0,5 1,6 3,6 4,5"],"r":["0,2 0,6","0,4 2,2 3,2"],"s":["4,2 1,2 0,3 1,4 3,4 4,5 3,6 0,6"],"t":["1,0 1,5 2,6 3,6","0,2 3,2"],"u":["0,2 0,5 1,6 3,6 4,5","4,2 4,6"],"v":["0,2 2,6 4,2"],"w":["0,2 1,6 2,4 3,6 4,2"],"x":["0,2 4,6","4,2 0,6"],"y":["0,2 0,5 1,6 4,6","4,2 4,7 3,8 0,8"],"z":["0,2 4,2 0,6 4,6"],".":["0,5 0,6"],",":["1,5 0,7"],"!":["0,0 0,3","0,5 0,6"],"?":["0,1 1,0 3,0 4,1 4,2 2,3","2,5 2,6"],":":["0,2 0,3","0,5 0,6"],";":["1,2 1,3","1,5 0,7"],"'":["0,0 0,1"],"\"":["0,0 0,1","2,0 2,1"],"-":["0,3 2,3"],"+":["2,1 2,5","0,3 4,3"],"/":["0,6 3,0"],"(":["2,0 1,1 0,3 0,5 1,7 2,8"],")":["0,0 1,1 2,3 2,5 1,7 0,8"],"%":["0,6 4,0","0,0 1,0 1,1 0,1 0,0","3,5 4,5 4,6 3,6 3,5"],"&":["4,6 1,2 1,1 2,0 3,1 3,2 0,4 0,5 1,6 2,6 4,4"],"·":["0,3 0,4"],"…":["0,5 0,6","2,5 2,6","4,5 4,6"],"✦":["2,0 3,2 4,3 3,4 2,6 1,4 0,3 1,2 2,0"],"←":["4,3 0,3","2,1 0,3 2,5"],"→":["0,3 4,3","2,1 4,3 2,5"],"⬆":["2,6 2,0","0,2 2,0 4,2"]},"display":{"0":["2,0 4,2 4,6 2,8 0,6 0,2 2,0","1,5 3,3"],"1":["0,2 1,0 1,8","0,8 2,8"],"2":["0,2 1,0 3,0 4,2 4,3 0,8 4,8"],"3":["0,0 4,0 2,3 4,5 4,7 3,8 1,8 0,7"],"4":["3,8 3,0 0,5 4,5"],"5":["4,0 0,0 0,4 3,4 4,5 4,7 3,8 0,8"],"6":["3,0 0,4 0,7 1,8 3,8 4,7 4,5 3,4 0,4"],"7":["0,0 4,0 1,8","1,4 3,4"],"8":["2,4 0,2 2,0 4,2 2,4 0,6 2,8 4,6 2,4"],"9":["1,8 4,4 4,1 3,0 1,0 0,1 0,3 1,4 4,4"],"A":["0,8 2,0 4,8","1,5 3,4"],"B":["0,0 0,8","0,0 3,0 4,2 0,4 4,6 3,8 0,8"],"C":["4,1 3,0 1,0 0,2 0,6 1,8 3,8 4,7"],"D":["0,0 0,8","0,0 2,0 4,3 4,5 2,8 0,8"],"E":["4,0 0,0 0,8 4,8","0,4 3,3"],"F":["4,0 0,0 0,8","0,4 3,3"],"G":["4,1 3,0 1,0 0,2 0,6 1,8 3,8 4,6 4,4 2,4"],"H":["0,0 0,8","4,0 4,8","0,5 4,3"],"I":["0,0 2,0","1,0 1,8","0,8 2,8"],"J":["1,0 4,0","3,0 3,7 2,8 1,8 0,6"],"K":["0,0 0,8","4,0 0,5","1,4 4,8"],"L":["0,0 0,8 4,8 4,7"],"M":["0,8 0,0 2,4 4,0 4,8"],"N":["0,8 0,0 4,8 4,0"],"O":["2,0 4,2 4,6 2,8 0,6 0,2 2,0"],"P":["0,0 0,8","0,0 3,0 4,2 0,4"],"Q":["2,0 4,2 4,6 2,8 0,6 0,2 2,0","2,6 4,9"],"R":["0,0 0,8","0,0 3,0 4,2 0,4 4,8"],"S":["4,1 3,0 1,0 0,1 0,3 4,5 4,7 3,8 1,8 0,7"],"T":["0,1 0,0 4,0 4,1","2,0 2,8"],"U":["0,0 0,6 2,8 4,6 4,0"],"V":["0,0 2,8 4,0"],"W":["0,0 1,8 2,4 3,8 4,0"],"X":["0,0 4,8","4,0 0,8"],"Y":["0,0 2,4 4,0","2,4 2,8"],"Z":["0,0 4,0 0,8 4,8","1,4 3,4"],".":["0,7 0,8"],",":["1,7 0,9"],"!":["0,0 0,5","0,7 0,8"],"?":["0,1 1,0 3,0 4,1 4,2 2,4 2,5","2,7 2,8"],":":["0,2 0,3","0,6 0,7"],"'":["0,0 0,2"],"-":["0,4 2,4"],"✦":["3,0 4,3 6,4 4,5 3,8 2,5 0,4 2,3 3,0"]}}
+// A glyph's strokes as lists of [x, y] points, and its left and right edges (proportional spacing).
+const glyph = (font, ch) => {
+  const strokes = (font[ch] || []).map((stroke) => stroke.split(' ').map((point) => point.split(',').map(Number)))
+  const xs = strokes.flat().map(([x]) => x)
+  return { strokes, left: xs.length ? Math.min(...xs) : 0, right: xs.length ? Math.max(...xs) : 1 }
+}
+// Width of a line of text in grid units (multiply by size / height for pixels).
+// The display font's broad pen widens every stroke, so its letters sit a unit further apart.
+const gap = (font) => (font == fonts.display ? 3 : 2)
+const textWidth = (text, font = fonts.readable) => [...text].reduce((w, ch) => w + glyph(font, ch).right - glyph(font, ch).left + gap(font), -gap(font))
+// Draw a line of text with its top-left at (x, y). size is the cap height in pixels; the caller sets strokeStyle.
+// The readable font is drawn thin and round. The display font is drawn with a broad pen held at 45°: the path is
+// stroked thinly at nine points along the nib, so strokes running down-left to up-right come out thin and the
+// rest thick, like lettering cut with a calligraphy nib.
+function drawText(ctx, text, x, y, size, font = fonts.readable, weight) {
+  const display = font == fonts.display
+  const height = display ? 8 : 6
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(size / height, size / height)
+  ctx.lineWidth = weight || (display ? 0.4 : 0.8)
+  ctx.lineCap = ctx.lineJoin = 'round'
+  for (const ch of text) {
+    const { strokes, left, right } = glyph(font, ch)
+    const path = new Path2D()
+    for (const points of strokes) points.forEach(([px, py], i) => (i ? path.lineTo(px - left, py) : path.moveTo(px - left, py)))
+    for (let k = display ? -4 : 0; k <= (display ? 4 : 0); k++) ctx.setTransform(ctx.getTransform().translate(k * 0.14, -k * 0.14)), ctx.stroke(path), ctx.setTransform(ctx.getTransform().translate(-k * 0.14, k * 0.14))
+    ctx.translate(right - left + gap(font), 0)
+  }
+  ctx.restore()
+}
+
+const ctx = document.getElementById('c').getContext('2d')
+const sky = ctx.createLinearGradient(0, 0, 0, 900)
+sky.addColorStop(0, '#24324a'); sky.addColorStop(1, '#3b5a3a')
+ctx.fillStyle = sky; ctx.fillRect(0, 0, 1100, 900)
+const label = (t, y) => { ctx.fillStyle = '#9ab'; ctx.font = '11px system-ui'; ctx.fillText(t, 12, y) }
+// Readable text with the game's text-shadow look: a dark pass under a light one.
+const hud = (t, x, y, size, color = '#fff') => {
+  ctx.strokeStyle = '#000a'; drawText(ctx, t, x + size / 12, y + size / 10, size, fonts.readable, 1.2)
+  ctx.strokeStyle = color; drawText(ctx, t, x, y, size)
+}
+// Display text: a dark heavy pass, then gold.
+const title = (t, x, y, size, color = '#fd4') => {
+  ctx.strokeStyle = '#310'; drawText(ctx, t, x, y, size, fonts.display, 1.6)
+  ctx.strokeStyle = color; drawText(ctx, t, x, y, size, fonts.display)
+}
+let y = 22
+label('readable · 24px', y); y += 10
+hud('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 12, y, 24); y += 38
+hud('abcdefghijklmnopqrstuvwxyz', 12, y, 24); y += 38
+hud("0123456789 .,!?:;'\"-+/()%&·…✦", 12, y, 24); y += 44
+label('readable · 18px, 15px, 12px (the HUD sizes)', y); y += 10
+hud('The boulder shatters: the cave is open. Light your torch and go in', 12, y, 18, '#fd4'); y += 32
+hud("Set torches in 3 villages' beacons and aim them at the star ✦", 12, y, 15); y += 26
+hud('W/S walk · A/D strafe · ←/→ turn · Space use · F swap · 1-8 tray · 0 craft · R ride', 12, y, 12); y += 22
+hud('Berries · +3 health    42 gold    You can carry only one sunstone: set yours in a well first', 12, y, 12); y += 30
+label('readable on the white dialog card', y); y += 8
+ctx.fillStyle = '#fff'; ctx.fillRect(12, y, 560, 70)
+ctx.strokeStyle = '#d80'; drawText(ctx, 'Apothecary', 30, y + 12, 18)
+ctx.strokeStyle = '#222'; drawText(ctx, 'A potion takes 2 berries and 1 gold. Buy one?', 30, y + 42, 15); y += 96
+label('display', y); y += 14
+title('WELLFIRE', 12, y, 96); y += 124
+title('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 12, y, 36); y += 54
+title("0123456789 .,!?:'- ✦", 12, y, 36); y += 60
+label('display on signs (wood board, 20px and 28px)', y); y += 8
+for (const [t, x, s] of [['APOTHECARY', 12, 20], ['ARMORY', 250, 28], ['INN', 450, 28], ['THE EYE IS SHATTERED', 560, 24]]) {
+  const w = textWidth(t, fonts.display) * s / 8
+  ctx.fillStyle = '#6b4423'; ctx.fillRect(x, y, w + 24, s + 24)
+  ctx.strokeStyle = '#2a1a0c'; drawText(ctx, t, x + 12, y + 12, s, fonts.display, 1)
+  ctx.strokeStyle = '#f4d58a'; drawText(ctx, t, x + 12, y + 12, s, fonts.display)
+}
+</script>
