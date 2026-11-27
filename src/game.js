@@ -2717,9 +2717,12 @@ function frame() {
   // the view (the weapon arm stays, so swings show)
   if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps), fps || document.exitPointerLock?.()
 
-  // on foot or riding: A/D turn and W/S walk along the facing (Q/E strafe), or, in free mode, move relative to the camera
-  let ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + stick.x
-  let iz = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + stick.y
+  // on foot or riding: A/D turn and W/S walk along the facing, or, in free mode, move relative to the camera
+  // in first person the arrows look instead: left/right turn (a mount too), up/down tilt the view
+  const arr = !fps || aim
+  let ix = (keys.KeyD || (arr && keys.ArrowRight) ? 1 : 0) - (keys.KeyA || (arr && keys.ArrowLeft) ? 1 : 0) + stick.x
+  let iz = (keys.KeyS || (arr && keys.ArrowDown) ? 1 : 0) - (keys.KeyW || (arr && keys.ArrowUp) ? 1 : 0) + stick.y
+  if (!arr) (drag += ((keys.ArrowRight | 0) - (keys.ArrowLeft | 0)) * 2.2 * dt), (pitch = Math.max(-1.3, Math.min(1.3, pitch + ((keys.ArrowUp | 0) - (keys.ArrowDown | 0)) * 1.5 * dt)))
   const il = Math.hypot(ix, iz)
   const alive = player.hp > 0
   const run = 6
@@ -2729,7 +2732,7 @@ function frame() {
     steer(dt, ix, iz, il)
     player.dir = player.seat.dir
   } else if (tank && alive) {
-    // first person: A/D strafe and the (locked) mouse turns; otherwise A/D turn
+    // first person: A/D strafe and the arrows or the (locked) mouse turn; otherwise A/D turn
     player.dir -= (fps ? 0 : ix * 2.8 * dt) + drag
     const f = Math.max(-1, Math.min(1, -iz)) * (iz > 0 ? 0.6 : 1) // backing up is slower
     const r = fps ? -ix : 0
