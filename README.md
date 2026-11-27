@@ -37,8 +37,9 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | key | does |
 |---|---|
 | W/S or ↑/↓ | walk forward and back (on a mount: run and back up; holding a beam: tilt it) |
-| A/D or ←/→ | turn; in first person, A/D strafe |
-| click | lock the mouse (Esc lets go). Sideways turns you; up/down swings the chase camera lower or higher round you (or tilts the view in first person); a click attacks |
+| A/D | strafe (on a mount or in the boat: turn) |
+| ←/→ | turn |
+| click | lock the mouse (Esc lets go). Sideways turns you (in first person up/down also tilts the view); a click attacks |
 | C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Dragging with the mouse button held looks too (for browsers that won't lock). Caves are always first person |
 | Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood, flint or the boat; at a well, set or take the beam |
 | F or Tab | swap to the next item |
