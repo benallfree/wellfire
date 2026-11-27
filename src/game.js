@@ -1517,11 +1517,11 @@ var village
     if (who == player) for (const f of v.folk) [x, z] = box(x, z, f.pos.x, f.pos.z, 0.45, 0.45)
     else if (who.town == v)
       for (const f of [...v.folk, player]) {
-        // townsfolk keep 0.6 apart (and from you), sliding a little sideways so two meeting head-on step round each other
+        // townsfolk keep 0.6 apart (and from you)
         const ex = x - f.pos.x
         const ez = z - f.pos.z
         const e = Math.hypot(ex, ez) / 0.6
-        if (f != who && e < 1) (x = f.pos.x + (ex + ez / 5) / e), (z = f.pos.z + (ez - ex / 5) / e), (who.bump = -~who.bump)
+        if (f != who && e < 1) (x = f.pos.x + ex / e), (z = f.pos.z + ez / e), (who.bump = -~who.bump)
       }
     const dx = x - T.x
     const dz = z - T.z
@@ -1691,19 +1691,28 @@ var village
         for (const f of v.folk) {
           const dx = f.goal[0] - f.pos.x
           const dz = f.goal[1] - f.pos.z
-          const d = Math.hypot(dx, dz)
+          let d = Math.hypot(dx, dz)
           f.speed = 0
           const n = Math.hypot(p.x - f.pos.x, p.z - f.pos.z)
           if (n < near && !f.keep && player.hp > 0 && !player.seat && !player.cave && !title) (near = n), (this.chat = [v, f])
           if ((f.wait -= dt) > 0) f.keep || f.move(0, 0, dt)
-          else if (d < 0.6 || f.bump > 99) {
+          else if (d < 0.6 || f.bump > 299) {
             f.bump = 0 // blocked a while: give up and pick somewhere else
             f.wait = 2 + v.VR() * 5
             f.goal = v.spots[(v.VR() * v.spots.length) | 0]
           } else {
+            // bear right round anyone close ahead, so two meeting head-on walk round each other
+            let ux = dx / d
+            let uz = dz / d
+            for (const o of [...v.folk, player]) {
+              const ox = o.pos.x - f.pos.x
+              const oz = o.pos.z - f.pos.z
+              if (o != f && Math.hypot(ox, oz) < 1.2 && ox * ux + oz * uz > 0) ([ux, uz] = [ux + uz, uz - ux]), (f.bump = -~f.bump)
+            }
+            d = Math.hypot(ux, uz) / 1.6 / dt
             f.speed = 1.6
-            f.dir = Math.atan2(dx, dz)
-            f.move((dx / d) * 1.6 * dt, (dz / d) * 1.6 * dt, dt)
+            f.dir = Math.atan2(ux, uz)
+            f.move(ux / d, uz / d, dt)
           }
           f.update(dt, 1.6)
         }
