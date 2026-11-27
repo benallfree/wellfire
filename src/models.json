@@ -8879,9 +8879,9 @@
       "pay": 1
     },
     {
-      "day": "#86cdb4",
+      "day": "#a6d65e",
       "night": "#020a07",
-      "light": "#e4fff0",
+      "light": "#eeffc8",
       "hp": 1.4,
       "dmg": 1.5,
       "run": 1.1,
@@ -8892,9 +8892,9 @@
       "say": "The sky turns sickly green. The creatures stir."
     },
     {
-      "day": "#a48cd8",
+      "day": "#9a70d8",
       "night": "#06030f",
-      "light": "#eedcff",
+      "light": "#e8d0ff",
       "hp": 1.9,
       "dmg": 2,
       "run": 1.2,

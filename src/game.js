@@ -2048,6 +2048,7 @@ function shine(dt) {
     const b = beacon[T.k]
     say(b ? (b[2] ? `${T.name}'s beam is on the star` : 'Space: aim the beam at the star') : !bag.sunstone ? 'A beacon needs a sunstone: ask the townsfolk where one sleeps' : bag.torch ? 'Space: set a torch and the sunstone in the beacon' : 'A beacon needs a torch: craft one in the pack (0)')
   }
+  if (well && !T && beacon[well.k] && !beacon[well.k][2]) say(`${well.name}'s beam is not on the star yet: come back and aim it`) // a lit but unaimed beam doesn't count
   well = T || null
   if (!well) aim = null
   if (show) {
