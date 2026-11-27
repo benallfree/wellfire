@@ -2185,17 +2185,26 @@ function enter(c) {
   const Z = c.z
   const y = CAVE.depth
   const at = ([i, j]) => [X + i * S, Z + j * S]
-  // walls: [x, z, half width, half depth]; none north of cell 0,0, the way out
+  // walls: [x, z, half width, half depth]; none north of cell 0,0, the way out. Each panel runs between two grid
+  // corners, stopping 0.3 short of each, and a 0.6 post stands on every corner a panel touches: panels butt against
+  // posts instead of overlapping one another (overlapping boxes left coplanar faces that flickered at every joint)
   const walls = []
-  for (let k = 0; k < n; k++) {
-    walls.push([X - S / 2, Z + k * S, 0.3, S / 2 + 0.3])
-    if (k) walls.push([X + k * S, Z - S / 2, S / 2 + 0.3, 0.3])
+  const posts = {}
+  const wall = (i, j, a) => {
+    // a panel from corner i,j (the cell i,j's north-west corner) one cell east (a) or south
+    const x = X + (i - 0.5) * S
+    const z = Z + (j - 0.5) * S
+    walls.push(a ? [x + S / 2, z, S / 2 - 0.3, 0.3] : [x, z + S / 2, 0.3, S / 2 - 0.3])
+    posts[[i, j]] = [x, z]
+    posts[a ? [i + 1, j] : [i, j + 1]] = [x + a * S, z + !a * S]
   }
+  for (let k = 0; k < n; k++) wall(0, k, 0), k && wall(k, 0, 1)
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++) {
-      if (!(L[[i, j]] & 1)) walls.push([X + i * S + S / 2, Z + j * S, 0.3, S / 2 + 0.3])
-      if (!(L[[i, j]] & 2)) walls.push([X + i * S, Z + j * S + S / 2, S / 2 + 0.3, 0.3])
+      if (!(L[[i, j]] & 1)) wall(i + 1, j, 0)
+      if (!(L[[i, j]] & 2)) wall(i, j + 1, 1)
     }
+  for (const [x, z] of Object.values(posts)) walls.push([x, z, 0.3, 0.3])
   const g = new THREE.Group()
   for (const [x, z, hw, hd] of walls) {
     const w = new THREE.Mesh(slab(hw * 2, H, hd * 2), caveRock)
@@ -2387,10 +2396,13 @@ function hinting(dt) {
 }
 blockers.push((x, z, w) => {
   if (!w.cave) return [x, z]
+  // you keep 0.35 off a wall; a creature keeps its whole model off it (its widest reach from its middle, measured
+  // once, plus a little for a swing), so no leg or arm pokes through to the far side or round a wall's end
+  const r = w == player ? 0.35 : (w.r ||= ((b) => Math.max(b.max.x - w.pos.x, w.pos.x - b.min.x, b.max.z - w.pos.z, w.pos.z - b.min.z) + 0.15)(w.g.updateWorldMatrix(false, true) || new THREE.Box3().setFromObject(w.m.root)))
   for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
-    const ax = hw + 0.35 - Math.abs(x - cx)
-    const az = hd + 0.35 - Math.abs(z - cz)
-    if (ax > 0 && az > 0) ax < az ? (x = cx + Math.sign(x - cx) * (hw + 0.35)) : (z = cz + Math.sign(z - cz) * (hd + 0.35))
+    const ax = hw + r - Math.abs(x - cx)
+    const az = hd + r - Math.abs(z - cz)
+    if (ax > 0 && az > 0) ax < az ? (x = cx + Math.sign(x - cx) * (hw + r)) : (z = cz + Math.sign(z - cz) * (hd + r))
   }
   return [x, z]
 })
