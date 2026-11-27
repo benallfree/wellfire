@@ -1250,19 +1250,25 @@ function herd(dt) {
 
 // ---------- monsters ----------
 const foes = []
-const { nearPay, farPay, payRamp, spawnPad } = lib.wilds
+const { nearPay, farPay, payRamp, spawnPad, homeRamp, homeCrowd, homeFierce } = lib.wilds
 let seedNext = 100
-// More monsters roam at night: 12 by day, up to 22 in the dark, scaled by the region the player is in.
-const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)] * st.crowd)
+// how far out from home (the start), 0 there to 1 at homeRamp: near home the wilds are thinner and tamer, so starting
+// over after a fall isn't a swarm; the beams' stages scale on top of this
+const out = (x, z) => Math.min(1, Math.hypot(x - home.x, z - home.z) / homeRamp)
+// More monsters roam at night: 12 by day, up to 22 in the dark, scaled by the region the player is in, the stage and
+// the distance from home (homeCrowd of it at home).
+const crowd = () => Math.round((12 + (1 - day) * 10) * CROWD[region(player.pos.x, player.pos.z)] * st.crowd * (homeCrowd + (1 - homeCrowd) * out(player.pos.x, player.pos.z)))
 function foe(kind, x, z) {
   const e = new Actor(kind, seedNext++)
   e.pos.set(x, 0, z)
   e.fits = HABITAT[kind] || onLand
   if (kind == 'eel') e.swim = 0.1
   const s = e.m.root.scale.x
-  e.hp = e.maxHp = Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6) * st.hp)
+  // fierceness: homeFierce near home, 1 from homeRamp out; it scales health, damage, how far it spots you and how often it strikes
+  const k = (e.fierce = homeFierce + (1 - homeFierce) * out(x, z))
+  e.hp = e.maxHp = Math.max(1, Math.round({ slime: 5, goblin: 8, spider: 7, bat: 4, eel: 6 }[kind] * (0.6 + s * 0.6) * st.hp * k))
   e.run = { slime: 3, goblin: 4.2, spider: 5, bat: 4.5, eel: 4.8 }[kind] * st.run
-  e.dmg = Math.round({ slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind] * st.dmg)
+  e.dmg = Math.max(1, Math.round({ slime: 1, goblin: 2, spider: 2, bat: 1, eel: 1 }[kind] * st.dmg * k))
   e.reach = 1.2 + s * 0.4
   e.wander = 0
   e.cool = 1
@@ -1298,7 +1304,7 @@ function spawn(f) {
   foe(kind, x, z)
   if (kind == 'goblin' && R() < 0.2) seat(e, addMount(MOUNTS[region(x, z)], seedNext++, x, z)) // a goblin rider
 }
-for (let i = 0; i < 14; i++) spawn()
+for (let i = crowd(); i > 0; i--) spawn() // as many as the place calls for: few near home
 
 // ---------- health bars: two flat planes over each hurt monster, facing the camera ----------
 // The bar is a child of the monster's group, so it leaves the scene with it; geometry and the
@@ -2688,7 +2694,7 @@ function frame() {
       tx /= l
       tz /= l
       sp = e.run * 0.7
-    } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
+    } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight * e.fierce && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
       // slimes and spiders shy from a lit torch, circling its edge, but dare a rush every few seconds
       if (!st.bold && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
         const k = d < 5 ? -1 : 0
@@ -2708,7 +2714,7 @@ function frame() {
         sp = e.run
       } else if (e.cool <= 0 && !e.busy) {
         e.play('attack')
-        e.cool = (1.8 + R() * 1.5) * st.cool
+        e.cool = ((1.8 + R() * 1.5) * st.cool) / e.fierce
         e.striking = true
       }
       e.dir = Math.atan2(dx, dz)

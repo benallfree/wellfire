@@ -423,6 +423,11 @@ every visit and every page load, and nothing generated needs storing. It's one s
   per-chunk water and costs one mesh.
 - **Monsters by region.** The spawn point's region picks the kind (`FOES`: spiders in forest, goblins and bats in the
   hills, slimes by the lakes), and the player's region scales the crowd (`CROWD`: forests are busier, lakes quieter).
+- **Gentler near home.** Distance from the start (Oakdale) scales the wilds, on top of the beams' stages
+  (models.json `"wilds"`): at home the crowd is `homeCrowd` (35%) of normal and each creature's fierceness is
+  `homeFierce` (0.5), both ramping to full `homeRamp` (400) units out. Fierceness scales a creature's health and damage,
+  how far it spots you and how often it strikes, set from where it spawns (cave guardians too). Starting over after a
+  fall isn't a swarm.
 - **What's remembered.** Only what can't be derived: the minimap's set of revealed 8×8-unit cells (one short string
   each, a few thousand after a long walk). Everything else is rebuilt from the seed: live chunks are the 49–81 around
   you, and the minimap's chunk pictures are a 150-entry cache. Player changes to the world (felled trees, opened chests)

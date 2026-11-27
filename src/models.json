@@ -8935,7 +8935,10 @@
     "nearPay": 0.2,
     "farPay": 2,
     "payRamp": 100,
-    "spawnPad": 22
+    "spawnPad": 22,
+    "homeRamp": 400,
+    "homeCrowd": 0.35,
+    "homeFierce": 0.5
   },
   "rocks": {
     "perChunk": 2.4,
