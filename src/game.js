@@ -3180,7 +3180,7 @@ let title = 1
 const hide = (o) => ['ui', 'nav', 'tray', 'help', 'mute'].map((k) => ($(k).style.opacity = o))
 hide(0)
 $('tip').textContent = 'press any key or tap to begin'
-document.body.insertAdjacentHTML('beforeend', '<small style="position:fixed;right:6px;bottom:3px;opacity:.5;font:10px system-ui">build BUILD_ID</small>') // the build fills in its commit, to tell a cached page from the latest
+document.body.insertAdjacentHTML('beforeend', '<small style="position:fixed;right:6px;bottom:3px;opacity:.5;font:10px system-ui">BUILD_ID</small>') // the build fills in its version and commit, to tell a cached page from the latest
 $('tip').style.opacity = 1
 for (const ev of ['keydown', 'pointerdown'])
   addEventListener(

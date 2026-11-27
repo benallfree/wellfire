@@ -4,10 +4,14 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { strip } from './strip.mjs'
 
-// the commit this build is from (plus '+' for uncommitted changes), shown on the title screen
-let build = 'dev'
+// the version and commit this build is from, shown in the corner: v<major>.<minor>.<commits> · <commit> ('+' for
+// uncommitted changes). major.minor come from package.json; the patch is the commit count on this branch, so every
+// deploy from main gets a higher one (CI checks out the full history for it, see .github/workflows/pages.yml)
+const [major, minor] = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version.split('.')
+let build = `v${major}.${minor} · dev`
 try {
-  build = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim() + (execSync('git status --porcelain src', { encoding: 'utf8' }).trim() ? '+' : '')
+  const git = (c) => execSync('git ' + c, { encoding: 'utf8' }).trim()
+  build = `v${major}.${minor}.${git('rev-list --count HEAD')} · ${git('rev-parse --short HEAD')}${git('status --porcelain src') ? '+' : ''}`
 } catch {}
 
 const read = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8')

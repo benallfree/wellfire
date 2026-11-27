@@ -24,6 +24,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the full history: the version's patch number is the commit count
       - uses: actions/setup-node@v4
         with:
           node-version: 22

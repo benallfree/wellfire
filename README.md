@@ -118,6 +118,11 @@ prints a fuller report across formats.
 workflow dispatch). The deploy step occasionally fails on GitHub's side with "No artifacts named github-pages";
 re-running the job fixes it.
 
+Every build is versioned: the corner of the game shows `v<major>.<minor>.<commits> · <commit>`, for example
+`v1.0.120 · 8ab1f07`. Major and minor come from `version` in `package.json` (bump them by hand for big releases); the
+patch is the commit count, so each deploy from `main` shows a higher number. The workflow checks out the full history
+for that count. A `+` after the commit means a local build with uncommitted changes in `src/`.
+
 ## History
 
 [docs/postmortem.md](docs/postmortem.md) is the full development journal: every feature as it was built, the design
