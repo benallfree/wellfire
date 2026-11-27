@@ -2128,7 +2128,7 @@ const got = (T) => {
   return felled.gems?.[T.k] || (p && felled[Math.floor(p[0] / CH) + ',' + Math.floor(p[1] / CH)]?.['e' + T.k])
 }
 let dark // said once per visit to a mouth without a lit torch
-const lens = (fov, near) => ((camera.fov = fov), (camera.near = near), camera.updateProjectionMatrix()) // wide and close in first person
+const lens = (fov, near) => ((camera.fov = fov), (camera.near = near), camera.updateProjectionMatrix()) // a little wider and closer underground
 function caves() {
   const p = player.pos
   const K = player.cave
@@ -2221,8 +2221,7 @@ function enter(c) {
   }
   scene.add(g)
   const K = (player.cave = { c, x: X, z: Z, y, walls, g })
-  player.g.visible = false
-  lens(70, 0.05)
+  lens(60, 0.1)
   for (const e of [...foes]) spawn(e) // the surface's creatures stay up there
   player.floor = y
   player.pos.set(X, y, Z - S / 2 + 0.6)
@@ -2271,7 +2270,6 @@ function leave() {
   scene.remove(K.g)
   K.g.traverse((o) => o != K.gem && o.geometry?.dispose()) // (the sunstone's model is shared)
   player.cave = player.floor = null
-  player.g.visible = true
   lens(45, 0.5)
   for (const e of [...foes]) e.cave && spawn(e) // the guardians stay down there; the surface fills up again
   village.glow.intensity = 0
@@ -2322,6 +2320,7 @@ function shine(dt) {
     camera.lookAt(o.addScaledVector(ray, 60))
   }
   star.position.copy(c).addScaledVector(STAR, 150)
+  star.visible = !player.cave // underground there's no sky: no eye and no beams, which would cut through the cave walls
   star.scale.setScalar((2.5 + (1 - day) * 1) * (1 + Math.min(show, 3)) * (1 + Math.sin(t * 5) * 0.1))
   star.rotation.y = t
   for (const k in beacon) {
@@ -2342,6 +2341,7 @@ function shine(dt) {
     // white until it snaps onto the eye, gold once locked: gold always means locked
     mesh.material.color.setHSL(show ? (t * 0.4 + d * 0.002) % 1 : 0.13, b[2], 0.85 - b[2] * 0.3)
     mesh.material.opacity = b[2] ? 0.7 : 0.45
+    mesh.visible = !player.cave
     if (d < 150 && !o.m) scene.add((o.m = make(lib, 'beacon')).root)
     if (d > 170 && o.m) scene.remove(o.m.root), o.m.root.traverse((g) => g.geometry?.dispose()), o.m.mat.dispose(), (o.m = null)
     if (o.m) {
@@ -2901,10 +2901,26 @@ function frame() {
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
     // high: a three-quarter view from 7 back; low (C): 3.5 back at head height and over the right shoulder, looking
     // far ahead so the horizon and sky open up
-    const r = (low ? 3.5 : 7) * back
-    const sh = low ? 0.7 : 0
+    // underground: always close over the shoulder (2.5 back, 1.8 up, under the roof, C or not), so you see only your
+    // own passage, and a wall between you and the camera pulls it in toward you
+    const K = player.cave
+    const r = K ? 2.5 : (low ? 3.5 : 7) * back
+    const sh = K ? 0.5 : low ? 0.7 : 0
     fwd.set(Math.sin(camYaw) * r - Math.cos(camYaw) * sh, 0, Math.cos(camYaw) * r + Math.sin(camYaw) * sh).add(target)
-    fwd.y = player.cave ? target.y + 4.8 * back : Math.max(target.y + (low ? 2 : 4.8) * back, height(fwd.x, fwd.z) + (low ? 0.8 : 1.5), WATER + 0.6)
+    fwd.y = K ? target.y + 1.8 : Math.max(target.y + (low ? 2 : 4.8) * back, height(fwd.x, fwd.z) + (low ? 0.8 : 1.5), WATER + 0.6)
+    if (K)
+      for (let k = 1, x = target.x, z = target.z; k <= 20; k++) {
+        const u = k / 20
+        const wx = target.x + (fwd.x - target.x) * u
+        const wz = target.z + (fwd.z - target.z) * u
+        if (K.walls.some(([cx, cz, hw, hd]) => Math.abs(wx - cx) < hw + 0.25 && Math.abs(wz - cz) < hd + 0.25)) {
+          fwd.x = x
+          fwd.z = z
+          break
+        }
+        x = wx
+        z = wz
+      }
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
   if (title) {
     const r = 30 / Math.min(1, camera.aspect)
@@ -2919,14 +2935,11 @@ function frame() {
     bits.slice(-2).map((b) => b.v.multiply({ x: 0.5, y: 2.4, z: 0.5 }))
     torchLight.position.copy(word.position).lerp(camera.position, 0.15).y -= 3
     torchLight.intensity = 90 * (1 + Math.sin(t * 21) * 0.1 + Math.sin(t * 37) * 0.07)
-  } else if (player.cave) {
-    // underground the view is first person: from the warrior's eyes, along the way he faces (he isn't drawn)
-    camera.position.set(target.x, target.y + 1.5, target.z)
-    camera.lookAt(target.x + Math.sin(player.dir), target.y + 1.4, target.z + Math.cos(player.dir))
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
-    camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
-    if (tank) low ? camera.lookAt(target.x - Math.sin(camYaw) * 14 - Math.cos(camYaw) * 0.7, target.y + 1.9, target.z - Math.cos(camYaw) * 14 + Math.sin(camYaw) * 0.7) : camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
+    camera.position.lerp(fwd, snap || player.cave ? 1 : Math.min(1, dt * (tank ? 8 : 5))) // (underground it never trails into a wall)
+    if (player.cave) camera.lookAt(target.x - Math.sin(camYaw) * 6, target.y + 1.2, target.z - Math.cos(camYaw) * 6)
+    else if (tank) low ? camera.lookAt(target.x - Math.sin(camYaw) * 14 - Math.cos(camYaw) * 0.7, target.y + 1.9, target.z - Math.cos(camYaw) * 14 + Math.sin(camYaw) * 0.7) : camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
     else camera.lookAt(target.x, target.y + 1, target.z)
   }
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
