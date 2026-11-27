@@ -1515,6 +1515,14 @@ var village
     if (foes.includes(who) || mounts.includes(who)) return d < T.r + 1 ? [T.x + ((x - T.x) / d) * (T.r + 1), T.z + ((z - T.z) / d) * (T.r + 1)] : [x, z]
     for (const o of v.houses) [x, z] = box(x, z, o.x, o.z, o.w / 2 + 0.4, o.d / 2 + 0.4, o.ry)
     if (who == player) for (const f of v.folk) [x, z] = box(x, z, f.pos.x, f.pos.z, 0.45, 0.45)
+    else if (who.town == v)
+      for (const f of [...v.folk, player]) {
+        // townsfolk keep 0.6 apart (and from you), sliding a little sideways so two meeting head-on step round each other
+        const ex = x - f.pos.x
+        const ez = z - f.pos.z
+        const e = Math.hypot(ex, ez) / 0.6
+        if (f != who && e < 1) (x = f.pos.x + (ex + ez / 5) / e), (z = f.pos.z + (ez - ex / 5) / e), (who.bump = -~who.bump)
+      }
     const dx = x - T.x
     const dz = z - T.z
     d = Math.hypot(dx, dz) || 1
@@ -1688,7 +1696,8 @@ var village
           const n = Math.hypot(p.x - f.pos.x, p.z - f.pos.z)
           if (n < near && !f.keep && player.hp > 0 && !player.seat && !player.cave && !title) (near = n), (this.chat = [v, f])
           if ((f.wait -= dt) > 0) f.keep || f.move(0, 0, dt)
-          else if (d < 0.6) {
+          else if (d < 0.6 || f.bump > 99) {
+            f.bump = 0 // blocked a while: give up and pick somewhere else
             f.wait = 2 + v.VR() * 5
             f.goal = v.spots[(v.VR() * v.spots.length) | 0]
           } else {
