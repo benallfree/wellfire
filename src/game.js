@@ -2993,11 +2993,16 @@ function frame() {
   } else if (fps && !aim && !show) {
     // first person: just in front of the warrior's face, following his head (he's still drawn, so his arms and
     // weapon swing into view), looking along his facing, tilted by pitch
+    // riding, it rides out in front of the mount's head instead (so the neck and head don't fill the view, and a
+    // drake's breath flames out below and ahead)
     const fx = Math.sin(player.dir)
     const fz = Math.cos(player.dir)
-    player.m.bones.head.getWorldPosition(camera.position)
-    camera.position.x += fx * 0.3
-    camera.position.z += fz * 0.3
+    const m = player.seat
+    const k = m ? m.m.root.scale.x * m.g.scale.x : 0
+    ;(m ? m.m.bones.head : player.m.bones.head).getWorldPosition(camera.position)
+    camera.position.x += fx * (m ? 1.1 * k : 0.3)
+    camera.position.z += fz * (m ? 1.1 * k : 0.3)
+    camera.position.y += m ? 0.35 * k : 0
     // underground the camera itself keeps clear of the walls (the body stops 0.35 short, the face reaches further)
     for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
       const ax = hw + 0.2 - Math.abs(camera.position.x - cx)

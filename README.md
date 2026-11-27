@@ -784,8 +784,9 @@ closes 4 × the angle gap per second), so turns feel smooth rather than bolted o
 - **Minimap.** It still turns with the camera, so up on the map is the way the camera looks; it lags with the camera,
   matching the view.
 - **First person.** C switches to it (caves always use it): the camera just in front of the warrior's face, A/D
-  strafe, and a click locks the pointer so the mouse or trackpad looks around and a click attacks. There are no Q/E
-  keys and no mouse drag-to-turn in any mode.
+  strafe, and a click locks the pointer so the mouse or trackpad looks around and a click attacks. Riding, the camera rides out in
+  front of the mount's head instead (1.1x its size ahead, a little above), so the neck and head stay out of view and a
+  drake's breath flames out below and ahead. There are no Q/E keys and no mouse drag-to-turn in any mode.
 
 Cost: about +2.4 KB raw in `src/game.js` (58,139 vs 55,763 bytes, much of it comments) and +29 bytes in the page
 shell; at ~90% compression, roughly +0.24 KB in the shipped build.
