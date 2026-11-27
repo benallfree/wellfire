@@ -828,7 +828,10 @@ function saveSeen() {
   savedAt = performance.now()
 }
 addEventListener('pagehide', saveSeen)
-document.addEventListener('visibilitychange', () => document.hidden && saveSeen())
+// a tab out of sight also gives back its WebGL context (a retina canvas with antialiasing and the shadow map holds a few
+// hundred MB of GPU memory, and every open game tab held it until closed), and takes it again when shown: three.js
+// uploads everything afresh. Leaving or reloading the page hides it first, so that frees it at once too
+document.addEventListener('visibilitychange', () => (document.hidden && saveSeen(), renderer[document.hidden ? 'forceContextLoss' : 'forceContextRestore']()))
 const tiles = new Map()
 // explored chunks (key -> [cx, cz]): the maps walk these instead of every chunk in view, so empty ground costs nothing
 const known = new Map()
@@ -3083,6 +3086,7 @@ function frame() {
     b.scale.setScalar(Math.max(0.01, b.life / 0.7))
     if (b.life <= 0) {
       scene.remove(b)
+      b.material.dispose() // each fleck's own colour; undisposed, three.js kept every one ever made
       bits.splice(bits.indexOf(b), 1)
     }
   }
