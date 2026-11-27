@@ -3040,7 +3040,12 @@ function frame() {
   daylit.color.copy(mouthMat.color)
   daylit.intensity = player.cave ? 6 : 0
   // underground: no sun, no sky, only your torch (and the sunstone's glow); the dark closes in fast
-  if (player.cave) (day = 0), (sun.intensity = 0), (hemi.intensity = 0.05), sky.setRGB(0, 0, 0), scene.fog.color.setRGB(0, 0, 0), (scene.fog.near = 3), (scene.fog.far = 18)
+  if (player.cave) (day = 0), (sun.intensity = 0), (hemi.intensity = lit ? 0.05 : 0.5), sky.setRGB(0, 0, 0), scene.fog.color.setRGB(0, 0, 0), (scene.fog.near = lit ? 3 : 0.5), (scene.fog.far = lit ? 18 : 3)
+  // no lit torch underground: the walls keep a faint even glow (the hemi light above) that the fog blacks out past
+  // arm's reach, and the cold takes 1 health every CAVE.darkHurt seconds until you light one or get out
+  const K = player.cave
+  if (!K || lit || !alive) K && (K.dark = 0), (player.cold = 0)
+  else if ((K.dark ||= say(bag.torch ? 'The dark is cold: light a torch (3)' : 'Your torch is out. The dark is cold: feel along the walls for the way out') || 1) && (player.cold += dt) > CAVE.darkHurt) (player.cold = 0), --player.hp > 0 ? (hud(), beep(140, 0.12)) : hurt(player, (player.safe = 0), player.pos, 0) // no hit flecks (in first person they fill the view); the last point falls as a hit
 
   // music: each monster kind within 14 units brings in its own part (fast in, slow out); night darkens the rest
   const close = {}

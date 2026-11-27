@@ -8737,7 +8737,8 @@
     "floorColor": "3a322a",
     "roofColor": "2e2a26",
     "guards": 6,
-    "roamers": 8
+    "roamers": 8,
+    "darkHurt": 3
   },
   "talk": {
     "roles": [

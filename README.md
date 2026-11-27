@@ -78,7 +78,9 @@ Type one in the browser console. They go through the game's own code, so the HUD
   creatures and a boss. The sunstone is yours once its guard is dead (roamers don't count), and taking it wakes the cave: every creature
   left comes hunting you on the way out. You can carry only one sunstone at a time. While you carry it, creatures
   everywhere spot you from twice as far and don't shy from your torch, and if you fall, it goes back to its cave,
-  guard and all, to be won again. A village's sage says where its cave is.
+  guard and all, to be won again. A village's sage says where its cave is. If your torch goes out underground, you
+  see only the walls at arm's reach and the cold costs 1 health every 3 seconds (`caves.darkHurt`) until you light
+  another or feel your way out.
 - **Wells and beams.** At a village well, Space sets a torch and a sunstone in its beacon and hands you the beam: turn
   and tilt it until it snaps gold onto the star. A `✦` on the minimap rim shows the star's way.
 - **Sky stages.** Each locked beam turns the sky a new colour (green, violet, orange, red) and makes the wilds harder:
