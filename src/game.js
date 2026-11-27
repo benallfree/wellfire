@@ -2339,8 +2339,8 @@ function enter(c) {
   player.floor = y
   player.pos.set(X, y, Z - S / 2 + 0.6)
   player.vel.set(0, 0)
-  player.dir = 0
-  camYaw = Math.PI
+  player.dir -= c.ry + Math.PI // in facing the way he faced outside (the maze's way out is north, the mouth faces ry), as a house's door does
+  camYaw = player.dir + Math.PI
   // the sunstone and its guardians, at the far end and on the way to it
   if (!got(c.T)) {
     const [ex, ez] = at(end)
@@ -2387,8 +2387,8 @@ function leave() {
   village.glow.intensity = 0
   player.pos.set(mouth[0] + Math.sin(ry) * 7, 0, mouth[1] + Math.cos(ry) * 7) // a few steps out: clear of the mouth (or you'd walk straight back in), and the camera behind you clears the mound
   player.vel.set(0, 0)
-  player.dir = ry
-  camYaw = ry + Math.PI
+  player.dir += ry + Math.PI // out facing the way he faced inside: backing out leaves him facing the mound
+  camYaw = player.dir + Math.PI
   hud()
 }
 // underground, can a reach from (ax, az) to (bx, bz) get there, or is a wall in the way? (segment against each wall's box)
