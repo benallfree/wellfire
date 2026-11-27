@@ -2242,12 +2242,14 @@ function enter(c) {
     const den2 = [end, from[end] || end]
     for (let k = 0; k <= CAVE.guards + done(); k++) {
       const [gx, gz] = at(den2[k % 2])
-      const e = dweller(k ? KINDS3[k % 3] : 'goblin', gx + R() * 3 - 1.5, gz + R() * 3 - 1.5)
+      const e = dweller(k ? KINDS3[k % 3] : 'spider', gx + R() * 3 - 1.5, gz + R() * 3 - 1.5)
       e.guard = 1
       if (!k) {
-        // the boss: bigger, much tougher, hits harder and reaches further
+        // the boss: a great violet spider (just a spider, scaled and tinted), much tougher, hits harder, reaches further,
+        // and never shies from a torch
         e.boss = 1
-        e.g.scale.setScalar(1.6)
+        e.g.scale.setScalar(1.8)
+        e.m.mat.color.set('#c27aff')
         e.hp = e.maxHp *= 4
         e.dmg *= 2
         e.reach += 0.8
@@ -2768,7 +2770,7 @@ function frame() {
       sp = e.run * 0.7
     } else if (alive && d < (lit && e.kind == 'bat' ? 24 : 12) * st.sight * e.fierce && (!village.in || (st.bold && !player.room)) && !(e.burn > 0 && e.kind != 'slime') && e.bored <= 0 && (e.kind != 'eel' || wet)) {
       // slimes and spiders shy from a lit torch, circling its edge, but dare a rush every few seconds
-      if (!st.bold && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
+      if (!st.bold && !e.boss && lit && d < 7 && (e.kind == 'slime' || e.kind == 'spider') && (e.dare = (e.dare || 0) + dt) % 7 < 5) {
         const k = d < 5 ? -1 : 0
         tx = (dx / d) * k + (dz / d) * 0.7
         tz = (dz / d) * k - (dx / d) * 0.7

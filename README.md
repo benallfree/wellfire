@@ -979,8 +979,8 @@ guarded. Flint comes from ordinary rocks. Tuning is in models.json `"rocks"` and
   one instanced mesh. You start in the corner cell; the way out is the gap behind you.
 - **The sunstone.** Every cave has one (checked across the 17 villages around the start), in the cell most steps from
   the mouth (often 20-30 steps of winding), glowing. Its guard is packed into that cell and the one before it:
-  `guards` (6) goblins, spiders and slimes, plus one per locked beam, led by a boss goblin (1.6x size, 4x health,
-  2x damage, longer reach). The sunstone can only be taken once the whole guard is dead; then it's the usual sunstone
+  `guards` (6) goblins, spiders and slimes, plus one per locked beam, led by a boss: a great violet spider (1.8x
+  size, tinted; 4x health, 2x damage, longer reach, never shies from a torch). The sunstone can only be taken once the whole guard is dead; then it's the usual sunstone
   celebration. Taken, it's kept in `warriorFelled.gems` (an older save's cracked sunstone egg counts).
 - **Roamers.** The rest of the maze holds `roamers` (8) more, plus one per locked beam, one to a cell, away from the
   mouth and the den. They don't have to die for the sunstone.
