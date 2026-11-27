@@ -11,9 +11,12 @@ language-model compressor, instead of zip? Then readable source *is* the compact
 mangled, and every model, animation and song is plain text compiled in the page at load. The game is checked against the
 13,312-byte budget under surprisal and against the best conventional pipeline (terser, roadroller, Zopfli zip).
 
-![A lit torch swing at night: flame bits and a burning slime](docs/night-fight.jpg)
+![A village square by day: the apothecary with its potion shelves, the well and the townsfolk](docs/screens/village.jpg)
 
-<sub>The screenshot is from an earlier build; the HUD and help line have changed since.</sub>
+| | |
+|---|---|
+| ![Riding a drake in first person: its horned head below, fire bursting ahead, a torch in hand](docs/screens/drake-fire.jpg) | ![Soaring on the roc over a lake and its islands](docs/screens/roc-flight.jpg) |
+| ![First person in a cave maze by torchlight: the sunstone glows at the end, its guards close in](docs/screens/cave-guard.jpg) | ![The village by torchlight at night](docs/screens/village-night.jpg) |
 
 ## Quick start
 
