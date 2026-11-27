@@ -2685,18 +2685,21 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyC') first = !first // the chase camera or first person
 })
 const chase = 1 // (tank controls always; the old free camera is gone)
-// first person: C on the surface, always in a cave (never in a house's room). Click to lock the pointer; then the
-// mouse or trackpad looks around (left-right turns you, up-down tilts the view) and a click attacks. Esc lets go.
+// first person: C on the surface, always in a cave (never in a house's room). Click to lock the pointer (in the
+// chase camera too); then the mouse or trackpad looks around (left-right turns you, up-down tilts the view, or in
+// the chase camera swings it lower or higher round you) and a click attacks. Esc lets go.
 let first = 0
 let pitch = 0
-const fpNow = () => (first || player.cave) && !player.room && !title
+let orb = 0.6 // the chase camera's elevation: 0.6 radians (34 degrees) up, kept between 0.2 (11) and 1.2 (69)
+const free = () => !player.room && !title // the mouse can look (not in a house's fixed cutaway room)
+const fpNow = () => (first || player.cave) && free()
 let drag = 0 // turning from the locked mouse, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
-// first person looks with the locked pointer, or by dragging with the button held where the browser won't lock it
-addEventListener('pointermove', (e) => (document.pointerLockElement || (e.buttons && e.pointerType == 'mouse' && fpNow())) && ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (tilt += e.movementY * 0.0025)))
+// look with the locked pointer, or by dragging with the button held where the browser won't lock it
+addEventListener('pointermove', (e) => (document.pointerLockElement || (e.buttons && e.pointerType == 'mouse' && free())) && ((drag += e.movementX * 0.0025), (pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * 0.0025))), (orb = fpNow() || aim ? orb : Math.max(0.2, Math.min(1.2, orb + e.movementY * 0.0025))), (tilt += e.movementY * 0.0025)))
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (document.pointerLockElement) return attack()
-  if (fpNow() && e.pointerType == 'mouse') renderer.domElement.requestPointerLock()
+  if (free() && e.pointerType == 'mouse') renderer.domElement.requestPointerLock()
 })
 addEventListener('keyup', (e) => (keys[e.code] = 0))
 const stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 }
@@ -2815,7 +2818,8 @@ function frame() {
   const fps = fpNow()
   // first person: a wide (90 degree), close lens, and the head and the left arm and shield hidden so they don't fill
   // the view (the weapon arm stays, so swings show)
-  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps), fps || document.exitPointerLock?.()
+  if (fps != wasFp) (wasFp = fps), (pitch = 0), lens(fps ? 90 : 45, fps ? 0.05 : 0.5), (player.m.bones.armL.visible = player.m.bones.head.visible = !fps)
+  if (!free() && document.pointerLockElement) document.exitPointerLock()
 
   // on foot or riding: A/D turn and W/S walk along the facing, or, in free mode, move relative to the camera
   // in first person the arrows look instead: left/right turn (a mount too), up/down tilt the view
@@ -3110,8 +3114,10 @@ function frame() {
   if (tank) {
     let a = player.dir + Math.PI - camYaw
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
-    fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
-    fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
+    // 8.5 out along the elevation orb (at the start 7 behind and 4.8 up), never under the ground or the water
+    const d = 8.5 * back * Math.cos(orb)
+    fwd.set(Math.sin(camYaw) * d, 0, Math.cos(camYaw) * d).add(target)
+    fwd.y = Math.max(target.y + 8.5 * back * Math.sin(orb), height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
   if (title) {
     const r = 30 / Math.min(1, camera.aspect)
@@ -3149,7 +3155,9 @@ function frame() {
   } else if (!aim && !show) {
     // (holding a beacon's beam, or in the light show, shine() runs the camera)
     camera.position.lerp(fwd, snap ? 1 : Math.min(1, dt * (tank ? 8 : 5)))
-    if (tank) camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.cos(camYaw) * 3)
+    // looking a step ahead (less as it rises, so from high up he isn't pushed off the bottom)
+    const a = 3.6 * Math.cos(orb)
+    if (tank) camera.lookAt(target.x - Math.sin(camYaw) * a, target.y + 0.8, target.z - Math.cos(camYaw) * a)
     else camera.lookAt(target.x, target.y + 1, target.z)
   }
   sun.position.set(target.x + 20, target.y + 40, target.z + 10)
