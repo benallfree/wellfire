@@ -56,7 +56,7 @@ material with `transparent = true`.
 
 ## Seeded maze dungeons
 
-Caves are built `depth` (80) units below their entrance, so the world above carries on unseen.
+Caves are built at y = −80 (`caves.depth`, an absolute height), far under their entrance, so the world above carries on unseen.
 
 - **Maze**: a perfect maze on a `size × size` grid (6×6) of `cell`-unit cells (5), by recursive backtracker
   (`rng(T.seed + 77)`): a stack, random unvisited neighbour, record openings as bits per cell (1 east, 2 south) on the
@@ -75,7 +75,7 @@ Caves are built `depth` (80) units below their entrance, so the world above carr
 - **Inside**: the surface's creatures are recycled away; nothing spawns; dwellers stand on the cave floor with
   `fits: () => 1`; the treasure's guard must all die before it can be taken; taking it wakes every creature left.
   First person always; no minimap; a light that's only your torch. Leaving disposes of the cave's geometry and puts
-  the player a few steps outside the mouth (not on it, or you walk straight back in), facing home.
+  the player a few steps outside the mouth (not on it, or you walk straight back in), facing its village.
 
 ## Far objects drawn near
 
@@ -89,7 +89,7 @@ far), and a locked beam runs to the star's drawn position so its tip sits on it 
 ## Aiming at a direction
 
 The goal is to point beams at a seeded star (azimuth and elevation from `hash`). The camera stands behind the beam's
-base and looks along it; A/D turn, W/S tilt, the locked mouse tilts. Within a lock zone (~7°, 0.12 rad) the beam snaps
+base and looks along it; A/D turn, W/S tilt, the locked mouse tilts. Within a lock zone (~4°, 0.07 rad) the beam snaps
 exactly onto the target, turns gold, chimes and stays locked. Store `[azimuth, polar angle, locked]` per site; a saved
 beam inside the zone locks on load.
 

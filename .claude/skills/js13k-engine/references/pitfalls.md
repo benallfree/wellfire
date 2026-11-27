@@ -4,7 +4,7 @@
 |---|---|---|
 | Legs whirl when a creature speeds up or slows down (300× too fast on a mount 300 s old) | gait phase was `time * speed / run`, so any speed change jumped it by `elapsed × change` | accumulate phase per frame: `step += dt * rate` |
 | Mirror-image chunks rolled the same herd (same mount, name, coat) | `hash(x, z) == hash(-x, -z)` for about a third of cells | key cell-level rolls through `h2(i, j) = hash(2i, 2j + 1)`; give each layer its own seed offset |
-| Village names repeated a lot (21 repeats among 76 villages) | names from random syllables | derive names from the cell with coprime strides along each part list |
+| Village names repeated a lot (21 repeats among 76 villages) | names from random syllables | derive names from the cell: each part steps along its list by a fixed stride per cell, picked so names don't repeat nearby |
 | Reloading while carrying the quest item crashed at load | a string (`felled.carry`) went through the regrow-pruning loop, which tried `delete str[i]` (TypeError in strict mode) | keep non-map keys out of generic loops over a save object, or skip them by type |
 | Saves silently stopped after an hour of flying (a beam's lock lost) | the explored-cells set as one string per cell hit the ~5 MB origin quota | compact per-chunk bitmasks; read back every write; show a "Can't save" box once |
 | 240 ms frames after a long flight | the minimap tile cache held 150 but the view needed 225, so ~75 tiles rebuilt every frame | caches grow to what's shown; build a few new tiles per frame; iterate an index of explored chunks |

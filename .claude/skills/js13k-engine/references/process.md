@@ -45,7 +45,8 @@ Through the `window.game` handle (player, foes, scene, renderer, world functions
 
 ## When to cut
 
-The only big lever is features. Rough costs from Wellfire (estimates at ~0.015-0.02 per byte of model JSON and ~0.07
-per byte of code): a flying mount with its whistle ~300 bytes, a second rideable creature ~200-250, house interiors
+The only big lever is features. Rough costs from Wellfire's size-trim survey (2026-11-26, the `size-trim.md` side-session
+note, not in this repo; **estimates, not measured**, at ~0.015-0.02 per byte of model JSON and ~0.07 per
+byte of code): a flying mount with its whistle ~300 bytes, a second rideable creature ~200-250, house interiors
 ~250, a water monster ~150-180, colour stages ~150, a big map ~70, a title-screen effect ~70. Prose in UI strings
 (~2.5 KB in all) trims for maybe 30-50. A dead-code sweep usually finds nothing in a game that's been played.

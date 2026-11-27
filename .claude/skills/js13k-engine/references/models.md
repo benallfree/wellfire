@@ -1,8 +1,8 @@
 # Models as text: the "language + JIT"
 
 Every model (characters, creatures, props, trees, houses, rooms, coins, icons) is a block of pretty JSON in
-`models.json`, compiled at load into three.js objects by a ~230-line compiler shipped in the page. Eleven rigged,
-animated models were 5.1 KB of text and 916 bytes compressed; a whole roster with houses, rooms, mounts and a flying
+`models.json`, compiled at load into three.js objects by a ~230-line compiler shipped in the page. Eleven characters and props
+(rigged and animated) were 5.1 KB of text and 916 bytes compressed; a whole roster with houses, rooms, mounts and a flying
 roc is ~150 KB pretty and packs to roughly 2-3 KB. Each creature block is a **generator**: a seed gives a different,
 repeatable creature, so variety costs nothing extra.
 
@@ -106,9 +106,9 @@ only what moves away from it.
 - **Scenery**: for each kind, compile 4 seeded variants, `bake` each, one `InstancedMesh` per variant shared by every
   chunk (see chunks-and-scenery.md).
 - **Items and drops**: `geo(k)` caches `bake(make(lib, k, 1))` per item; one shared material (with `glow`) for all.
-- **Props and sockets**: a socket is just a bone (`handR`, `handL`, `saddle`, `post`). Swapping items calls `hold`
-  again. A prop's origin sits in the fist; the prop orients itself with a rotated root bone in its own block. A
-  "carry" offset for odd props (a boat over the head) can be a var read into the prop's rest pose.
+- **Props and sockets**: a socket is just a bone (`handR`, `handL`, `saddle`, and a `back` bone for the slung weapon). Swapping items calls `hold`
+  again. A prop's origin sits in the fist; the prop orients itself with a rotated root bone in its own block. An
+  odd carry offset (Wellfire once carried a boat over the head) can be a var read into the prop's rest pose.
 - **Tray icons** are the item models rendered once at startup: a second small `WebGLRenderer({ alpha: true,
   preserveDrawingBuffer: true })`, a hemisphere light, a camera fitted to each model's bounding sphere
   (`radius / sin(fov / 2) / zoom`) from a view direction, `toDataURL()` into `<img>` tags, then `forceContextLoss()`.

@@ -34,7 +34,7 @@ as an estimate.
 | drop the debug `window.game` block from the shipped page | −58 | a list of names is high-information |
 | pretty JSON models instead of a custom line DSL | ~10% smaller, despite 7× bigger raw | keys tell the model what each number is; JSON syntax is nearly free |
 | pretty JSON score instead of a line-based music format | 392 → 265 (score alone, -1), 60% bigger raw | same |
-| text models instead of meshes | 11 rigged, animated models: 5.1 KB text → 916 bytes | a generator yields endless seeded variants; binary is unpredictable |
+| text models instead of meshes | 11 characters and props: 5.1 KB text → 916 bytes (old DSL, early -1) | a generator yields endless seeded variants; binary is unpredictable |
 | leaning on three.js from a CDN | the compiler is ~230 lines | primitives, lathe, extrude, merge, instancing come free and don't count |
 
 ## What hurt or did nothing
@@ -84,15 +84,17 @@ Don't:
 
 ## Context and scale
 
-- Context length barely matters: across 197 js13k entries, a 2K-token and a 32K-token window differed by about 2%.
-- The whole game packed 90.7% at 32 KB raw and 95% at 275 KB raw: the bigger and more regular the build, the better
+- Context length barely matters: across 197 js13k entries, a 2K-token and a 32K-token window differed by about 2%
+  (root `docs/nollama/compression-dials.md`, via root `docs/surprisal/best-practices.md`).
+- The whole game packed 90.7% at 32 KB raw and 95% at 275 KB raw (2026-11-26, root `docs/surprisal/best-practices.md`): the bigger and more regular the build, the better
   the ratio. Early "assume ~90% saved" was the working estimate; use the table above instead.
 - Repetition is cheap: the second creature costs far less than the first, the fifth clip less than the second.
 
 ## Measuring
 
-- **Measure only when asked**, at the level asked. A size run takes minutes (-1: ~1.5-3 min on a 300 KB page on an
-  M1 Max when the GPU is free; much longer when other runs share it; -6 several minutes; -9 far longer).
+- **Measure only when asked**, at the level asked. A size run takes minutes: on 2026-11-27 a -1 run on the 295 KB
+  page took ~1.5-3 min on an M1 Max with the GPU free (`docs/refactor-size.md` reported ~9 min for the full build at
+  -1 with an older binary); much longer when other runs share the GPU; -6 several minutes; -9 far longer.
 - **Never pipe surprisal's output** through `tail`, `head` or `grep`: it hides the progress line, so stuck and working
   look the same. Run it in a visible terminal and let it stream.
 - **Compare like with like.** Build both pages, run the same binary and level on each:

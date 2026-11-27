@@ -73,8 +73,8 @@ this.m.mat.emissive.setRGB(this.flash * 0.7 + this.burn * 0.12, this.flash * 0.3
 
 ## Player control
 
-- Tank controls in the chase camera: A/D (or the touch stick's x) turn at 2.8 rad/s; W/S walk along the facing,
-  backing at 60%; the locked mouse turns too. Speed 6, halved while a one-shot plays, 55% swimming.
+- Tank controls in the chase camera: ←/→ (or the touch stick's x, or the locked mouse) turn at 2.8 rad/s; A/D strafe;
+  W/S walk along the facing, backing at 60%. Speed 6, halved while a one-shot plays, 55% swimming.
 - First person: A/D strafe, the mouse turns and pitches, arrows look.
 - Move with `player.move((f*sin + r*cos) * k * dt, (f*cos - r*sin) * k * dt, dt)` and set `player.speed` for the gait.
 - **Breath** while swimming: 25 s, refills in 4 s on land; then 1 hp every 2 s. Gentle on purpose: it stops the lake
@@ -85,7 +85,7 @@ this.m.mat.emissive.setRGB(this.flash * 0.7 + this.burn * 0.12, this.flash * 0.3
 
 ## Combat
 
-- **Attack**: play the item's clip (`item.anim`). With no free aim, turn to the nearest live enemy within 4 units and
+- **Attack**: play the item's clip (`item.anim`). Except in first person, turn to the nearest live enemy within 4 units and
   about 57° of the facing (`cos(a) > 0.55`), so you only need to roughly face a fight.
 - **The blow lands partway through the clip** (45% of the swing): then hit every live enemy within
   `item.reach + enemy.scale * 0.4` and within 1.2 rad of the facing, with a clear line (no wall between).
@@ -129,7 +129,7 @@ model, region mixes in `FOES`.
   function covers respawns, recycling and night crowds.
 - **Fierceness** from distance to home (0.5 at home to 1 at `homeRamp`) scales health, damage, sight and attack rate.
 - Spawn with probability `dt` per frame while under the crowd size; fill the crowd at load.
-- **Death**: shrink away over the third second (`scale = 2.4 - dead`), then recycle.
+- **Death**: play `death`, shrink away from 1.4 s to 2.4 s (`scale = clamp(2.4 - dead, 0.01, 1)`), recycle at 3 s.
 - **Disposal**: when recycling, remove the group, dispose of each mesh's geometry and the material. Every respawn
   leaked one compiled model before this was added.
 

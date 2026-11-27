@@ -112,14 +112,14 @@ then swimming. It's pure in the base height, so seam-safe and nearly free.
 
 - **Jittered coarse grid**: 280-unit cells centred on `home`. `site(gi, gj)` (memoised, seeded by `h2`): ~60% of
   cells hold a village; try up to 4 jittered spots in the middle 60% of the cell; keep the first that is dry and
-  gentle (8 samples on a ring just outside the village radius, all above water, less than 6 units from low to high).
+  gentle (8 samples on a ring at the village radius; any sample below `WATER + 1` rules the spot out; less than 6 units from low to high).
   **Test against `terrain()`, not `height()`**, so the test never depends on itself. Cell (0, 0) always has one,
   27-37 units from the start, so a village is in sight at once. The site also fixes radius (12-18), name and a seed
   for houses and townsfolk. Jitter keeps villages ~110+ units apart. (Rejected: per-chunk `hash < p`, which can't
   control spacing; Poisson discs, which need global state.)
 - **Names from the cell alone**: each name part steps along its list by a fixed stride per cell
-  (`l[((gi * a + gj * b) % n + n) % n]` with strides coprime to the list length), so no name repeats within the list
-  length either way and neighbours never share a part. Lists live in `models.json`. Random syllables repeated a lot.
+  (`l[((gi * a + gj * b) % n + n) % n]`; Wellfire's strides are 19/20, 4/6 and 22/21 on lists of 24, 8 and 24), chosen so
+  the whole name doesn't repeat within 24 cells either way and neighbours never share a part. Lists live in `models.json`. Random syllables repeated a lot.
 - **Roads: a relative-neighbourhood graph.** Join villages in neighbouring cells (8-neighbourhood) unless a third
   village C is closer to both ends than they are to each other. Candidates for C come from the 5×5 cells round the
   pair's midpoint, a set both ends compute identically, so both agree the road exists. Short, natural links, no
@@ -145,7 +145,7 @@ function height(x, z) {
 - Every step is pure in (x, z), so two chunks sampling the same edge vertex agree exactly: **zero seam difference**,
   checked on thousands of shared vertices including under roads and water.
 - `at(x, z)` returns the memoised context of the 40-unit chunk area (villages and road segments within reach), so
-  `height()` is a map lookup plus a short loop: ~0.3 µs bare, ~3 µs on scattered points with roads.
+  `height()` is a map lookup plus a short loop: under 0.3 µs on a chunk's vertex grid, ~3 µs on scattered points (1 µs for bare terrain).
 - Villages level *after* roads, so a road meets the gate at the village floor.
 - `slope(x, z) = [h(x+1) - h(x-1), h(z+1) - h(z-1)]`: the same everywhere, so colours match across seams.
 - `depth(x, z) = max(0, WATER - height)`; swimming starts at depth 1 (`SWIM = WATER - 1`).

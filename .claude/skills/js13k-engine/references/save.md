@@ -2,7 +2,7 @@
 
 The world is generated from the seed, so a save holds only **player state and player changes**. Wellfire keeps a
 handful of localStorage keys with a common prefix (`warriorGold`, `warriorBag`, `warriorSlots`, `warriorFelled`,
-`warriorBeacons`, `warriorEye`, `warriorSeen`, `warriorMute`).
+`warriorBeacons`, `warriorEye`, `warriorSeen`, `warriorLearned` (hints already learned), `warriorMute`).
 
 ## The two helpers
 

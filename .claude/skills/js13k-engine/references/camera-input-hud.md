@@ -46,7 +46,9 @@ hemi.intensity = 0.03 + day * 1.27
   `(4 + 26 * (1 - day)) * (1 + sin(t*21)*0.1 + sin(t*37)*0.07)` (two sines flicker).
 - Music follows the same `day` (audio.md). Game stages can tint `DAY`, `NIGHT` and a light multiplier, lerped in over
   ~2 s so a change fades rather than snaps.
-- Underground: day 0, no sun, black sky and fog closing to 3-18 units.
+- Underground: day 0, no sun, black sky; with a lit torch the fog closes to 3-18 units. With none, the hemisphere light
+  rises to 0.5 and the fog closes to 0.5-3 (walls keep a faint even glow within arm's reach), and the cold costs 1 health
+  every `caves.darkHurt` seconds.
 
 ## Chase camera
 
@@ -73,7 +75,7 @@ camera.lookAt(target.x - Math.sin(camYaw) * 3, target.y + 0.8, target.z - Math.c
   facing tilted by `pitch` (clamped ±1.3). Riding, it rides out in front of the mount's head (1.1× its size ahead).
 - Switch lens on change: fov 90 / near 0.05 in first person, 45 / 0.5 otherwise
   (`camera.fov = …; camera.near = …; camera.updateProjectionMatrix()`).
-- Hide the head and the shield arm so they don't fill the view; the weapon arm stays so swings show. A held torch is
+- Hide the head and the left arm (`armL`) so they don't fill the view; the weapon arm stays so swings show. A held torch is
   shown as a camera-child mesh at the lower left that follows the hidden hand's bob.
 - In tight spaces keep the camera itself clear of walls (push it out of each wall box plus 0.2), since the face
   reaches further than the body's collider.
@@ -111,8 +113,8 @@ HTML and CSS are cheaper and crisper than drawing text in WebGL.
 - **Toasts**: `say(t)` sets a line's text and runs a Web Animations fade (`el.animate([{opacity:1},{opacity:1,offset:.7},{opacity:0}], 2500)`).
 - **Dialog box**: a centred white box (`#say`) with a heading, a line and "Space or tap". While it's open, the frame
   loop returns early (paused) and keys only close it.
-- **Pop on change**: `el.animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)` on a tray slot or the
-  purse when it changes.
+- **Pop on change**: `el.animate([{ transform: 'scale(1.4)' }, { transform: 'none' }], 300)` on a tray slot; the purse
+  pops to `scale(1.6)` with a colour flash (red and slower, 900 ms, when it drops).
 - **Tray**: slots built as `innerHTML` from the bag (icon image, slot number, count badge); taps via one
   `onpointerdown` on the container with `closest('b')` and `data-` attributes.
 - A tiny build-ID label in a corner (build-and-ship.md).
@@ -140,9 +142,10 @@ player (more while flying). Wellfire: section `minimap`.
 - **Compose world-aligned** on a hidden canvas 1.42× the map's size, then draw it rotated by the camera yaw in one
   `drawImage`: up on the map is the way W walks, and tiles never show seams. North-up was tried first and confused
   people, because the camera's default turn made "ahead" point north-west.
-- **Marks** on top (in a separate pass so the big map can reuse it): a red arrow for facing, a dotted trail of the
-  last 300 steps (one dot per 6 units), the start square, village rings (coloured by progress) and upright names,
-  clamped to the rim when off the edge, `N` on the rim, and the goal's direction (`✦`).
+- **`chart()`** draws the ground tiles plus a dotted trail of the last 300 steps (one dot per 6 units), the start
+  square and village rings (coloured by progress). **`marks()`**, a separate pass, adds a red arrow for facing, upright
+  village names (clamped to the rim when off the edge), `N` on the rim and the goal's direction (`✦`). Both maps use
+  both.
 - **Big map (N or tap)**: full screen, north-up, zoomed to fit everything explored plus hints; pauses the game. The
   same `chart()` and `marks()` draw it.
 - Below the map: region name, coordinates, distance from the start.

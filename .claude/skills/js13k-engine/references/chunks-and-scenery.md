@@ -25,7 +25,7 @@ function stream(x, z, n = 2) {
 }
 ```
 
-- Called every frame from the loop with the camera target; called once at load with `n = 99` so the start is complete.
+- Called every frame from the loop with the player's position; called once at load with `n = 99` so the start is complete.
 - **Hysteresis**: build within `NEAR`, drop beyond `NEAR + 1`, so walking along a chunk edge doesn't thrash.
 - Live chunks stay at 49-81. A chunk build was ~0.3 ms bare, ~1.3 ms with slope-sampled colours; at most two per frame
   never showed as a hitch.
@@ -43,9 +43,10 @@ function stream(x, z, n = 2) {
    in or near villages, on roads, or felled recently. Pick the kind from the region's `FLORA` weights; nothing but
    boulders above the tree line. Push the instance matrix into `inst[kind * 4 + variant]`, and a collider
    `[x, z, radius]` for solid kinds.
-3. **Game objects on this ground**: breakable rocks (their own seeded stream, `SEED + 13`), a village's cave mound
-   when the cave's spot falls in this chunk, berry bushes (a seeded share of bushes). Add them as children of the
-   chunk mesh so they leave with it, and push their colliders.
+3. **Game objects on this ground**: breakable rocks (their own seeded stream, `SEED + 13`) and a village's cave mound
+   when the cave's spot falls in this chunk are meshes added as children of the chunk mesh, so they leave with it;
+   push their colliders. Berry clusters (a seeded share of bushes) are only records in `chunk.berries`, drawn by a
+   shared instanced mesh.
 4. Store `{ cx, cz, key, mesh, inst, trees, rocks, caves, berries }` and set `dirty`.
 
 ## Shared instanced meshes
@@ -57,7 +58,7 @@ const kit = KINDS.flatMap(([kind]) => [1, 2, 3, 4].map((v) => {
   const m = make(lib, kind, v)
   const mesh = new THREE.InstancedMesh(bake(m), m.mat, 900)
   mesh.castShadow = mesh.receiveShadow = true
-  mesh.frustumCulled = false // instances span many chunks; the bounding sphere is the first instance's
+  mesh.frustumCulled = false // instances span many chunks; a bounding sphere computed once would go stale as chunks refill
   mesh.count = 0
   scene.add(mesh)
   return mesh

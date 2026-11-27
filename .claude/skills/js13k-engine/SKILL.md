@@ -65,8 +65,10 @@ src/models.json   every model, skeleton and clip, plus tuning tables (pretty JSO
 src/score.json    the music (pretty JSON; note patterns as strings)
 src/compiler.js   model JSON -> three.js rigs (~230 lines: shapes, transforms, mirroring, bones, clips, bake)
 src/music.js      score JSON -> WebAudio (instruments, sequencer, jukebox)
-src/game.js       everything else, in sections: renderer -> world -> chunks -> actors -> HUD -> minimap ->
-                  player -> creatures -> villages -> particles -> drops -> goals -> sound -> input -> combat -> loop
+src/game.js       everything else, in sections (the real headers): renderer, scene, light -> world -> settlements
+                  and roads (chunks at its end) -> actors -> HUD -> minimap -> player -> mounts -> monsters ->
+                  health bars -> villages -> particles -> drops -> wood -> beacons -> caves -> the hint line ->
+                  sound -> input -> combat -> main loop
 tools/build.mjs   strips comments, concatenates the JS, inlines the JSON: dist/index.html (the shipped file)
 tools/strip.mjs   the comment stripper (string, template and regex aware)
 tools/ship.mjs, fit.mjs, roadroll.mjs, serve.mjs   size checks, the js13k baseline, a static server
