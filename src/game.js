@@ -830,7 +830,7 @@ function chart(g, W, H, k, x = player.pos.x, z = player.pos.z) {
   const u = k / UPP
   const sx = (wx) => (wx - x) * u + W / 2
   const sz = (wz) => (wz - z) * u + H / 2
-  g.fillStyle = g == bigc && player.seat?.alt ? '#0b0f1840' : '#0b0f18' // flying: the world shows through the big map
+  g.fillStyle = g == bigc ? '#0b0f1840' : '#0b0f18' // the world shows through the big map
   g.fillRect(0, 0, W, H)
   const span = Math.ceil(Math.max(W, H) / u / CH / 2) + 1
   const cx = Math.floor(x / CH)
@@ -2724,9 +2724,10 @@ function hurt(e, dmg, from, push) {
   hud()
 }
 
-// the big map (N), north-up and zoomed to the trail; see-through while flying, which keeps going under it
+// the big map (N), north-up and zoomed to the trail; see-through, and the game keeps going under it
 function bigDraw() {
   const c = $('big')
+  if (player.cave) return (c.hidden = true) // walking into a cave shuts it: underground there's no map
   if (c.width != innerWidth || c.height != innerHeight) (c.width = innerWidth), (c.height = innerHeight) // resizing clears and reallocates it
   const W = c.width
   const H = c.height
@@ -2738,7 +2739,7 @@ function bigDraw() {
   const mz = (z0 + z1) / 2
   const k = Math.min(4, (0.45 * UPP) / Math.max((x1 - x0) / 2 / W, (z1 - z0) / 2 / H, 1e-3))
   const u = k / UPP
-  c.style.opacity = player.seat?.alt ? 0.8 : 1
+  bigc.clearRect(0, 0, W, H) // its framing shifts as you go: last frame's ground would smear under the see-through dark
   marks(bigc, (x - mx) * u + W / 2, (z - mz) * u + H / 2, 0, k, Math.min(W, H) / 2 - 12, chart(bigc, W, H, k, mx, mz), 1e9, W / 2, H / 2)
 }
 
@@ -2750,8 +2751,6 @@ let inRoom = false
 let wasFp = false
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05)
-  const open = !$('big').hidden
-  if (open && !player.seat?.alt) return bigDraw(), requestAnimationFrame(frame) // paused, unless flying
   if (!$('say').hidden) return requestAnimationFrame(frame)
   const tank = (chase || player.cave) && !player.room // a house's room keeps its fixed cutaway camera and screen-relative moves; a cave is always steered like this
   const fps = fpNow()
@@ -3109,7 +3108,7 @@ function frame() {
   minimap()
   village.update(dt)
   bars(dt)
-  if (open) bigDraw()
+  if (!$('big').hidden) bigDraw() // the game keeps going under it
   renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }

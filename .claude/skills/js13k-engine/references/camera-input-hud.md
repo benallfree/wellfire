@@ -146,7 +146,7 @@ player (more while flying). Wellfire: section `minimap`.
   square and village rings (coloured by progress). **`marks()`**, a separate pass, adds a red arrow for facing, upright
   village names (clamped to the rim when off the edge), `N` on the rim and the goal's direction (`✦`). Both maps use
   both.
-- **Big map (N or tap)**: full screen, north-up, zoomed to fit everything explored plus hints; pauses the game. The
+- **Big map (N or tap)**: full screen, north-up, zoomed to fit everything explored plus hints; see-through, and the game keeps going under it. The
   same `chart()` and `marks()` draw it.
 - Below the map: region name, coordinates, distance from the start.
 
