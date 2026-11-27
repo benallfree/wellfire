@@ -41,7 +41,7 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Dragging with the mouse button held looks too (for browsers that won't lock). Caves are always first person |
 | Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood or flint; at a well, set or take the beam |
 | F or Tab | swap to the next item |
-| 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle); in the apothecary, a potion's slot buys one |
+| 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle) |
 | 0 | crafting (in a village) |
 | R | ride or leave a mount, let go of a beam |
 | N | the big map (Esc closes it) |
@@ -57,7 +57,7 @@ On a touch screen: drag anywhere (up/down walks, sideways turns), the HIT, SWAP 
   flint, plus wood, flint and the roc's whistle for gold and wood. Townsfolk talk.
 - **The apothecary**, the first house in each village (a big bottle by its door), sells two potions: healing (250
   gold, +30 health) and speed (150 gold: 1.6× walking and swimming speed for 30 s, not on a mount; a teal bar under
-  the torch's counts it down). Inside, a potion's slot (key or tap) picks it and Space buys one; Space with none picked lists them.
+  the torch's counts it down). Inside, both stand on the floor beside the shopkeeper: walk up to one and press Space to buy it.
   Drink either from the tray like any item (Space).
 - **Night.** A 3-minute day. Nights are near-black, so the torch matters: lit, it lights the way, sets monsters
   alight and scares slimes and spiders back (bats are drawn to it), and it burns down in 90 seconds.
