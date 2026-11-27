@@ -1506,8 +1506,10 @@ var village
       const sz = Math.cos(ry)
       path(a + Math.PI, r - d / 2)
       const room = add('room', T.seed + i, x, T.y - 40 - i * 15, z)
+      const lid = add('roof', T.seed + i, x, T.y - 40 - i * 15, z) // its ceiling and closed front, shown only in first person ("roof", four letters like "room", rolls the same w and d)
+      lid.root.visible = false
       m.mat.transparent = true
-      houses.push({ m, x, z, ry, w, d, ty: T.y, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d })
+      houses.push({ m, x, z, ry, w, d, ty: T.y, out: [x + sx * (d / 2 + 1.4), z + sz * (d / 2 + 1.4)], y: room.root.position.y, rw: room.vars.w, rd: room.vars.d, lid })
     }
 
     // the first house is the apothecary: a shopkeeper inside with the two potions for sale either side, and outside under
@@ -1758,8 +1760,7 @@ var village
         // the open-topped room and kept over its floor so no wall gets between; warm firelight, no sky
         const sx = Math.sin(camYaw)
         const sz = Math.cos(camYaw)
-        camera.position.set(Math.max(h.x - h.rw / 2, Math.min(h.x + h.rw / 2, p.x + sx * 2.6)), h.y + 5.5, Math.max(h.z - h.rd / 2, Math.min(h.z + h.rd / 2 + 2, p.z + sz * 2.6)))
-        camera.lookAt(p.x - sx, h.y + 0.6, p.z - sz)
+        if (!(h.lid.root.visible = fpNow())) camera.position.set(Math.max(h.x - h.rw / 2, Math.min(h.x + h.rw / 2, p.x + sx * 2.6)), h.y + 5.5, Math.max(h.z - h.rd / 2, Math.min(h.z + h.rd / 2 + 2, p.z + sz * 2.6))), camera.lookAt(p.x - sx, h.y + 0.6, p.z - sz) // (in first person the room gets its lid and the eyes do the looking)
         glow.intensity = 30 * (1 + Math.sin(clock.elapsedTime * 13) * 0.08)
         sun.intensity = 0
         hemi.intensity = 0.7
@@ -2712,13 +2713,13 @@ addEventListener('keydown', (e) => {
   if (e.code == 'KeyC') first = !first // the chase camera or first person
 })
 const chase = 1 // (tank controls always; the old free camera is gone)
-// first person: C on the surface, always in a cave (never in a house's room). Click to lock the pointer (in the
+// first person: C, anywhere (going in or out of a house or a cave keeps the view). Click to lock the pointer (in the
 // chase camera too); then the mouse or trackpad turns you (in first person up-down also tilts the view) and a click
 // attacks. Esc lets go.
 let first = 0
 let pitch = 0
 const free = () => !title // the mouse can turn you (in a house's room too)
-const fpNow = () => (first || player.cave) && !player.room && free() // (never first person in a room's cutaway)
+const fpNow = () => first && free() // C picks the view everywhere: on the surface, in a house's room, underground
 let drag = 0 // turning from the locked mouse, in radians, used up each frame
 let tilt = 0 // and up and down, for tilting a beam
 // look with the locked pointer, or by dragging with the button held where the browser won't lock it
@@ -3144,8 +3145,11 @@ function frame() {
   if (tank) {
     let a = player.dir + Math.PI - camYaw
     camYaw += Math.atan2(Math.sin(a), Math.cos(a)) * (snap ? 1 : Math.min(1, dt * 4))
-    fwd.set(Math.sin(camYaw) * 7 * back, 0, Math.cos(camYaw) * 7 * back).add(target)
-    fwd.y = Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
+    let d = 7 * back
+    // underground: close behind (at most 3), pulled in until no wall stands between, and under the roof
+    if (player.cave) for (d = 3; d > 0.6 && !clear(target.x, target.z, target.x + Math.sin(camYaw) * (d + 0.4), target.z + Math.cos(camYaw) * (d + 0.4)); d -= 0.2);
+    fwd.set(Math.sin(camYaw) * d, 0, Math.cos(camYaw) * d).add(target)
+    fwd.y = player.cave ? target.y + 2.4 : Math.max(target.y + 4.8 * back, height(fwd.x, fwd.z) + 1.5, WATER + 0.6)
   } else fwd.set(Math.sin(camYaw) * 7 * back, 7.5 * back, Math.cos(camYaw) * 7 * back).add(target)
   if (title) {
     const r = 30 / Math.min(1, camera.aspect)

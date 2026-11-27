@@ -38,7 +38,7 @@ elsewhere. `/tools/viewer.html` (dev only) shows any model, seed, clip or held i
 | A/D | strafe (on a mount: turn) |
 | ←/→ | turn |
 | click | lock the mouse (Esc lets go). Sideways turns you (in first person up/down also tilts the view); a click attacks |
-| C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Dragging with the mouse button held looks too (for browsers that won't lock). Caves are always first person |
+| C | toggle first person. The arrows then look around (left/right turn you or your mount, up/down tilt the view). Dragging with the mouse button held looks too (for browsers that won't lock). The view stays as you set it going in and out of houses and caves |
 | Space or J | use what's in hand: swing a weapon, drink a potion, blow the whistle, throw wood or flint; at a well, set or take the beam |
 | F or Tab | swap to the next item (the torch isn't in the swap: it has its own hand) |
 | 1–8 | pick a tray slot (sword, axe, torch, wood, flint, speed potion, healing potion, whistle). The torch slot (3) lights the torch in the left hand, or puts it out, and leaves the weapon in the right |
