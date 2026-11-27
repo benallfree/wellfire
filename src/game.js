@@ -3179,8 +3179,8 @@ function frame() {
     const m = player.seat
     const k = m ? m.m.root.scale.x * m.g.scale.x : 0
     ;(m ? m.m.bones.head : player.m.bones.head).getWorldPosition(camera.position)
-    camera.position.x += fx * (m ? 1.1 * k : 0.3)
-    camera.position.z += fz * (m ? 1.1 * k : 0.3)
+    camera.position.x += fx * (m ? 1.1 * k : 0.1) // (on foot the head is already 0.12 ahead: any more and, pressed against a house, the eyes pass its 0.4 margin into the wall and see through it)
+    camera.position.z += fz * (m ? 1.1 * k : 0.1)
     camera.position.y += m ? 0.35 * k : 0
     // underground the camera itself keeps clear of the walls (the body stops 0.35 short, the face reaches further)
     for (const [cx, cz, hw, hd] of player.cave?.walls || []) {
