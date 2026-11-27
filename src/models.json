@@ -649,7 +649,7 @@
             ]
           },
           {
-            "bone": "arm*",
+            "bone": "armR",
             "channel": "rx",
             "keys": [
               0,
@@ -657,11 +657,35 @@
             ]
           },
           {
-            "bone": "fore*",
+            "bone": "foreR",
             "channel": "rx",
             "keys": [
               0,
               -8
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -14
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              7
+            ]
+          },
+          {
+            "bone": "foreL",
+            "channel": "rx",
+            "keys": [
+              0,
+              -13
             ]
           },
           {
@@ -742,19 +766,33 @@
             "bone": "armL",
             "channel": "rx",
             "keys": [
-              8,
+              20,
+              14,
               0,
-              -8,
-              0
+              -14,
+              -20,
+              -14,
+              0,
+              14
+            ]
+          },
+          {
+            "bone": "armL",
+            "channel": "rz",
+            "keys": [
+              0,
+              6,
+              0,
+              6
             ]
           },
           {
             "bone": "foreL",
             "channel": "rx",
             "keys": [
-              6,
+              14,
               0,
-              -6,
+              -14,
               0
             ]
           },

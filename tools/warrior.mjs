@@ -88,11 +88,11 @@ const base = P(STANCE)
 // ---------- clips: lists of absolute poses (missing channels hold the stance) ----------
 const clips = {}
 
-// idle: the stance, breathing (the chest rises and rocks, the guard sways with it)
+// idle: the stance, breathing (the chest rises and rocks, the weapon sways with it and the torch arm sinks and lifts)
 clips.idle = {
   duration: 2.4,
   loop: true,
-  keys: [P(STANCE), P({ ...STANCE, 'chest.rx': 16, 'chest.y': 0.03, 'head.rx': -16, 'armR.rx': -31, 'armL.rx': -26, 'foreR.rx': -83, 'foreL.rx': -103, 'cape.rx': 16 })],
+  keys: [P(STANCE), P({ ...STANCE, 'chest.rx': 16, 'chest.y': 0.03, 'head.rx': -16, 'armR.rx': -31, 'armL.rx': -34, 'armL.rz': 22, 'foreR.rx': -83, 'foreL.rx': -108, 'cape.rx': 16 })],
 }
 
 // walk: 8 phases; left foot strikes at 0, right at .5. Heel strike, flat, toe off, swing with a high knee.
@@ -134,8 +134,9 @@ clips.idle = {
         'armR.rz': -10,
         'foreR.rx': -75 - 8 * c,
         'handR.rx': 75,
-        'armL.rx': -20 + 8 * c,
-        'foreL.rx': -95 + 6 * c,
+        'armL.rx': -20 + 20 * c, // the torch arm swings against the left leg
+        'armL.rz': 15 + 6 * Math.abs(s),
+        'foreL.rx': -95 + 14 * c,
       }),
     )
   }
