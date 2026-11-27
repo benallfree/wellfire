@@ -1137,11 +1137,12 @@ function whistle() {
   setTimeout(() => say(m.m.vars.name + ' the roc answers'), 1000)
 }
 function herd(dt) {
-  // roll each newly built chunk once for a wild mount (about one chunk in 17)
+  // roll each newly built chunk once for a wild mount (about one chunk in 17); h2, as hash(x, z) often equals
+  // hash(-x, -z), which gave mirror-image chunks the same herd
   for (const [key, ch] of chunks)
     if (!rolled.has(key)) {
       rolled.add(key)
-      const r = rng((hash(ch.cx, ch.cz, SEED + 9) * 4294967296) | 0)
+      const r = rng((h2(ch.cx, ch.cz, SEED + 9) * 4294967296) | 0)
       if (gone.has(key) || r() > 0.06) continue
       for (let i = 0; i < 5; i++) {
         const x = (ch.cx + r()) * CH
