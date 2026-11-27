@@ -406,11 +406,11 @@ function grow(cx, cz) {
   }
   const eggs = []
   const E = rng((hash(cx, cz, SEED + 13) * 4294967296) | 0)
-  const egg = (x, z, id, c, T) => {
+  const egg = (x, z, id, c) => {
     const g = new THREE.Mesh(geo(felled[key]?.[id] ? 'cracked' : 'egg'), itemMat)
     g.position.set(x, height(x, z), z)
     g.rotation.y = x * 7
-    Object.assign(g, { k: id, c, T, done: felled[key]?.[id] })
+    Object.assign(g, { k: id, c, done: felled[key]?.[id] })
     mesh.add(g) // goes when the chunk's ground does
     eggs.push(g)
   }
@@ -422,7 +422,7 @@ function grow(cx, cz) {
   }
   for (const T of sites(x0, z0)) {
     const p = gem(T.gi, T.gj)
-    if (p && Math.floor(p[0] / CH) == cx && Math.floor(p[1] / CH) == cz) egg(...p, 'e' + T.k, 'sunstone', T)
+    if (p && Math.floor(p[0] / CH) == cx && Math.floor(p[1] / CH) == cz) egg(...p, 'e' + T.k, 'sunstone')
   }
   chunks.set(key, { cx, cz, mesh, inst, trees, eggs, key })
   dirty = true
@@ -1367,7 +1367,7 @@ var village
   const talk = (v, f) => {
     const T = v.T
     const q = gem(T.gi, T.gj)
-    if (f == v.sage) return !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? `${T.name}'s sunstone is found. Light the wells!` : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`
+    if (f == v.sage) return !q ? 'No sunstone sleeps near here, friend' : felled[Math.floor(q[0] / CH) + ',' + Math.floor(q[1] / CH)]?.['e' + T.k] ? 'The sunstone of these wilds is found. Any well will take it!' : `A sunstone sleeps in a thunder egg out in the wilds, ${['north', 'east', 'south', 'west'][Math.round(Math.atan2(q[0] - T.x, T.z - q[1]) / (Math.PI / 2)) & 3]} of ${T.name}`
     const k = T.seed + f.i
     const pick = (a, name) => a[k % a.length].replace('@', name)
     if (told[k]) return told[k]
@@ -1660,12 +1660,11 @@ function toss(k) {
   gain(k, -1)
 }
 // picking up a sunstone is the big moment: a fanfare, a fountain of sparks and a box that pauses the game
-let found = ''
 function sunstone() {
   for (let i = 0; i < 8; i++) setTimeout(() => beep(523 * 1.26 ** (i % 4) * (i > 3 ? 2 : 1), 0.6, 'triangle', 0.06, 1), i * 120)
   for (let i = 0; i < 4; i++) burst(player.pos.clone().setY(player.pos.y + i * 0.6), ['#fb4', '#fff', '#f84', '#fe8'][i], 20)
   $('say').hidden = false
-  $('say').innerHTML = `<small>✦ ✦ ✦</small><h2>You found ${found ? found + "'s" : 'a'} sunstone!</h2><p>Set it in a village well with a torch, and its beam will rise to the star</p><small>Space or tap</small>`
+  $('say').innerHTML = `<small>✦ ✦ ✦</small><h2>You found a sunstone!</h2><p>Set it in any village well with a torch, and its beam will rise to the star</p><small>Space or tap</small>`
   $('say').animate([{ transform: 'translate(-50%,-50%) scale(.3)', boxShadow: '0 0 0 #fb4' }, { transform: 'translate(-50%,-50%) scale(1.1)', boxShadow: '0 0 80px #fb4' }, { transform: 'translate(-50%,-50%)', boxShadow: '0 0 0 #fb4' }], 900)
 }
 const lose = (c) => (scene.remove(c), drops.splice(drops.indexOf(c), 1))
@@ -1945,7 +1944,7 @@ function crack(o = player, reach = item.reach + 1, arc = 1.16) {
         beep(110, 0.25, 'square', 0.06, 0.5)
         const [lo, hi] = EGG.coins
         if (g.c) spill(g.c, g.c == 'gold' ? Math.round((lo + R() * (hi - lo)) * st.pay) : 1, p)
-        if (g.c == 'sunstone') burst(p, '#fb4', 30), (found = g.T.name)
+        if (g.c == 'sunstone') burst(p, '#fb4', 30)
         return
       }
     }
